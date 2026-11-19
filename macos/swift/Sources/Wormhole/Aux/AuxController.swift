@@ -56,7 +56,14 @@ final class AuxController {
         #endif
     }
 
-    func showUpdates() { UpdateWindow.show(backend: updateBackend(), version: AppInfo.from(bundle: .main).version) }
+    /// Check for Updates…: Settings on its Updates page, and a manual check started at once when nothing is in progress (`app/handlers.rs`).
+    func showUpdates() {
+        // Settings' Updates page, as GPUI's handler opens it, then the check.
+        app.showSettings()
+        app.settingsController?.show(section: "updates")
+        let backend = updateBackend()
+        if backend.phase == .idle || backend.phase == .upToDate { Task { await backend.check() } }
+    }
 
     /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive: profile
     /// `profile`'s (the shown one's by default), which the hook socket judges its windows' requests by from now on.
@@ -72,6 +79,9 @@ final class AuxController {
         #endif
     }
 
+    /// The shown profile's question driver, for the control folder's `agent-ask`.
+    var accessDriver: AccessDriver? { access[app.windowsHost.profile] }
+
     /// The window a question of `profile` goes on: the one in front if it is of that profile, else any shown one of it
     /// (`agent_access/ask.rs` `window_for`); nil when none is open.
     private func window(ofProfile profile: String) -> NSWindow? {
@@ -83,7 +93,7 @@ final class AuxController {
     func showAccess() {
         let request = AccessRequest(
             label: "claude", capability: .run, kind: .developerID,
-            program: .init(path: "/usr/local/bin/claude", pid: 4242, signer: .init(kind: .developerID, subject: "Anthropic PBC")))
+            program: .init(path: "/usr/local/bin/claude", pid: 4242, signer: .init(kind: .developerID, subject: "Anthropic PBC"))) // text: a sample signer
         let sheet = AccessSheet(request)
         Task { _ = await sheet.ask(in: app.window) }
     }
@@ -91,8 +101,14 @@ final class AuxController {
     /// The first run shows the welcome by itself, once per data folder; `--onboarding` and Help ▸ Welcome show it
     /// again. A test instance keeps the effect above the window instead of taking the screen.
     func showOnboarding(firstRun: Bool) {
+        // Help ▸ Welcome while the page is up plays it again (`onboarding_host.rs`).
+        if let open = onboarding, open.isOpen, !firstRun {
+            open.replay()
+            return
+        }
         let window = OnboardingWindow(backend: backends.onboarding(firstRun: firstRun), firstRun: firstRun, immersive: !app.policy.background)
         onboarding = window
+        window.onEnded = { [weak self] primer in if primer { self?.app.showNoAgentsTip() } }
         window.show()
     }
 

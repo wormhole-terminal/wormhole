@@ -5,6 +5,15 @@ import PlatformModel
 
 extension ActionRouter {
     func appActions() -> [ActionID: Handler] {
+        var actions = ownActions()
+        // Developer ▸ Inspector (⇧⌥⌘I): a debug build's, as the GPUI app's is.
+        #if DEBUG
+            actions["inspector"] = { [unowned self] in Inspector.shared.toggle(beside: app.window) }
+        #endif
+        return actions
+    }
+
+    private func ownActions() -> [ActionID: Handler] {
         [
             "newWindow": { [unowned self] in app.openNewWindow() },
             "newProfile": { [unowned self] in app.showProfiles(new: true) },

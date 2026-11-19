@@ -27,9 +27,9 @@
 
         private func perform(_ effect: PanelEffect) async {
             switch effect {
-            case .type(let command, let place): terminal(for: place)?.source.write(Data((command + "\r").utf8))
+            case .type(let command, let place): await terminal(for: place)?.source.write(Data((command + "\r").utf8))
             case .paste(let text, let submit, let place):
-                guard let source = terminal(for: place)?.source else { return }
+                guard let source = await terminal(for: place)?.source else { return }
                 source.paste(text)
                 if submit {
                     // The program takes the paste first; Return a moment later is what the person would press.
@@ -37,19 +37,26 @@
                     source.write(Data("\r".utf8))
                 }
             case .open(let url): NSWorkspace.shared.open(url)
-            case .openTerminals(let terminals): terminals.forEach(open)
+            case .openTerminals(let terminals):
+                // As GPUI's `open_terminals`: each is selected as it is made (a new terminal always is), then the last of those that
+                // ask for focus is selected again, so one made after it does not keep the selection.
+                let focused = terminals.compactMap { open($0) }.last
+                if let focused { hub?.send(.select(focused)) }
             }
         }
 
-        private func open(_ spec: NewTerminal) {
-            guard let hub else { return }
+        /// The terminal made for `spec`, when it asks for focus; nil for one left alone or one that does not ask.
+        private func open(_ spec: NewTerminal) -> TerminalID? {
+            guard let hub else { return nil }
             // Only what is not open: a terminal of that name is left alone, nothing typed into it, not selected.
-            guard existing(named: spec.name) == nil, let id = make(in: spec.cwd, named: spec.name) else { return }
-            if spec.focus { hub.send(.select(id)) }
+            guard existing(named: spec.name) == nil, let id = make(in: spec.cwd, named: spec.name) else { return nil }
             if let run = spec.run, let view = hub.terminals.view(for: id) { view.source.write(Data((run + "\r").utf8)) }
+            return spec.focus ? id : nil
         }
 
-        private func terminal(for place: EffectPlace) -> MetalTerminalView? {
+        /// The terminal's view, once there is one: a terminal made a moment ago has its view drawn a frame later, and what is
+        /// typed into it waits for that (up to a second) instead of going nowhere.
+        private func terminal(for place: EffectPlace) async -> MetalTerminalView? {
             guard let hub else { return nil }
             let id: TerminalID?
             switch place {
@@ -60,11 +67,18 @@
                 // The terminal it is typed into comes in front first.
                 if let id, id != hub.state.selected { hub.send(.select(id)) }
             }
-            return id.flatMap { hub.terminals.view(for: $0) }
+            guard let id else { return nil }
+            for _ in 0..<20 {
+                if let view = hub.terminals.view(for: id) { return view }
+                // one-shot: the new terminal's view, which is drawn a frame after the terminal is made (bounded, a second)
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            return nil
         }
 
         private func existing(named name: String) -> TerminalID? {
-            hub?.state.all.first { $0.title == name }?.id
+            // By the name the terminal was given (the layout's, or the person's), not by the title its program shows.
+            hub?.state.all.first { $0.customName == name }?.id
         }
 
         private func make(in cwd: String?, named name: String?) -> TerminalID? {

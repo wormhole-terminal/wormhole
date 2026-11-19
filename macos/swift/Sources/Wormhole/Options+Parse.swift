@@ -12,7 +12,7 @@ extension Options {
           --mock <text|flood|noise|matrix|unicode|cursor|mixed>   synthetic output (default mixed)
           --mock-hz <n>        steps a second; 0 as fast as possible (default 60)
           --seed <n>           the mock's seed (default 1)
-          --shell <program>    every terminal runs this program instead of the login shell (WORMHOLE_SHELL)
+          --shell <program>    every terminal runs this program, whatever shell it was opened with (WORMHOLE_SHELL)
           --sample             the sample workspace and mock terminals instead of real ones
           --grid <COLSxROWS>   a fixed grid, the window sized to fit (WORMHOLE_SWIFT_GRID)
           --font <family>      an installed font instead of the bundled JetBrains Mono
@@ -97,6 +97,9 @@ extension Options {
                 guard let mode = ThemeMode(rawValue: name) else { throw UsageError(description: "--appearance is light, dark or system") }
                 options.appearance = mode
             case "-h", "--help": throw UsageError(description: usage)
+            // As the first word it is what GPUI answers to any word that is not a command (`main.rs:73`, exit 2): this app
+            // takes a launch option there or nothing. Later in the line it is a mistake among the launch options.
+            case _ where index == 0: throw UsageError(description: "Wormhole: unknown command \(flag.debugDescription)")
             default: throw UsageError(description: "unknown option \(flag)\n\n\(usage)")
             }
             index += 1

@@ -35,10 +35,18 @@
                 // No server (a second launch, an unlinked socket): the desk alone takes it back.
                 if stored { _ = desk(of: app)?.revokeStored(id: number) } else { _ = desk(of: app)?.revoke(id: number) }
             }
+            platform.setApprovalCapability = { [weak app] number, stored, capability, on in
+                if let hooks = app?.hooks, let profile = app?.windowsHost.profile {
+                    hooks.setApprovalCapability(number, stored: stored, capability: capability, on: on, profile: profile)
+                } else {
+                    _ = desk(of: app)?.setCapability(id: number, stored: stored, capability: capability, on: on)
+                }
+            }
             // The Project folders page shares the Project tab's service, so trust given here is what the tab shows.
             // Asked while Settings is made, which can be before the first window exists.
             platform.projects = { [weak app] in (app?.sessions.first?.panelBackends.project as? RustProjectBackend)?.service }
-            platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
+            // The folders the panel reads (a key where a name is not text), not the drawn ones, which carry U+FFFD for it.
+            platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.readPath) ?? [] }
             platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
             platform.profileCreated = { [weak app] in app?.switchProfile(to: $0) }
             platform.willDeleteProfile = { [weak app] in app?.end(profile: $0) }
@@ -68,7 +76,8 @@
             let host = settingsModel.host as? RustSettingsHost
             switch action {
             case .checkForUpdates: aux.showUpdates()
-            case .sendTestNotification: notices?.sendTest(name: AuxText.brand, settings: settingsNotice)
+            case .sendTestNotification: notices?.runTest(name: AuxText.brand, settings: settingsNotice)
+            case .askNotifications: notices?.askPermission()
             case .openNotificationSettings: open("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
             // The system's list of apps that start programs without the first-run malware check (Privacy & Security).
             case .openDeveloperTools: open("x-apple.systempreferences:com.apple.preference.security?Privacy_DevTools")

@@ -30,7 +30,7 @@ extension AppController {
         case "size":
             let sides = argument.split(separator: "x").compactMap { Double($0) }
             guard sides.count == 2 else { reply("error: size is WIDTHxHEIGHT"); return true }
-            window?.setContentSize(CGSize(width: sides[0], height: sides[1]))
+            windowController?.setContentSize(asked: CGSize(width: sides[0], height: sides[1]))
         case "live-resize-sim": liveResizeSim(argument)
         case "split": hub.split(["down", "column"].contains(argument) ? .column : .row)
         case "edge":
@@ -58,7 +58,7 @@ extension AppController {
             reply(windowShot(to: words[0], titled: words.count > 1 ? words[1] : nil))
             return true
         case "windows":
-            reply(NSApp.windows.map { "\($0.title.isEmpty ? "(untitled)" : $0.title) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil)" }.joined(separator: "\n"))
+            reply(NSApp.windows.map { "\($0.title.isEmpty ? "(untitled)" : $0.title) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil) edited=\($0.isDocumentEdited)" }.joined(separator: "\n"))
             return true
         case "menus":
             reply(menus?.dump() ?? "no menus")
@@ -66,6 +66,8 @@ extension AppController {
         case "find": runFind(argument)
         case "diff": runDiff(argument)
         case "notice": reply(postNotice(argument)); return true
+        // `onboarding <welcome|folder|look|agents|primer|close>`, as the GPUI app's devctl: the intro window at that step, or closed.
+        case "onboarding" where !argument.isEmpty: aux.showOnboarding(step: argument)
         case "about", "licenses", "hosts", "trust", "access", "updates", "onboarding", "quick-panel": runAux(command)
         case "host":
             // What the bar's buttons do, for the selected terminal: retry, new, end, end-hard.

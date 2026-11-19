@@ -5,6 +5,7 @@
 
 #if WITH_UNIFFI
     import AppKit
+    import TerminalCore
     import TerminalMetal
     import UniFFISource
     import WormholeBindings
@@ -23,6 +24,10 @@
         /// window's would undo that.
         private static var pending: Set<ObjectIdentifier> = []
         private static var watching = false
+        /// The size a program's last resize asked of the window, until the layout shows it or a second passes: the next
+        /// operation, which a program sends at once, is about that size (`size_asked`). With the grid it was asked at.
+        /// And what was around the text then: the window has its new frame at once, the pane its new size a layout later.
+        private static var asked: [ObjectIdentifier: (cols: Int, rows: Int, before: GridSize, at: ContinuousClock.Instant, around: (width: Float, height: Float))] = [:]
 
         /// `view`'s program may act on its window (when `allow_window_ops` is on) and is told where it is. `raises`: a
         /// raise may bring the window forward (not in a test instance, which stays behind).
@@ -58,11 +63,13 @@
             case .raise: if raises { window.orderFront(nil) }
             case .lower: window.orderBack(nil)
             case .maximize(how: .both):
+                asked[ObjectIdentifier(view)] = nil
                 if !window.isZoomed {
                     saved[ObjectIdentifier(window)] = saved[ObjectIdentifier(window)] ?? window.frame.size
                     window.zoom(nil)
                 }
             case .maximize(how: .restore):
+                asked[ObjectIdentifier(view)] = nil
                 if window.isZoomed {
                     window.zoom(nil)
                 } else if let size = saved[ObjectIdentifier(window)] {
@@ -70,6 +77,7 @@
                 }
                 saved[ObjectIdentifier(window)] = nil
             case .fullscreen(let how):
+                asked[ObjectIdentifier(view)] = nil
                 let on = window.styleMask.contains(.fullScreen)
                 let want = switch how {
                 case .enter: true
@@ -80,6 +88,11 @@
             case .move, .resizeCells, .maximize:
                 if case .maximize = op { saved[ObjectIdentifier(window)] = saved[ObjectIdentifier(window)] ?? window.frame.size }
                 guard let goal = windowOpFrame(op: op, place: place, pane: pane) else { break }
+                if let cols = goal.cols, let rows = goal.rows {
+                    asked[ObjectIdentifier(view)] = (Int(cols), Int(rows), view.gridSize, .now, (pane.frameWidth, pane.frameHeight))
+                } else {
+                    asked[ObjectIdentifier(view)] = nil
+                }
                 window.setFrame(appKitFrame(goal.frame, on: screen), display: true)
             }
             followed(view)
@@ -124,10 +137,20 @@
         /// The pane's cell, its text area in cells, and what is around the text area in the window.
         private static func pane(of view: MetalTerminalView, in window: NSWindow) -> PaneSizeRecord {
             let grid = view.gridSize
-            let text = (width: Float(grid.cols) * grid.cellWidth, height: Float(grid.rows) * grid.cellHeight)
+            // What is around the text in the window, from the points the cells really have: a resize leaves half a cell
+            // over so that rounding lands on the size asked for, and a sum on `cols * cell` would count that half cell as
+            // the window's and make the next resize one cell too large each way.
+            let area = view.textArea
+            var around = (width: max(0, Float(window.frame.width - area.width)), height: max(0, Float(window.frame.height - area.height)))
+            // What the last resize asked for stands while the layout has not caught up with it (`pane_size`); the window
+            // already has that resize's frame, so what was around the text is what was measured for it.
+            var (cols, rows) = (grid.cols, grid.rows)
+            if let ask = asked[ObjectIdentifier(view)], ask.before == grid, ask.at.duration(to: .now) < .seconds(1) {
+                (cols, rows, around) = (ask.cols, ask.rows, ask.around)
+            }
             return PaneSizeRecord(
-                cellWidth: grid.cellWidth, cellHeight: grid.cellHeight, cols: UInt32(grid.cols), rows: UInt32(grid.rows),
-                frameWidth: max(0, Float(window.frame.width) - text.width), frameHeight: max(0, Float(window.frame.height) - text.height))
+                cellWidth: grid.cellWidth, cellHeight: grid.cellHeight, cols: UInt32(cols), rows: UInt32(rows),
+                frameWidth: around.width, frameHeight: around.height)
         }
 
         /// A window that moves, changes size, goes to the Dock or full screen tells its terminals.

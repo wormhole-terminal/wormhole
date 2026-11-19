@@ -18,7 +18,7 @@ extension AppController {
                 let row = rows[terminal.id]
                 let ambient = ambient(terminal, running: terminal.runningCommand)
                 return PaletteTerminal(
-                    id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity,
+                    id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity, told: ambient.source.told,
                     number: session === own ? row?.number : nil, path: terminal.folder, folder: ambient.folder, branch: ambient.branch,
                     who: ambient.who, message: ambient.message, command: ambient.command, exit: ambient.exit,
                     elapsed: { [state = ambient.state, since = ambient.since] now in
@@ -37,7 +37,7 @@ extension AppController {
     /// ⌘↩: a new window, laid out like this one, with a terminal where the result is: a terminal's folder, a folder, a commit's
     /// repository with History on the commit there.
     func openInNewWindow(_ target: Command.Target, from session: WindowSession?) {
-        func expanded(_ path: String) -> String { (path as NSString).expandingTildeInPath }
+        func expanded(_ path: String) -> String { HomeFolder.expanding(path) }
         let hub = (session ?? front).hub
         switch target {
         case .terminal(let id): openNewWindow(folder: self.session(holding: id)?.hub.state.all.first { $0.id == id }?.folder.map(expanded))
@@ -45,13 +45,13 @@ extension AppController {
         case .commit(let sha):
             guard let repo = hub.state.all.first(where: { $0.id == hub.state.selected })?.repo else { return }
             openNewWindow(folder: repo)
-            // The window opens a step later and is then the one in front; History lists its commits once git has answered.
+            // The window opens a step later and is then the one in front; History follows its folder once git has answered.
             Task { @MainActor [weak self] in
                 for _ in 0..<40 {
                     try? await Task.sleep(for: .milliseconds(50))
-                    guard let opened = self?.sessions.last?.hub, opened.panel.history.model.commits.contains(where: { $0.sha == sha }) else { continue }
+                    guard let opened = self?.sessions.last?.hub, opened.panel.history.phase == .loaded else { continue }
                     opened.send(.showPanelTab(.history))
-                    opened.panel.history.show(sha)
+                    opened.panel.history.reveal(sha)
                     return
                 }
             }

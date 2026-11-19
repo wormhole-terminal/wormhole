@@ -5,15 +5,31 @@
 import AppKit
 import DesignSystem
 import TerminalMetal
+import WorkspaceModel
 
 extension AppController {
     /// One control line: the pointer's and the tools' first (they may take time), then the commands that act at once.
-    func run(line: String) async {
+    func run(line: String, window number: Int? = nil) async {
+        // A line of `cmd<n>` is for the n-th window: it acts on that one and answers in `out<n>.txt`, keys included.
+        commandWindow = number
+        defer { commandWindow = nil }
+        // A number no window in sight has is an error in that file's answer, never the window in front: a scenario about
+        // "the other window" must not be answered by the wrong one.
+        // (`sync` is a batch's own mark and `delay` its pause, the same whatever the window, so the batch still ends.)
+        if let number, !shown.indices.contains(number - 1), !line.hasPrefix("sync "), !line.hasPrefix("delay ") {
+            reply("error: no window \(number) (\(shown.count) in sight)")
+            return
+        }
         let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
         let command = parts.first ?? "", argument = parts.count > 1 ? parts[1] : ""
         window?.contentView?.layoutSubtreeIfNeeded()
+        // While inspect mode picks, `hover` and `click` are the inspector's (they highlight and pin), as in GPUI's devctl.
+        if await runInspect(command: command, argument: argument) { return }
         if await runPointer(command: command, argument: argument) { return }
         if await runTooling(command: command, argument: argument) { return }
+        if await runDevTools(command: command, argument: argument) { return }
+        if await runFlow(command: command, argument: argument) { return }
+        if await runExtra(command: command, argument: argument) { return }
         run(command: line)
     }
 
@@ -24,7 +40,9 @@ extension AppController {
             let words = argument.split(separator: " ").map(String.init)
             guard let view = selectedView, let devctl else { reply("error: no terminal is shown"); return true }
             let seconds = words.first.flatMap(Double.init) ?? 5
-            let report = await PerfProfile.run(view: view, seconds: seconds)
+            // Where the window's terminals run decides what the reader's numbers mean (a hosted one is parsed twice).
+            let hosted = hub.state.live.filter { hub.store.hosting(of: $0)?.hostID != nil }.count
+            let report = await PerfProfile.run(view: view, seconds: seconds, hosted: hosted, local: hub.state.live.count - hosted)
             let name = words.count > 1 ? words[1] : "perf-profile"
             devctl.append(report.json, to: "\(name).json")
             devctl.append(report.table, to: "\(name).txt")

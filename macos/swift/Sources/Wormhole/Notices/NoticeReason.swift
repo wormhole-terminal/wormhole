@@ -36,6 +36,23 @@ extension AppController {
         return Set(settingsModel.host.flags().filter(\.on).map(\.key))
     }
 
+    /// The features that are off in `session`'s window's own profile: what hides their actions from menus, palette and sheet.
+    func featuresOff(_ session: WindowSession) -> Set<String> {
+        #if WITH_UNIFFI
+            if options.isReal { return profileFlags.featuresOff(profile: session.windows.profile) }
+        #endif
+        return []
+    }
+
+    /// `profile`'s settings were read again: its windows take the feature switches it has now (the panel's tabs are the
+    /// core workspace's), and the menus, which leave out what is off, are built again.
+    func featuresMoved(in profile: String) {
+        for session in sessions where session.windows.profile == profile {
+            HubSettings.applyFeatures(off: featuresOff(session), to: session.hub)
+        }
+        menus?.windowsChanged()
+    }
+
     /// The Notices feature (its flag) in the window's profile: off, the notice chip is not drawn and the pane's bar says what matters.
     func noticesOn(_ session: WindowSession) -> Bool {
         let flags = flagsOn(session)

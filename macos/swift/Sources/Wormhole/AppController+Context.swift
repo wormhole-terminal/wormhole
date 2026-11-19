@@ -13,12 +13,13 @@ extension AppController {
     func terminalMenu(for id: TerminalID, in session: WindowSession? = nil) -> NSMenu? {
         var facts = TerminalMenuFacts()
         facts.canPaste = Pasteboard.text()?.isEmpty == false
-        // Greyed when the action is not available: no room for another pane, a diff over the terminal.
+        // The terminal right-clicked is selected first, so the greying below is its own (`context_menu.rs`).
         let holder = session ?? self.session(holding: id) ?? front
+        holder.hub.send(.select(id))
+        // Greyed when the action is not available: no room for another pane, a diff over the terminal.
         let off = menuState(for: holder.hub).disabled
         facts.splitRight = !off.contains("splitRight")
         facts.splitDown = !off.contains("splitDown")
-        holder.hub.send(.select(id))
         let view = holder.hub.terminals.existing(id)
         facts.canCopy = view?.canCopy ?? false
         facts.link = view?.linkAddressUnderPointer
@@ -37,6 +38,7 @@ extension AppController {
             self?.settingsModel.reveal($0)
         }
         hub.actions.editsSettings = { [weak self, weak session] in session?.windows.profile == self?.windowsHost.profile }
+        connectTitleRow(of: session)
         // A test instance keeps the menu for `menu` and `menu-pick` (it would hold the app in AppKit's tracking loop).
         hub.actions.showKeyMenu = { [weak self, weak session] menu, frame in
             guard let self, policy.touchesSystem, let content = session?.window?.contentView else { self?.injector.keep(menu); return }

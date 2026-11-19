@@ -16,6 +16,8 @@ extension AppController {
         guard on != zenOn, !on || Zen.preset != nil else { return }
         look.zen = on ? Zen.preset : nil
         settingsApplier?.applyZen()
+        settingsModel.zenOn = on
+        profileLooks.values.forEach { $0.applyZen(look.zen) }
         let words = on ? Words.text("zen-on", fallback: "Zen mode on") : Words.text("zen-off", fallback: "Zen mode off")
         Announcements.post(words)
     }

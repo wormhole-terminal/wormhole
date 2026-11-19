@@ -4,6 +4,7 @@
 
 import AppKit
 import DesignSystem
+import AuxModel
 import AuxWindows
 import PanelUI
 import PlatformModel
@@ -30,14 +31,28 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Every profile opened since launch, by id: the ones parked keep their windows (their terminals running, out of sight).
     var profileHosts: [String: WindowsHost] = [:]
     /// Every window of every profile, in the order they were made; the ones commands act on are `shown`.
-    var sessions: [WindowSession] = []
+    /// The folder picker's recent folders follow every window's terminals from the first window on (`FolderPicking`).
+    var sessions: [WindowSession] = [] {
+        didSet { folderPicking.windowsChanged() }
+    }
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
-    var lastFront: WindowSession? { didSet { if lastFront !== oldValue { updateFollower?.keepOffered() } } }
+    var lastFront: WindowSession? {
+        didSet {
+            guard lastFront !== oldValue else { return }
+            updateFollower?.keepOffered()
+            #if WITH_UNIFFI
+                projectSettings?.follow()
+            #endif
+        }
+    }
     /// Open folder… in a test instance, which shows no panel: what a chosen folder does, until `open-folder` gives one.
     var pendingFolder: ((String) -> Void)?
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
     var terminating = false
     var devctl: DevCtl?
+    /// The window (1-based, in the order they were made) whose control file a line came from (`cmd2`): the window commands
+    /// act on and the file `reply` writes to, for as long as that line runs. `nil` for `cmd`.
+    var commandWindow: Int?
     /// The control folder's pointer: what it pressed, the tracking areas it is in, the menu it found.
     let injector = Injector()
     var settingsController: SettingsWindowController?
@@ -45,8 +60,6 @@ final class AppController: NSObject, NSApplicationDelegate {
     var notices: NoticeFeed?
     /// The quick panel driven without its window by the control folder (`quick-open`).
     var quickDriver: QuickPanelModel?
-    /// Layers the settings of the terminal in front's project over the person's (real windows only).
-    var projectSettings: AnyObject?
     var hooks: HookHost?
     /// Files and folders macOS asked this app to open that are still waiting for the windows and the socket (`SystemOpen.swift`).
     var systemOpens: [URL] = []
@@ -63,6 +76,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var endsAllOnQuit = false
     /// The quit question's answer for the session hosts: end them with the app, or leave them running (the default).
     var endsHostsOnQuit = false
+    /// How far a quit has got, once it asks or ends the hosts: a second request is absorbed by it (`AppController+Quit`).
+    var quitStage: QuitStage?
     let activityClock = ActivityClock()
     /// The chip that follows a terminal dragged out of its window, and the growth the next window opens with (`TearOff/`).
     let tearChip = TearOffChip()
@@ -70,15 +85,34 @@ final class AppController: NSObject, NSApplicationDelegate {
     #if WITH_UNIFFI
         /// Feature switches read in a window's own profile (`flagsOn(_:)`).
         let profileFlags = ProfileFlags()
+        /// Layers the settings of the terminal in front's project over the person's (real windows only).
+        var projectSettings: ProjectSettingsFollower?
     #endif
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
-    private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
+    private(set) lazy var terminalLook = TerminalLook(
+        terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] }, engineProfile: { [weak self] in self?.windowsHost.profile })
+    /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`). A look made or dropped changes
+    /// which parked profiles need a follower of their own (`followParkedAccess`), whatever made or dropped it.
+    var profileLooks: [String: ProfileLook] = [:] {
+        didSet { if Set(profileLooks.keys) != Set(oldValue.keys) { followParkedAccess() } }
+    }
+    /// The agent access of each parked profile nothing else follows (`ParkedAccess`).
+    var parkedAccess: [String: ParkedAccess] = [:]
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     lazy var settingsModel = AppSettings.makeModel(app: self)
-    private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
+    private(set) lazy var studio = StudioLauncher(
+        dataDirectory: dataDirectory, themesFolder: { [unowned self] in self.themes.themesDirectory ?? self.dataDirectory.appendingPathComponent("themes") },
+        project: { [unowned self] in StudioProjects.source(app: self) },
+        keyChanged: { [unowned self] in self.menus?.windowsChanged() })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
-    private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
+    /// Where Go to Waiting (true) and Go to Finished (false) went last, so the next press goes on.
+    var lastJumped: [Bool: Int64] = [:]
+    /// The table's keys no menu item holds (`ExtraKeys`).
+    private(set) lazy var extraKeys = ExtraKeys(app: self)
+    /// A project action's key, wherever the focus is in a window of the workspace (`ProjectKeys`).
+    private(set) lazy var projectKeys = ProjectKeys(app: self)
+    private(set) lazy var recents = RecentProjects(real: options.isReal)
     /// SIGTERM as an event on the main queue (`quitOnSigterm`).
     var sigterm: DispatchSourceSignal?
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
@@ -105,6 +139,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         PlatformSetup.install(options, launchLog: options.background ? opened : nil)
         // Before anything opens a file in the data folder: a folder from before the rename is moved (never in an experiment folder).
         LegacyLaunch.moveDataFolder(dataDirectory)
+        // Then the log files and the panic record, and the data folder's older files made owner-only.
+        LaunchLogging.start()
         windowsHost = try WindowsHost.make(options)
         profileHosts[windowsHost.profile] = windowsHost
         super.init()
@@ -115,10 +151,14 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     /// The windows in sight: the profile Wormhole is in, and the odd ones opened in another (the rest are parked).
     var shown: [WindowSession] { sessions.filter { !$0.parked } }
-    /// The window commands act on: the key one, else the one that was in front last, else the first.
+    /// The window commands act on: the key one, else the one that was in front last, else the first. In the middle of a
+    /// profile switch none is in sight for a moment (the ones left are parked, the target's not yet up) while the new
+    /// profile's settings are already applied and the menu bar asks: then the first window there is, never an index
+    /// into an empty list (that ended the app on every switch into a profile without a window in sight).
     var front: WindowSession {
         let shown = shown
-        return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown[0]
+        if let n = commandWindow, shown.indices.contains(n - 1) { return shown[n - 1] }
+        return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown.first ?? sessions[0]
     }
     var hub: WindowHub { front.hub }
     /// What the right panel reads through: the project backend is also Settings' source of what a project sets.
@@ -133,10 +173,12 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         quitOnSigterm()
+        extraKeys.start()
+        projectKeys.start()
         do {
             try open()
         } catch {
-            FileHandle.standardError.write(Data("cannot start: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("cannot start: \(error)\n".utf8)) // text: a stderr line
             exit(1)
         }
     }
@@ -146,9 +188,11 @@ final class AppController: NSObject, NSApplicationDelegate {
         // Every window as it is, so the next launch brings them back; a window the person closed was forgotten already.
         terminating = true
         saveAllWindows()
+        // Notes a save did not take are written once more on the way out (`Workspace::persist`, `window/windows.rs:296`).
+        sessions.forEach { $0.notes?.flush() }
         hooks?.stop()
-        // Before the views go: a terminal let go of is not ended by its view closing.
-        sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) }
+        // Before the views go: a terminal let go of is not ended by its view closing. Quit and End All did this already.
+        if quitStage != .endingHosts, quitStage != .hostsEnded { sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) } }
         sessions.forEach { $0.hub.terminals.shutdown() }
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }

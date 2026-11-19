@@ -12,6 +12,10 @@ final class TerminalFactory {
     private let options: Options
     private var configuration: RendererConfiguration?
     var onExit: (TerminalID, Int32?) -> Void = { _, _ in }
+    /// A key the window takes before its terminals hear it (`MetalTerminalView.claimKey`); set once the window exists.
+    var claimKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
+    /// The window's jump to the previous or next prompt (`MetalTerminalView.onPrompt`); set once the window exists.
+    var jumpPrompt: (PromptDirection) -> Void = { _ in }
     /// The fonts and colours a new terminal starts with (Settings and the theme); set once the window exists.
     var look: TerminalLook?
     /// The source of a terminal that the core's workspace runs; nil means the mock sources.
@@ -39,6 +43,9 @@ final class TerminalFactory {
             } else {
                 source = try SourceFactory.make(options, size: GridSize(cols: 100, rows: 30))
             }
+            // Its colours before its view exists: a program that asks first is answered in this window's profile's colours,
+            // not the shown profile's that the engine starts with.
+            if let palette = look?.palette { source.setEngineColors(palette.engineSlots) }
             let view = try MetalTerminalView(source: source, configuration: configuration)
             view.fixedGrid = options.grid
             look?.dress(view)
@@ -47,6 +54,8 @@ final class TerminalFactory {
                 WindowOps.attach(view, raises: !options.background)
             #endif
             view.onExit = { [weak self] in self?.onExit(id, $0) }
+            view.claimKey = { [weak self] in self?.claimKey($0, $1) ?? false }
+            view.onPrompt = { [weak self] in self?.jumpPrompt($0) }
             return view
         } catch {
             FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8)) // text: a line on stderr for whoever launched the app

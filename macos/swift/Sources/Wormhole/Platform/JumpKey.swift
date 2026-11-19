@@ -8,5 +8,7 @@ extension AppController {
         let keys = (try? KeySpec(parsing: text)).map { [$0] } ?? []
         Keymap.install(Keymap.shared.replacingKeys(of: .goToWaiting, with: keys))
         menus?.windowsChanged()
+        // The status item's Jump to Next Waiting shows it too.
+        ambient?.pushStatus()
     }
 }

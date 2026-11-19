@@ -1,3 +1,4 @@
+// text-file: replies of the control folder and the idle check (dev tooling, English by design), not interface text
 // The app's windows, made: a session over its own workspace (the core's, with ids all windows share) and what a window asks
 // of the app. Putting one on the screen is `AppController+WindowOpening`, its end `AppController+WindowEnding`; what is
 // saved of each and where each workspace comes from is the core's (`WindowsHost`).
@@ -28,6 +29,9 @@ extension AppController {
     /// move into it). The window itself is `present`ed apart.
     func makeSession(window id: WindowID, empty: Bool = false, in windows: WindowsHost? = nil) -> WindowSession {
         let windowsHost = windows ?? self.windowsHost
+        // Before its terminals start: the engine knows the colours of the window's own profile (the first window of another
+        // profile in this run makes that profile's look, which tells them), so a program that asks at once is answered right.
+        _ = profileLook(for: windowsHost.profile)
         let host = WorkspaceHost.make(options, windows: windowsHost, window: id, empty: empty)
         let factory = TerminalFactory(options: options, source: host.source)
         let effects = Self.makeEffects()
@@ -36,20 +40,20 @@ extension AppController {
         let session = WindowSession(id: id, windows: windowsHost, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
-            if options.isReal { hub.rowFitting = CoreRowFitting() }
+            if options.isReal { (hub.rowFitting, hub.splitMotion) = (CoreRowFitting(), CoreSplitMotion()) }
             (effects as? PanelEffects)?.hub = hub
             if options.isReal { (effects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) } }
         #endif
-        factory.look = terminalLook
-        settingsApplier?.dress(session)
+        // Before it is dressed: the registry tells the app's own windows from another profile's by their look.
+        sessions.append(session)
+        dressForProfile(session)
         connect(session)
         followCloseDot(of: session)
         if let persistence = panel.notes {
-            session.notes = NotesCoordinator(persistence: persistence, hub: hub)
+            session.notes = NotesCoordinator(persistence: persistence, hub: hub, merging: .app)
             session.notes?.start()
         }
         session.saver = WindowSaver(session: session, windows: windowsHost.backend)
-        sessions.append(session)
         return session
     }
 
@@ -57,6 +61,10 @@ extension AppController {
     func connect(_ session: WindowSession) {
         let hub = session.hub
         hub.shell = session.factory.shellName
+        session.factory.claimKey = { [weak self, weak hub] key, flags in
+            hub.map { self?.claimProjectKey(key, flags, in: $0) ?? false } ?? false
+        }
+        session.factory.jumpPrompt = { [weak hub] in hub?.jumpPrompt($0) }
         session.factory.onExit = { [weak self, weak hub] id, code in
             hub?.noteExit(of: id, code: code)
             self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")
@@ -113,6 +121,12 @@ extension AppController {
             self?.showSettings()
             self?.settingsController?.show(section: $0)
         }
+        // A sheet opened from the menu counts as much as one a command-line request opened: the control line answers a second
+        // request for this window Failed while it is up.
+        hub.panel.worktrees.sheetChanged = { [weak self, weak session] up in
+            guard let session else { return }
+            self?.hooks?.worktreeSheet(window: session.id, up: up)
+        }
         hub.actions.newTerminalWith = { [weak self, weak session] key in self?.newTerminal(shellKey: key, in: session) }
     }
 
@@ -139,6 +153,9 @@ extension AppController {
     func show(terminal id: TerminalID) {
         guard let holder = session(holding: id) else { return }
         holder.hub.send(.select(id))
-        if policy.touchesSystem { holder.window?.makeKeyAndOrderFront(nil) }
+        if policy.touchesSystem {
+            NSApp.activate()
+            holder.window?.makeKeyAndOrderFront(nil)
+        }
     }
 }

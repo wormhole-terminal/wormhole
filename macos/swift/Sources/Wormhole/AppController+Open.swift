@@ -21,6 +21,9 @@ extension AppController {
         let applier = SettingsApplier(app: self, model: settingsModel)
         settingsApplier = applier
         applier.start()
+        #if WITH_UNIFFI
+            profileFlags.changed = { [weak self] in self?.featuresMoved(in: $0) }
+        #endif
         try openSavedWindows()
         menus = MenuController(app: self)
         menus?.start()
@@ -29,9 +32,11 @@ extension AppController {
         applier.applyAmbient()
         startRealParts()
         if let directory = options.devctl {
-            let devctl = DevCtl(directory: directory) { [weak self] line in await self?.run(line: line) }
+            let devctl = DevCtl(directory: directory) { [weak self] line, window in await self?.run(line: line, window: window) }
             try devctl.start()
             self.devctl = devctl
+            installGroupAsker()
+            installStudioAsker()
         }
         if options.onboarding || aux.isFirstRun { aux.showFirstRun() }
         openWhatSystemAsked()
@@ -53,7 +58,7 @@ extension AppController {
         startUpdates()
         #if WITH_UNIFFI
             let follower = ProjectSettingsFollower(app: self)
-            follower?.start()
+            follower.start()
             projectSettings = follower
         #endif
     }

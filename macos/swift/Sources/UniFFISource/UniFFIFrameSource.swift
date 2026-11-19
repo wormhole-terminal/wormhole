@@ -19,6 +19,8 @@ public final class UniFFIFrameSource: FrameSource {
     private let fitted = Mutex<(size: GridSize, wake: (@Sendable () -> Void)?)?>(nil)
     private let responsiveness = Mutex<(@Sendable () -> Void)?>(nil)
     private let windowOp = Mutex<(@Sendable (WindowOpRecord) -> Void)?>(nil)
+    /// The colours the view last drew with, for a terminal that comes after it (`fill`, `start`).
+    private let engineColors = Mutex<[UInt32]?>(nil)
 
     /// Called, as the view drains events, when the session host stopped answering or answers again.
     public func onHostResponsiveness(_ then: @escaping @Sendable () -> Void) { responsiveness.withLock { $0 = then } }
@@ -59,6 +61,7 @@ public final class UniFFIFrameSource: FrameSource {
     /// The terminal is ready: fit it to the view's size and wake the view to draw it.
     public func fill(_ terminal: Terminal) {
         self.terminal.withLock { $0 = terminal }
+        if let colors = engineColors.withLock({ $0 }) { terminal.setColors(slots: colors) }
         guard let fit = fitted.withLock({ $0 }) else { return }
         terminal.resize(cols: UInt16(fit.size.cols), rows: UInt16(fit.size.rows), cellWidth: fit.size.cellWidth, cellHeight: fit.size.cellHeight)
         fit.wake?()
@@ -87,6 +90,7 @@ public final class UniFFIFrameSource: FrameSource {
             program: program, args: arguments, cols: UInt16(size.cols), rows: UInt16(size.rows),
             cellWidth: size.cellWidth, cellHeight: size.cellHeight, listener: WakeListener(wake))
         terminal.withLock { $0 = created }
+        if let colors = engineColors.withLock({ $0 }) { created.setColors(slots: colors) }
     }
 
     /// A new small object per call: the view takes it once, after the source started.
@@ -129,6 +133,7 @@ public final class UniFFIFrameSource: FrameSource {
             case .clipboardRead: events.append(.clipboardRead)
             case .clipboardAsk: events.append(.clipboardAsk)
             case .clipboardAskClosed: events.append(.clipboardAskClosed)
+            case .controlTyped: events.append(.controlTyped)
             // The bar over the pane says it; the view has nothing to draw.
             case .hostResponsiveness: responsiveness.withLock { $0 }?()
             case .windowOp(let op): windowOp.withLock { $0 }?(op)
@@ -139,6 +144,16 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func write(_ bytes: Data) { current?.write(bytes: bytes) }
+
+    /// Told to the terminal when they are not the ones it was last told (the engine would report a scheme again).
+    public func setEngineColors(_ slots: [UInt32]) {
+        let moved = engineColors.withLock { known -> Bool in
+            if known == slots { return false }
+            known = slots
+            return true
+        }
+        if moved { current?.setColors(slots: slots) }
+    }
 
     public func setClipboardRules(read: TerminalCore.ClipboardReadRule, writeAllowed: Bool) {
         let rule: WormholeBindings.ClipboardReadRule = switch read {
@@ -177,6 +192,8 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func scroll(lines: Int) { current?.scroll(lines: Int32(clamping: lines)) }
+
+    public func scrollRows(_ rows: Int) { current?.scrollRows(rows: Int32(clamping: rows)) }
 
     public func paste(_ text: String) { current?.paste(text: text) }
 

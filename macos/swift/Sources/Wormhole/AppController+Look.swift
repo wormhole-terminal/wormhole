@@ -1,3 +1,4 @@
+// text-file: replies of the control folder and the idle check (dev tooling, English by design), not interface text
 // How the window looks, from the command line, Settings and the control folder: the theme, the appearance, the
 // status bar and the window's own translucency. All of it is one live value in `ThemeStore` and `WindowLook`, so
 // every command does the same as the Settings control and nothing is redrawn by hand.
