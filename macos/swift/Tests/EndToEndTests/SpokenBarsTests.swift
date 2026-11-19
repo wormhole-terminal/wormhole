@@ -27,7 +27,7 @@ extension EndToEnd {
 
             await app.shell("exit")
             let words = await app.until("exited-words") { $0 != "exited-words none" }
-            guard let said = words.split(separator: " ", maxSplits: 1).last.map({ String($0).trimmingCharacters(in: CharacterSet(charactersIn: "\"\n ")) }) else { return app.fail("the bar's words:\n\(words)") }
+            guard let said = words.split(separator: "\n").first(where: { $0.hasPrefix("exited-words ") }).map({ String($0.dropFirst("exited-words ".count)).trimmingCharacters(in: CharacterSet(charactersIn: "\" ")) }) else { return app.fail("the bar's words:\n\(words)") }
             let bar = await app.reply("a11y")
             let inside = Self.children(of: "Group \"\(said)\"", in: bar)
             app.expect(!inside.isEmpty, "the bar is a group named by its words (\(said)):\n\(bar)")

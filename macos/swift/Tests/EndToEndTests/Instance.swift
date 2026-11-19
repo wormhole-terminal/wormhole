@@ -266,7 +266,7 @@ final class Instance {
             if marks.contains(line) {
                 answers.append(current.joined(separator: "\n"))
                 current = []
-            } else {
+            } else if !Self.unsolicited(line) {
                 current.append(line)
             }
         }
@@ -276,6 +276,13 @@ final class Instance {
         // (`until` asks again instead: the window may be on its way; its error is no answer and satisfies nothing.)
         if !awaitingWindow, let wrong = answers.first(where: { $0.hasPrefix("error: no window ") }) { fail("`\(commands.joined(separator: "; "))` went to window \(window ?? 0): \(wrong)") }
         return Array(answers.prefix(commands.count)) + Array(repeating: "", count: max(0, commands.count - answers.count))
+    }
+
+    /// A line the app writes by itself, when something happens (a shell ended, a saved text was erased), not as the answer to a command.
+    /// It lands in the answer that is being read when it comes: before the next command on a fast Mac, in the middle of one on a
+    /// slow runner, where `exited-words "…"` then had `exited terminal=1 code=0` before it.
+    nonisolated private static func unsolicited(_ line: String) -> Bool {
+        ["exited terminal=", "saved-text-forgotten terminal=", "group-to-window group="].contains { line.hasPrefix($0) }
     }
 
     func reply(_ command: String, window: Int? = nil) async -> String { (await send([command], window: window)).first ?? "" }
