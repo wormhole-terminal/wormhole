@@ -30,10 +30,16 @@ pub(super) fn converted_safely(themes: &Themes, file: &ThemeFile, id: &str) -> R
 
 impl StudioWindow {
     /// What saving writes over the theme's file at `path`: the file as edited, converted first when it
-    /// is still in the older format. The error is what to tell the person.
+    /// is still in the older format. A theme with no id stored gets the one it had (`new_id` keeps the
+    /// file's own), so a rename does not leave its earlier saves under an id it no longer has. The
+    /// error is what to tell the person.
     pub(super) fn file_to_write(&self, path: &Path) -> Result<ToWrite, String> {
         if self.doc.file.version.is_some() {
-            return Ok(ToWrite { file: self.doc.file.clone(), converted: false });
+            let mut file = self.doc.file.clone();
+            if file.id.is_none() {
+                file.id = Some((self.themes.new_id)(self.doc.name(), Some(path)));
+            }
+            return Ok(ToWrite { file, converted: false });
         }
         let id = (self.themes.new_id)(self.doc.name(), Some(path));
         match converted_safely(&self.themes, &self.doc.file, &id) {
