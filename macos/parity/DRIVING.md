@@ -380,6 +380,11 @@ screen: on a 1024-point display the terminal was 304 points wide, a split was re
 The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
 `a11y` lists SwiftUI's controls too (wave 13), so a button's or a row's spoken name is checked through it.
 
+A session host of an older build: `Instance.with(hosts: true, hostFrom: Instance.oldHostProgram())`. It is made from the repository's
+own history, in the worktree's ignored `target/`: `git archive 1feca30ff^ | tar -x -C target/oldhost-src` (the commit before hosts could
+forget a terminal's history, protocol minor 1), then `CARGO_TARGET_DIR=$PWD/target/oldhost-target cargo build -p wormhole-host` in that
+folder (30 seconds; or `$WORMHOLE_E2E_OLD_HOST`). Scenarios that use it skip without it.
+
 Wave 8 (lane e2e-b) added: `Instance.with(auth: "allow", config: "<json>")` (what the owner's question answers, a `config.json`
 before the first launch), `app.cli([...])` and `app.cliRun([...])` (the app's own command line asking the instance through its
 socket, as an agent or a script would: `Client.swift`), `app.later(command, answer: prefix)` for a command that answers from a task

@@ -74,13 +74,25 @@ final class Instance {
         return files.isExecutableFile(atPath: built.path) ? built : nil
     }
 
+    /// A session host built from the repository's own history, before the commit that taught hosts to forget a terminal's history
+    /// (protocol minor 1): `$WORMHOLE_E2E_OLD_HOST`, else `target/oldhost-target/debug/wormhole-host` in the worktree, made by
+    /// `git archive 1feca30ff^` into `target/oldhost-src` and `cargo build -p wormhole-host` there (see DRIVING.md).
+    nonisolated static func oldHostProgram() -> URL? {
+        let files = FileManager.default
+        if let path = ProcessInfo.processInfo.environment["WORMHOLE_E2E_OLD_HOST"], files.isExecutableFile(atPath: path) { return URL(fileURLWithPath: path) }
+        let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let built = package.appendingPathComponent("../../target/oldhost-target/debug/wormhole-host").standardizedFileURL
+        return files.isExecutableFile(atPath: built.path) ? built : nil
+    }
+
     /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does. `auth` is what
     /// the owner's question answers (a project's trust, a Probe's approval); `config` is the text of the default profile's
     /// `config.json` before the first launch (a flag or a mode the app reads at launch); `hosts`: Persistent terminals on, with
-    /// the built session host (`hostProgram`), which writes that file itself, so the two are not given together.
+    /// the built session host (`hostProgram`, or `hostFrom`: a host of an older build, `oldHostProgram`), which writes that file
+    /// itself, so the two are not given together.
     static func with(
         shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], updater: Bool = false,
-        feed: String? = nil, label: String = #function,
+        feed: String? = nil, hostFrom: URL? = nil, label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
@@ -100,7 +112,7 @@ final class Instance {
             }
         }
         if hosts {
-            guard let built = hostProgram() else { throw ScratchError(description: "no session host is built: cargo build -p wormhole-host") }
+            guard let built = hostFrom ?? hostProgram() else { throw ScratchError(description: "no session host is built: cargo build -p wormhole-host") }
             app.host = try app.scratch.giveHosts(from: built)
         }
         do {
