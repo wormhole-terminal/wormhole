@@ -11,6 +11,12 @@ extension EndToEnd {
         try await Instance.with(shell: .zsh) { app in
             await app.send(["new-window"])
             await app.until("sessions") { $0.split(separator: "\n").count == 2 }
+            // A short prompt in each shell: a host name's long prompt wraps a typed line in a narrow window (the second window
+            // is some 35 columns wide on a small display), and a line wrapped on two rows is not one string on the screen.
+            for window in [1, 2] {
+                await app.send([#"text PS1='$ '"#, "key return"], window: window)
+                await app.until("screen", window: window) { $0.contains("\n$ ") || $0.hasPrefix("$ ") }
+            }
             for window in [1, 2] {
                 await app.send(["text echo w\(window)"], window: window)
                 await app.until("screen", window: window) { $0.contains("echo w\(window)") }
