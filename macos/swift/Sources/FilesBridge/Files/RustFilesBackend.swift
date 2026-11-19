@@ -18,6 +18,11 @@ public final class RustFilesBackend: FilesBackend, @unchecked Sendable {
         }
     }
 
+    public func stamp(_ path: String, in root: String) async -> String? {
+        let service = service
+        return await offMain { service.stamp(root: root, path: path) }
+    }
+
     public func read(_ path: String, in root: String) async -> FileContent {
         let service = service
         return await offMain { FileContent(service.read(root: root, path: path)) }
@@ -29,6 +34,14 @@ public final class RustFilesBackend: FilesBackend, @unchecked Sendable {
             do { _ = try service.rename(root: root, path: path, name: name); return .success(()) } catch { return .failure(PanelModel.RenameFailure(error)) }
         }
     }
+
+    public func resolve(_ path: String, in root: String, folder: Bool) async -> String? {
+        let service = service
+        return await offMain { service.resolve(root: root, path: path, folder: folder) }
+    }
+
+    /// The window's own profile, whose settings hold its pins; false for a profile the list does not have.
+    @discardableResult public func followProfile(_ profile: String) -> Bool { service.followProfile(profile: profile) }
 
     public func pins() async -> [String] {
         let service = service

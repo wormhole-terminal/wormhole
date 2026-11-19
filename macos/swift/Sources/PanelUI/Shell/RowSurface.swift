@@ -31,7 +31,7 @@ struct PanelRow<Content: View>: View {
         let hovering: Bool
         @Environment(\.tokens) private var tokens
         @Environment(\.selectionSpace) private var space
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @Environment(\.reduceMotion) private var reduceMotion
 
         func makeBody(configuration: Configuration) -> some View {
             let shape = RoundedRectangle(cornerRadius: Radius.row, style: .continuous)

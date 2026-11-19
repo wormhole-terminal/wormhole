@@ -16,7 +16,7 @@ struct RenameField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TextField("", text: $draft, selection: $selection)
-                .textFieldStyle(.plain).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).focused($focused)
+                .textFieldStyle(.plain).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).focused($focused)
                 .onSubmit { store.commitRename(to: draft) }
                 .onExitCommand(perform: store.cancelRename)
                 .onChange(of: focused) { _, now in if !now { store.cancelRename() } }
@@ -24,11 +24,12 @@ struct RenameField: View {
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
                 .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusSm).strokeBorder(tokens.inputBorderFocus, lineWidth: tokens.metrics.borderWidth) }
                 .accessibilityLabel(panelText("files-spoken-rename-field", "New name, text field"))
-            if let error = store.renameError { Text(error).font(TextRole.caption.font).foregroundStyle(tokens.statusDangerText) }
+            if let error = store.renameError { Text(error).font(tokens.font(.caption)).foregroundStyle(tokens.statusDangerText) }
         }
         .onAppear {
-            draft = row.name
-            let stem = FileNames.stemLength(row.name, isFolder: row.isFolder)
+            // A name that is not text is typed over as it is drawn (`rename.rs`: the lossy name).
+            draft = DiskName.shown(row.name)
+            let stem = FileNames.stemLength(draft, isFolder: row.isFolder)
             selection = TextSelection(range: draft.startIndex..<draft.index(draft.startIndex, offsetBy: stem))
             focused = true
         }

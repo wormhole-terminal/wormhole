@@ -22,7 +22,7 @@ enum RepoChanges {
             let holder = Holder()
             let task = Task {
                 while !Task.isCancelled {
-                    if git.isRepository(folder: folder), let watch = try? GitWatch.start(folder: folder, listener: Relay(continuation)) {
+                    if git.isRepository(folder: folder), let watch = try? git.watch(folder: folder, listener: Relay(continuation)) {
                         holder.set(watch)
                         // The repository appeared after the tab looked: read it now.
                         continuation.yield()

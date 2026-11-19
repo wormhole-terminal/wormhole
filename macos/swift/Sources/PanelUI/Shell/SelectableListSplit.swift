@@ -19,6 +19,7 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
     @State private var typed = TypedAhead()
     @Environment(PanelKeyboard.self) private var keyboard: PanelKeyboard?
     @Environment(\.panelMotion) private var motion
+    @Environment(\.panelHost) private var host
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -49,7 +50,15 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
         }
         .onDisappear { keyboard?.disappeared(focused: focused) }
         .onKeyPress(phases: [.down, .repeat], action: handle)
-        .onCopyCommand { walker.copyCursor().map { [NSItemProvider(object: $0 as NSString)] } ?? [] }
+        .onCopyCommand {
+            guard let text = walker.copyCursor() else { return [] }
+            // With a chip to say it, the host copies and says it; else the system's copy puts the text on the clipboard.
+            if let said = walker.copiedAs, let host {
+                host.copy(text, as: said)
+                return []
+            }
+            return [NSItemProvider(object: text as NSString)]
+        }
         .accessibilityLabel(label)
     }
 

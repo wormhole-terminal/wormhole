@@ -14,6 +14,8 @@ public final class ProjectStore {
     public private(set) var paint = FolderPaint.own
     public private(set) var loaded = false
     public private(set) var error: String?
+    /// What went wrong with the person's own stores, said where there is no project too.
+    public private(set) var problem: String?
     /// The project's trust waits for Touch ID or the password.
     public private(set) var approving = false
     @ObservationIgnored private let backend: any ProjectBackend
@@ -45,9 +47,10 @@ public final class ProjectStore {
         Task {
             async let project = backend.project(at: folder)
             async let colour = backend.folderPaint(of: band ?? folder)
-            let (found, painted) = await (project, colour)
+            async let stores = backend.problem()
+            let (found, painted, wrong) = await (project, colour, stores)
             guard folder == self.folder, band == self.band else { return }
-            (state, paint, loaded) = (found, painted, true)
+            (state, paint, loaded, problem) = (found, painted, true, wrong)
         }
     }
 
@@ -95,6 +98,14 @@ public final class ProjectStore {
         act { _, backend in await backend.run(action: action.id, at: root) }
     }
 
+    /// Runs the action whose key is `glyphs` when the core says, now, that the project is trusted and has one; false: the key is
+    /// nobody's (nothing runs, and the window lets it through).
+    public func runAction(forKey glyphs: String) -> Bool {
+        guard let root = state?.root, let id = backend.actionID(forKey: glyphs, at: root) else { return false }
+        act { _, backend in await backend.run(action: id, at: root) }
+        return true
+    }
+
     public func send(_ prompt: ProjectPrompt) {
         guard let root = state?.root else { return }
         act { _, backend in await backend.send(prompt: prompt.id, at: root) }
@@ -117,8 +128,11 @@ public final class ProjectStore {
     }
 
     /// Runs a backend call for the current folder, then reads the tab again (the file watch would too, a beat later).
+    /// The folder the tab's Create and its colour are for: the band's (the repository's root), else the terminal's.
+    public var target: String? { band ?? folder }
+
     private func act(_ call: @escaping @Sendable (String, any ProjectBackend) async -> Void) {
-        guard let folder = band ?? folder else { return }
+        guard let folder = target else { return }
         let backend = backend
         Task {
             await call(folder, backend)

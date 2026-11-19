@@ -21,8 +21,9 @@ public final class PanelController {
     public let keyboard = PanelKeyboard()
     public private(set) var folder: String?
     @ObservationIgnored private var terminal: Int?
-    @ObservationIgnored private var root: String?
-    @ObservationIgnored private var roots: [String: String] = [:]
+    /// The repository root of `folder`, once git has said; git's paths are relative to it.
+    private var root: String?
+    @ObservationIgnored private(set) var roots: [String: String] = [:]
     @ObservationIgnored private let git: any GitBackend
     /// A fixed clock (Unix seconds) for screenshots and tests; nil follows the real one.
     public var now: Int?
@@ -54,17 +55,36 @@ public final class PanelController {
         }
     }
 
+    /// Whether the window can be seen: the git tabs' own reads wait while it cannot (`GitBackend.setSeen`).
+    public func windowSeen(_ seen: Bool) { git.setSeen(seen) }
+
+    /// The folder every path the git tabs hand out (Copy Path, Open, Reveal, a submodule's terminal, the diff's open icons) is
+    /// joined to: the repository's root, as git's paths are relative to it and not to the terminal's folder; the folder
+    /// itself until git has answered or outside a repository.
+    public var repoRoot: String? { root ?? folder }
+
     /// The terminal's folder changed (it `cd`ed, or another terminal was selected): every tab follows it.
     /// `terminal` is the selected terminal's id: what a tab keeps per terminal waits under it. `root` is the folder's
     /// repository root, else the folder: the band's folder, which the Files tree and the project's colour are of.
     private func settle(folder: String?, terminal: Int?, root: String?) {
         guard folder != self.folder || terminal != self.terminal || root != self.root else { return }
         (self.folder, self.terminal, self.root) = (folder, terminal, root)
+        changes.root = root ?? folder
         changes.follow(folder, terminal: terminal)
         history.follow(folder, terminal: terminal)
         files.follow(root ?? folder, terminal: terminal)
         project.follow(folder, band: root ?? folder)
         worktrees.follow(folder)
+    }
+
+    /// The window's terminals now. What a tab kept for a terminal that is gone (closed, or moved to another window) is
+    /// dropped, as the GPUI app's features do in `closed` and `left`, and so is each folder's root no terminal is in
+    /// any more (`folders`: the terminals' folders), which the Project tab's colour and Create are for.
+    public func keep(terminals: Set<Int>, folders: Set<String>) {
+        changes.keep(terminals: terminals)
+        history.keep(terminals: terminals)
+        files.keep(terminals: terminals)
+        roots = roots.filter { folders.contains($0.key) }
     }
 
     /// The selected terminal and its folder. The band's folder is asked of git once per folder and remembered, so
@@ -80,6 +100,14 @@ public final class PanelController {
     }
 
     
+    /// A Changes submodule row's "Open a terminal in …" button, as the row presses it (`SubmoduleRowView.enter`, with the root
+    /// and host the panel gives its rows). False when the list has no such row or the row has no button.
+    public func enterSubmodule(_ path: String) -> Bool {
+        guard let file = changes.files.first(where: { $0.path == path }), let enter = SubmoduleRowView.enter(file, root: repoRoot, host: host) else { return false }
+        enter()
+        return true
+    }
+
     /// File History: the log limited to the commits that touched these paths.
     public func showFileHistory(_ paths: [String]) {
         history.filter(by: paths)

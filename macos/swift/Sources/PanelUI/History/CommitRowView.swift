@@ -13,28 +13,32 @@ struct CommitRowView: View {
     let expanded: Bool
     let action: () -> Void
     @Environment(\.tokens) private var tokens
+    @Environment(\.panelMotion) private var motion
 
     var body: some View {
         PanelRow(selected: expanded, action: action) { _ in
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: PanelMetrics.gap) {
                     PanelIcon("chevron.right", size: 12).foregroundStyle(muted)
-                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: Metric.lead, height: Metric.lead)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                        // Turned with the fold the list plays; under Reduce Motion it swaps at once, as GPUI's chevron does.
+                        .motionTurn(motion.turn, value: expanded)
+                        .frame(width: Metric.lead, height: Metric.lead)
                     Text(commit.subject)
-                        .font(TextRole.body.font.weight(expanded ? .semibold : .regular))
+                        .font(tokens.font(.body).weight(expanded ? .semibold : .regular))
                         .foregroundStyle(expanded ? tokens.sidebarRowSelectedText : tokens.textPrimary)
                         .lineLimit(1).truncationMode(.tail)
                 }
                 .frame(height: PanelMetrics.nameLine)
                 HStack(spacing: PanelMetrics.gap) {
-                    Text(commit.short).font(.system(size: TextRole.caption.size, design: .monospaced))
+                    Text(commit.short).font(.system(size: tokens.size(.caption), design: .monospaced))
                         .foregroundStyle(expanded ? tokens.sidebarRowSelectedText : tokens.primary)
                     if commit.merge { Text(panelText("history-merge", "merge")) }
                     Text(commit.author).lineLimit(1)
                     Spacer(minLength: 0)
                     Text(Age.text(seconds: now - commit.time)).monospacedDigit()
                 }
-                .font(TextRole.caption.font).foregroundStyle(muted)
+                .font(tokens.font(.caption)).foregroundStyle(muted)
                 .frame(height: PanelMetrics.metaLine)
                 .padding(.leading, Metric.lead + PanelMetrics.gap)
             }
@@ -42,6 +46,7 @@ struct CommitRowView: View {
             .frame(height: Metric.rowTwoLine)
         }
         .marked("commit.row")
+        .panelRowFrame("commit:\(commit.id)")
         .help(commit.subject)
         .accessibilityLabel("\(commit.subject), \(commit.short), \(commit.author)")
         .accessibilityValue(expanded ? panelText("panel-spoken-open", "open") : panelText("panel-spoken-folded", "folded"))

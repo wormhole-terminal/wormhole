@@ -5,6 +5,18 @@
 import Observation
 import PanelModel
 
+/// The rows of a diff in both layouts and the digits its gutter needs: cut once, off the main actor, when the diff is
+/// read (`diff/rows.rs`), so drawing and every sideways scroll step only pick a list.
+public struct DiffBuilt: Sendable {
+    public let unified: [DiffRow]
+    public let split: [DiffRow]
+    public let digits: Int
+
+    init(_ diff: DiffFile) {
+        (unified, split, digits) = (DiffRows.unified(diff), DiffRows.split(diff), DiffRows.numberDigits(diff))
+    }
+}
+
 @MainActor @Observable
 public final class DiffSession {
     public enum Phase: Equatable { case idle, loading, shown(DiffFile?), failed(String) }
@@ -29,6 +41,10 @@ public final class DiffSession {
         set { preferences.diffWrap = newValue }
     }
     public let preferences: PanelPreferences
+    /// What the diff view last laid out: two columns or one (split only where `split` asks and there is room and lines),
+    /// and whether it had room for the switch. The view's own decision, for the control folder's `diff-drawn`; nothing reads
+    /// it to draw.
+    @ObservationIgnored public internal(set) var drawn: (split: Bool, fits: Bool)?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var reload: (@Sendable (Bool) async throws -> DiffFile)?
     @ObservationIgnored private let highlighter: any SyntaxHighlighting
@@ -36,9 +52,19 @@ public final class DiffSession {
     public init(highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
         self.highlighter = highlighter
         self.preferences = preferences
+        preferences.tabObservers.append { [weak self] in self?.retab() }
+    }
+
+    /// `tab_width` changed: the widest line is measured again, so the sideways extent follows the tabs the rows draw.
+    private func retab() {
+        guard case .shown(let shown) = phase, var diff = shown else { return }
+        diff.widest = DiffRows.widest(diff, tabWidth: preferences.tabWidth)
+        phase = .shown(diff)
     }
 
     public var parsed: DiffFile? { if case let .shown(diff) = phase { diff } else { nil } }
+    /// The rows of `parsed`, made with it.
+    public private(set) var built: DiffBuilt?
 
     /// `fetch(loadAnyway)` reads the diff; a patch core would not load unasked is read again with true ("Load diff").
     public func open(_ file: ChangedFile, stamp: String? = nil, fetch: @escaping @Sendable (_ loadAnyway: Bool) async throws -> DiffFile) {
@@ -74,13 +100,14 @@ public final class DiffSession {
         task = Task { [weak self] in
             do {
                 let fetched = try await fetch(loadAnyway)
-                let diff = await Task.detached(priority: .userInitiated) { () -> DiffFile in
+                let (diff, rows) = await Task.detached(priority: .userInitiated) { () -> (DiffFile, DiffBuilt) in
                     var colored = fetched
                     DiffHighlighting.apply(to: &colored, with: highlighter)
                     colored.widest = DiffRows.widest(colored, tabWidth: tabWidth)
-                    return colored
+                    return (colored, DiffBuilt(colored))
                 }.value
                 guard !Task.isCancelled else { return }
+                self?.built = rows
                 self?.phase = .shown(diff)
                 self?.refreshError = nil
             } catch {
@@ -95,6 +122,6 @@ public final class DiffSession {
         task?.cancel()
         reload = nil
         file = nil
-        (phase, gone, refreshError, stamp) = (.idle, false, nil, nil)
+        (phase, gone, refreshError, stamp, built) = (.idle, false, nil, nil, nil)
     }
 }

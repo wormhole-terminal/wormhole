@@ -15,13 +15,14 @@ struct LineCounts: View {
             Text(verbatim: "+" + String(added)).foregroundStyle(tokens.diffAdded)
             if removed > 0 { Text(verbatim: "\u{2212}" + String(removed)).foregroundStyle(tokens.diffRemoved) }
         }
-        .font(TextRole.caption.font.monospacedDigit())
+        .font(tokens.font(.caption).monospacedDigit())
         .fixedSize()
     }
 }
 
 /// What a file row says of its lines, right before the kind letter: counts, "bin", "LFS" or a submodule's words.
 struct FileLinesLabel: View {
+    @Environment(\.tokens) private var tokens
     let lines: ChangedFile.Lines
     let muted: Color
 
@@ -31,10 +32,11 @@ struct FileLinesLabel: View {
         case .binary: word(panelText("changes-badge-binary", "bin"))
         case .lfs: word("LFS") // text: Git LFS, a product name
         case let .submodule(words): word(words)
+        case .folder: EmptyView()
         }
     }
 
     private func word(_ text: String) -> some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(muted).fixedSize()
+        Text(text).font(tokens.font(.caption)).foregroundStyle(muted).fixedSize()
     }
 }

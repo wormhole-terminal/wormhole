@@ -23,6 +23,17 @@ public enum FilesBridge {
     @MainActor public static func installRules() {
         NoteRules.paragraphAt = { text, cursor in noteParagraphAt(text: text, cursor: UInt64(max(cursor, 0))) }
         NoteRules.title = { noteTitle(text: $0) }
+        NoteRules.body = { noteBody(text: $0) }
+        NoteRules.cap = { lines, editing, showAll in
+            noteCap(lines: UInt64(max(lines, 0)), editing: editing, showAll: showAll).map { Int($0) }
+        }
+        NoteRules.moveBy = { key, mods in
+            switch noteItemKey(key: KeySpecRecord(mods: UInt8(truncatingIfNeeded: mods), key: key), empty: false) {
+            case .moveUp: -1
+            case .moveDown: 1
+            default: nil
+            }
+        }
         NoteRules.closeStake = { notesCloseStake(openItems: UInt64(max($0, 0))) }
         VisibleRules.line = { text, tab in
             let line = visibleLine(text: text, tabWidth: UInt32(max(tab, 1)))
@@ -31,6 +42,9 @@ public enum FilesBridge {
         GitProblem.rule = { message, history in
             let words = gitProblem(message: message, history: history)
             return GitProblem(headline: words.headline, hint: words.hint, detail: words.detail, copy: words.copy)
+        }
+        TabSpeech.tab = { name, files, steps, notes in
+            panelTabSpoken(tab: name, files: files.map { UInt32(max($0, 0)) }, openSteps: UInt32(max(steps, 0)), notes: UInt32(max(notes, 0)))
         }
         ByteSize.core = { byteSize(bytes: $0, binary: $1) }
         RepoFiles.resolver = { repoFileResolve(root: $0, relative: $1) }
@@ -58,10 +72,13 @@ public enum FilesBridge {
         let project = try ProjectService(authenticator: OwnerAuthentication(authenticator))
         // The window's own profile's trust store and switches, whatever profile Wormhole is in (`hub_of(profile)`).
         _ = project.followProfile(profile: profile)
+        let files = RustFilesBackend(service: try FilesService())
+        // Its pins too are the window's own profile's (`features/files/pins.rs`).
+        files.followProfile(profile)
         return try PanelBackends(
-            files: RustFilesBackend(service: try FilesService()),
+            files: files,
             project: RustProjectBackend(service: project, effects: effects, biometricsAvailable: authenticator.biometricsAvailable()),
-            usage: usage ?? Self.makeUsage(),
+            usage: try usage?.bound(to: profile) ?? Self.makeUsage().bound(to: profile),
             notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))
     }
 }

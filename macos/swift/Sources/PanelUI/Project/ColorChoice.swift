@@ -2,7 +2,8 @@
 // square in the small corners filled with the colour and outlined with the hairline so a pale colour on a pale surface
 // still has an edge, with a `text.primary` ring round it (a gap inside) when it is the chosen one. None is an empty
 // outline with a slash. Where the colour can't be changed the choices don't light up and are dimmed, all but the chosen
-// one, which keeps its colour so it still reads.
+// one, which keeps its colour so it still reads. The keyboard's place is the shared ring (`focus_outline`); VoiceOver hears
+// the row's radio group (`FolderColorCard`).
 
 import AppKit
 import DesignSystem
@@ -15,6 +16,7 @@ struct ColorChoice: View {
     let enabled: Bool
     let action: () -> Void
     @State private var hovering = false
+    @FocusState private var focused: Bool
     @Environment(\.tokens) private var tokens
 
     static let dot: CGFloat = 16
@@ -38,9 +40,11 @@ struct ColorChoice: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain).disabled(!enabled).onHover { hovering = $0 }
+        .focused($focused)
+        .focusEffectDisabled()
+        .keyboardFocusRing(focused, radius: tokens.metrics.radius)
         .help(name)
         .accessibilityLabel(name)
-        .accessibilityAddTraits(chosen ? .isSelected : [])
     }
 
     @ViewBuilder private var swatch: some View {

@@ -30,6 +30,11 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
         return await offMain { service.worktreeSetup(repo: repo) }
     }
 
+    public func problem() async -> String? {
+        let service = service
+        return await offMain { service.problem() }
+    }
+
     public func project(at folder: String) async -> ProjectState? {
         let service = service
         return await offMain { service.project(folder: folder).map(ProjectState.init) }
@@ -86,6 +91,8 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
         let service = service
         await perform { try service.runAction(root: root, id: id) }
     }
+
+    public func actionID(forKey glyphs: String, at root: String) -> String? { service.actionForKey(root: root, glyphs: glyphs) }
 
     public func send(prompt id: String, at root: String) async {
         let service = service

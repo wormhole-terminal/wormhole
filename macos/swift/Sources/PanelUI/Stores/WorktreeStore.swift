@@ -10,7 +10,17 @@ import PanelModel
 public final class WorktreeStore {
     public private(set) var folder: String?
     /// The new-worktree sheet is up.
-    public var asking = false { didSet { if !asking { askedFolder = nil } } }
+    public var asking = false {
+        didSet {
+            if !asking { (askedFolder, askedCommand) = (nil, nil) }
+            if asking != oldValue { sheetChanged(asking) }
+        }
+    }
+    /// The sheet came up or went away: the window tells the control line, which answers a second `--worktree` request Failed
+    /// while one is up.
+    @ObservationIgnored public var sheetChanged: (Bool) -> Void = { _ in }
+    /// What `--command` asked to run in the terminal that opens, after the project's setup.
+    @ObservationIgnored private var askedCommand: String?
     /// The repository a command-line request named, for as long as its sheet is up; else the terminal's folder.
     @ObservationIgnored private var askedFolder: String?
     public var branch = "" { didSet { if branch != oldValue { replan() } } }
@@ -55,7 +65,9 @@ public final class WorktreeStore {
 
     /// The sheet's footnote under the branch field: the folder it would make, or why it can't.
     public var footnote: String? {
-        switch plan {
+        // A refusal at Create (trust revoked while the sheet was up) is said here, the sheet staying up.
+        if let error { return error }
+        return switch plan {
         case let .ready(_, folder): panelText("worktree-folder", ["folder": .text(shown(folder))], "Folder: \(shown(folder))")
         case let .refused(why): why
         case nil: panelText("worktree-folder-pending", "Folder: <branch>")
@@ -66,27 +78,32 @@ public final class WorktreeStore {
     public var canCreate: Bool { !branch.isEmpty && !busy }
 
     /// The repository's name, which the sheet's description names.
-    public var repositoryName: String { repository.map { ($0 as NSString).lastPathComponent } ?? panelText("worktree-this-repository", "the repository") }
+    public var repositoryName: String { repository.map { (DiskName.shown($0) as NSString).lastPathComponent } ?? panelText("worktree-this-repository", "the repository") }
 
-    /// A path with the home folder as `~`.
-    private func shown(_ path: String) -> String {
+    /// A path with the home folder as `~`, a name that is not text with U+FFFD for its bytes (the core hands it as a key).
+    private func shown(_ key: String) -> String {
+        let path = DiskName.shown(key)
         guard let home = host?.homeFolder, path == home || path.hasPrefix(home + "/") else { return path }
         return "~" + path.dropFirst(home.count)
     }
 
     /// The sheet, empty or with `branch` filled in, for the terminal's folder or for `repo` (`wh new-terminal
     /// --worktree <branch>` names the folder it was run for). The backend may refuse (an untrusted project): that is said, not asked.
-    public func ask(branch preset: String = "", in repo: String? = nil) {
+    public func ask(branch preset: String = "", in repo: String? = nil, command: String? = nil) {
         guard let target = repo ?? folder else { return }
+        // A sheet already up is not reset by a second request (the control line answered that one Failed).
+        guard !asking else { return }
         // Before the branch, which plans for the folder it finds.
         askedFolder = repo
+        askedCommand = command
         plan = nil
         error = nil
         branch = ""
         branch = preset
         Task {
             if let problem = await backend.problem(making: target) {
-                askedFolder = nil
+                (askedFolder, askedCommand) = (nil, nil)
+                sheetChanged(false)
                 alert = Alert(title: panelText("worktree-refused-title", "Can\u{2019}t make a worktree here"), message: problem)
             } else {
                 asking = true
@@ -112,8 +129,14 @@ public final class WorktreeStore {
         // A refused branch says why under the field; nothing is asked of git.
         if case .refused = plan { return }
         busy = true
+        let (typed, command) = (branch, askedCommand)
         Task {
-            let failure = await backend.create(branch: branch, repo: folder)
+            // Trust may have been revoked while the sheet was up: asked again, and a refusal keeps the sheet up with its reason.
+            if let why = await backend.problem(making: folder) {
+                busy = false
+                return error = why
+            }
+            let failure = await backend.create(branch: typed, repo: folder, command: command)
             busy = false
             asking = false
             if let failure { alert = Alert(title: panelText("worktree-create-failed", "Couldn\u{2019}t create the worktree"), message: failure) }

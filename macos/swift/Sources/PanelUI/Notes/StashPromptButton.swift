@@ -23,7 +23,7 @@ public struct StashPromptButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain).onHover { hovering = $0 }
-        .help(panelText("notes-stash-prompt", "Stash prompt into a new note"))
+        .help(controller.host.keyed(panelText("notes-stash-prompt", "Stash prompt into a new note"), action: "stashPrompt"))
         .accessibilityLabel(panelText("notes-stash-prompt", "Stash prompt into a new note"))
     }
 }

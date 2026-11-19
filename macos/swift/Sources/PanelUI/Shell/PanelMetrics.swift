@@ -29,9 +29,8 @@ enum PanelMetrics {
     /// The checkbox of a next step, and its mark (`style/checkbox.rs`).
     static let checkbox: CGFloat = 14
     static let checkMark: CGFloat = 10
-    /// A note's text lines: 14 pt on 20, and how many an open note shows before it fades (`NOTE_OPEN_MAX_LINES`).
+    /// A note's text lines: 14 pt on 20. How many an open note shows before it fades is the core's (`note_cap`).
     static let noteLine: CGFloat = 20
-    static let noteMaxLines = 12
     /// What 14 pt text needs between lines to sit on the 20 pt line.
     static let noteLineGap: CGFloat = 3
     /// A two-line commit row's lines (`NAME_LINE`, `META_LINE`) and the pad above and below.

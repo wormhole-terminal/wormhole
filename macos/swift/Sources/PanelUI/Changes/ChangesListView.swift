@@ -46,11 +46,15 @@ struct ChangesListView: View {
     private func head(group: ChangeGroup, count: Int, folded: Bool, first: Bool) -> some View {
         CardBand(
             title: group.title, folded: count > 0 ? folded : nil, count: count > 0 ? CountText.grouped(count) : nil,
-            spoken: panelText("changes-group-spoken", ["group": .text(group.title), "count": .whole(count)], "\(group.title), \(count) \(count == 1 ? "file" : "files")"),
+            spoken: panelText("changes-group-spoken", ["group": .text(group.title), "count": .whole(count)], "\(group.title), \(count == 0 ? "no files" : "\(count) \(count == 1 ? "file" : "files")")"),
             onToggle: { store.layout.folds[group] = !folded }
         ) {
             if first {
-                RevPicker(prefix: panelText("changes-compare-versus", "vs"), selected: store.compare, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.setCompare) // text: HEAD is git's name for the current commit
+                RevPicker(prefix: panelText("changes-compare-versus", "vs"), selected: store.compare, revs: store.revs, headTitle: "HEAD", // text: HEAD is git's name for the current commit
+                    headOption: panelText("picker-head-compare", "HEAD (uncommitted changes)"),
+                    hint: panelText("picker-compare-hint", "Changes since this branch split off from it"), loading: store.revsLoading,
+                    scope: store.terminal, load: store.loadRevs, pick: store.setCompare,
+                    requested: store.pickerRequested, answered: { store.pickerFor = nil })
                 ViewOptionsMenu(layout: $store.layout)
                 BandButton(symbol: "arrow.clockwise", label: panelText("changes-refresh", "Refresh"), action: store.refresh)
             }
@@ -76,7 +80,7 @@ struct ChangesListView: View {
         case let .directory(_, path, label, depth, collapsed):
             FolderRowView(label: label, path: path, depth: depth, collapsed: collapsed) { store.toggle(row) }
         case let .foldNote(text):
-            Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            Text(text).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .band, .spacer: EmptyView()

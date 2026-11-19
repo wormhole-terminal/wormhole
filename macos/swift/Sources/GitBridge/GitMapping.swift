@@ -107,11 +107,14 @@ public struct GitRepoState: Sendable, Equatable {
     public var behind: Int
     /// The compared branch no longer exists: the files are against HEAD and the panel says so.
     public var compareMissing: String?
+    /// The commit the list is against: HEAD, or the merge-base with the compared branch.
+    public var baseRev: String
 
     init(_ status: GitStatus) {
         files = status.files.map(ChangedFile.init)
         (branch, dirty, upstream) = (status.branch, status.dirty, status.upstream)
         (ahead, behind) = (Int(status.ahead), Int(status.behind))
         compareMissing = status.compareMissing
+        baseRev = status.baseRev
     }
 }
