@@ -225,7 +225,7 @@ final class Instance {
 
     /// Runs the commands in order in the window's control file (`cmd`, or `cmd<n>` for the n-th window); the answer to each, in the same order.
     @discardableResult
-    func send(_ commands: [String], window: Int? = nil, timeout: TimeInterval = 30) async -> [String] {
+    func send(_ commands: [String], window: Int? = nil, timeout: TimeInterval = 30, awaitingWindow: Bool = false) async -> [String] {
         batches += 1
         let token = "e2e\(batches)"
         let files = FileManager.default
@@ -257,6 +257,10 @@ final class Instance {
             }
         }
         answers.append(current.joined(separator: "\n"))
+        // A command file for a window that is not in sight: the scenario counted wrong, and nothing it reads next is of the
+        // window it means.
+        // (`until` asks again instead: the window may be on its way; its error is no answer and satisfies nothing.)
+        if !awaitingWindow, let wrong = answers.first(where: { $0.hasPrefix("error: no window ") }) { fail("`\(commands.joined(separator: "; "))` went to window \(window ?? 0): \(wrong)") }
         return Array(answers.prefix(commands.count)) + Array(repeating: "", count: max(0, commands.count - answers.count))
     }
 
@@ -269,8 +273,8 @@ final class Instance {
         let start = Date()
         var answer = ""
         repeat {
-            answer = (await send([command, "delay 150"], window: window)).first ?? ""
-            if done(answer) { return answer }
+            answer = (await send([command, "delay 150"], window: window, awaitingWindow: true)).first ?? ""
+            if !answer.hasPrefix("error: no window "), done(answer) { return answer }
         } while Date().timeIntervalSince(start) < timeout && !ended.isDone
         fail("timed out waiting on `\(command)`; the last answer was:\n\(answer)")
         return answer

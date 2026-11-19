@@ -128,7 +128,8 @@ extension AppController {
             let hosts = session.hub.state.live.map { id in
                 "\(id):\(store.hosting(of: id).map { String(describing: $0) } ?? "off")\(store.hostProblem(of: id).map { " problem=\($0)" } ?? "")"
             }.joined(separator: ", ")
-            return "window=\(session.id) profile=\(session.windows.profile) visible=\(session.window?.isVisible ?? false) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
+            // `visible` is "in sight" as `cmd<n>` counts it (not parked), so a number read from these lines is the file's.
+            return "window=\(session.id) profile=\(session.windows.profile) visible=\(!session.parked) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
     }
 

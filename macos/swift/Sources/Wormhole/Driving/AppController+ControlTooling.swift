@@ -13,6 +13,13 @@ extension AppController {
         // A line of `cmd<n>` is for the n-th window: it acts on that one and answers in `out<n>.txt`, keys included.
         commandWindow = number
         defer { commandWindow = nil }
+        // A number no window in sight has is an error in that file's answer, never the window in front: a scenario about
+        // "the other window" must not be answered by the wrong one.
+        // (`sync` is a batch's own mark and `delay` its pause, the same whatever the window, so the batch still ends.)
+        if let number, !shown.indices.contains(number - 1), !line.hasPrefix("sync "), !line.hasPrefix("delay ") {
+            reply("error: no window \(number) (\(shown.count) in sight)")
+            return
+        }
         let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
         let command = parts.first ?? "", argument = parts.count > 1 ? parts[1] : ""
         window?.contentView?.layoutSubtreeIfNeeded()
