@@ -4,7 +4,9 @@
 //! (`ProjectPrefs`, `TrustStore`, `FeatureStanding`); the sentences are the GPUI page's
 //! (`settings_window/sections/projects.rs`), written once here.
 
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use wormhole_core::platform::paths;
 use wormhole_core::project::{
@@ -78,9 +80,11 @@ fn short(path: &Path) -> String {
     }
 }
 
+/// `root` is handed back to name the project (`project_page`, `revoke`): a key of `names` where it is not text, so a
+/// revoke from the page takes back the very project's approval, not one of a folder its name as text happens to name.
 fn choice(root: &Path) -> ProjectChoiceRecord {
     ProjectChoiceRecord {
-        root: root.to_string_lossy().into_owned(),
+        root: crate::files_panel::names::path_key(root),
         name: root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
         detail: short(root),
     }
@@ -130,6 +134,7 @@ impl ProjectService {
     /// A switch for each feature: whether projects use it unless they say otherwise.
     pub fn project_defaults(&self) -> Vec<ProjectDefaultRecord> {
         let hub = self.lock();
+        let prefs = hub.prefs();
         Feature::ALL
             .into_iter()
             .map(|feature| ProjectDefaultRecord {
@@ -140,17 +145,14 @@ impl ProjectService {
                 } else {
                     feature.description().to_string()
                 },
-                on: hub.prefs.default_enabled(feature),
+                on: prefs.default_enabled(feature),
             })
             .collect()
     }
 
     pub fn set_project_default(&self, feature: String, on: bool) -> Result<(), ProjectFailure> {
         let feature = Feature::from_key(&feature).ok_or_else(|| ProjectFailure::not_found(feature))?;
-        let mut hub = self.lock();
-        hub.prefs.set_default(feature, on);
-        hub.save();
-        drop(hub);
+        self.lock().change_prefs(|prefs| prefs.set_default(feature, on));
         self.changed();
         Ok(())
     }
@@ -159,17 +161,26 @@ impl ProjectService {
     pub fn clear_feature_choice(&self, root: String, feature: String) -> Result<(), ProjectFailure> {
         let feature = Feature::from_key(&feature).ok_or_else(|| ProjectFailure::not_found(feature))?;
         let folder = open(&root).ok_or_else(|| ProjectFailure::not_found(root))?;
-        let mut hub = self.lock();
-        hub.prefs.clear_override(&folder.root, feature);
-        hub.save();
-        drop(hub);
+        self.lock().change_prefs(|prefs| prefs.clear_override(&folder.root, feature));
         self.changed();
         Ok(())
     }
 
     /// The projects the person trusts, whether or not they are open anywhere.
+    /// Read from the file as it is now: a project may have been trusted or revoked elsewhere (`watch_trust`).
     pub fn trusted_projects(&self) -> Vec<ProjectChoiceRecord> {
-        self.lock().trust.list().into_iter().map(|trusted| choice(&trusted.root)).collect()
+        let hub = self.lock();
+        hub.trust().list().into_iter().map(|trusted| choice(&trusted.root)).collect()
+    }
+
+    /// Calls `listener` once whenever the profile's approvals change on disk, until the returned watch is let go: the
+    /// Project folders page hears a trust given or taken back in another window or by the command line.
+    pub fn watch_trust(
+        &self,
+        listener: Arc<dyn crate::settings::ProjectListener>,
+    ) -> Arc<crate::settings::ProjectWatch> {
+        let dir = self.lock().dir().to_path_buf();
+        crate::settings::project_watch::watch_approvals(&dir, listener)
     }
 
     /// The projects worth offering: the project of each of `folders` (the open terminals' and the recent ones),
@@ -177,10 +188,12 @@ impl ProjectService {
     pub fn known_projects(&self, folders: Vec<String>) -> Vec<ProjectChoiceRecord> {
         let mut roots: Vec<PathBuf> = Vec::new();
         let trusted: Vec<PathBuf> =
-            self.lock().trust.list().into_iter().map(|trusted| trusted.root.clone()).collect();
+            self.lock().trust().list().into_iter().map(|trusted| trusted.root.clone()).collect();
         let candidates = folders
             .iter()
-            .filter_map(|folder| find_project(Path::new(folder)).map(|found| found.root))
+            .filter_map(|folder| {
+                find_project(&crate::files_panel::names::folder(folder)).map(|found| found.root)
+            })
             .chain(trusted);
         for root in candidates {
             if !roots.contains(&root) && ProjectFolder::open(&root).is_some() {
@@ -195,24 +208,25 @@ impl ProjectService {
         let folder = open(&root)?;
         let mut hub = self.lock();
         let snapshot = hub.snapshot(&folder);
-        let status = hub.trust.status_of(&snapshot);
+        let status = hub.trust().status_of(&snapshot);
         let request = snapshot.trust_request();
         let has_commands = request.as_ref().is_some_and(|r| !r.commands.is_empty());
         let needing = snapshot.needing_trust();
+        let prefs = hub.prefs();
         let features = Feature::ALL
             .into_iter()
             .map(|feature| {
                 let standing = snapshot.standing(feature, status);
                 // Notes: with no notes.md nothing syncs unless the person switches it on, so "Default (on)"
                 // would say what does not happen.
-                let default_on = hub.prefs.default_enabled(feature)
-                    && (feature != Feature::Notes || snapshot.has(feature));
+                let default_on =
+                    prefs.default_enabled(feature) && (feature != Feature::Notes || snapshot.has(feature));
                 ProjectFeatureRowRecord {
                     key: feature.key().to_string(),
                     label: feature.label().to_string(),
                     description: feature_description(feature, standing),
                     faint: standing == FeatureStanding::Missing && feature != Feature::Notes,
-                    choice: hub.prefs.project_override(&folder.root, feature),
+                    choice: prefs.project_override(&folder.root, feature),
                     default_on,
                 }
             })
@@ -223,7 +237,7 @@ impl ProjectService {
             TrustStatus::Untrusted => SETTINGS_PROJECTS_NOT_TRUSTED,
         };
         Some(ProjectPageRecord {
-            root: folder.root.to_string_lossy().into_owned(),
+            root: crate::files_panel::names::path_key(&folder.root),
             status: status.into(),
             status_word: text(status_word).to_string(),
             detail: trust_detail(status, has_commands, &needing),
@@ -237,6 +251,13 @@ impl ProjectService {
             approving: hub.approving,
             dir_name: dir_name_at(&folder.root),
         })
+    }
+
+    /// The project's own folder (`.wormhole`, or an older project's `.andromeda`) as the bytes of its path, for "Show
+    /// .wormhole in Finder": the page holds the root as a key of `names` where its name is not text, which Swift turns
+    /// into no file URL of its own. `None` when the folder has no project anymore.
+    pub fn project_dir_bytes(&self, root: String) -> Option<Vec<u8>> {
+        open(&root).map(|folder| folder.dir.as_os_str().as_bytes().to_vec())
     }
 
     /// "<folder> has no .wormhole folder anymore", for a project the page was showing that lost it.
@@ -290,5 +311,31 @@ mod tests {
 
         std::fs::remove_dir_all(project.path().join(".wormhole")).expect("gone");
         assert!(service.project_page(root).is_none());
+    }
+
+    /// "Show .wormhole in Finder" for a project whose folder's name is not text: the page's root is a key, and the folder
+    /// comes back as the very bytes of its path; a key that does not read back names no folder.
+    #[test]
+    fn the_project_folder_of_a_root_whose_name_is_not_text_comes_back_as_its_bytes() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::{OsStrExt, OsStringExt};
+
+        let data = tempfile::tempdir().expect("data");
+        let scratch = tempfile::tempdir().expect("scratch");
+        let base = std::fs::canonicalize(scratch.path()).expect("canonical");
+        let mut name = base.as_os_str().as_bytes().to_vec();
+        name.extend_from_slice(b"/caf\xe9");
+        let root = std::path::PathBuf::from(OsString::from_vec(name));
+        let service = ProjectService::in_dir(data.path(), Arc::new(Never));
+        assert_eq!(service.project_dir_bytes("/tmp/caf\0zz".into()), None, "a key cut short names no folder");
+        // A volume that refuses such a name (APFS does) has nothing more to show; exFAT, FAT and SMB allow it.
+        if std::fs::create_dir_all(root.join(".wormhole")).is_err() {
+            return;
+        }
+        let key = crate::files_panel::names::path_key(&root);
+        let page = service.project_page(key.clone()).expect("the page reads the key");
+        assert_eq!(page.root, key);
+        let bytes = service.project_dir_bytes(key).expect("its folder");
+        assert_eq!(bytes, root.join(".wormhole").as_os_str().as_bytes());
     }
 }

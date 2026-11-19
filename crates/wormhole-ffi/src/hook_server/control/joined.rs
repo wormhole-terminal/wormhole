@@ -12,7 +12,7 @@ use wormhole_core::workspace::{Action, Event};
 use crate::workspace::Shared;
 
 /// The side of the target's pane a new terminal goes, as a drop zone.
-fn zone_of(side: Side) -> Zone {
+pub(super) fn zone_of(side: Side) -> Zone {
     match side {
         Side::Right => Zone::Right,
         Side::Down => Zone::Bottom,

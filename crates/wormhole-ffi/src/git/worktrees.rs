@@ -9,11 +9,14 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use wormhole_core::git::worktree::{self, Worktree, Worktrees};
 use wormhole_core::git::{find_root, worktree_of};
+use wormhole_core::storage::paths::ProfilePaths;
 use wormhole_core::storage::store::Store;
 
 use super::error::GitBackendError;
+use crate::files_panel::names;
 
-/// A worktree Wormhole made: of which repository (its main working tree), on which branch, where.
+/// A worktree Wormhole made: of which repository (its main working tree), on which branch, where. The folders are keys of
+/// `names` where they are not text (`DiskName` draws them), so they are handed back as the very folders.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct GitWorktree {
     pub repo: String,
@@ -32,9 +35,9 @@ pub struct GitEnvVar {
 impl GitWorktree {
     fn of(made: &Worktree) -> Self {
         Self {
-            repo: made.repo.to_string_lossy().into_owned(),
+            repo: names::path_key(&made.repo),
             branch: made.branch.clone(),
-            folder: made.folder.to_string_lossy().into_owned(),
+            folder: names::path_key(&made.folder),
             env: made.env().into_iter().map(|(name, value)| GitEnvVar { name: name.into(), value }).collect(),
         }
     }
@@ -53,8 +56,9 @@ struct State {
     /// `worktree_base` of the settings: where worktrees go instead of beside the repository.
     base: Option<PathBuf>,
     clone_build_folders: bool,
-    /// What the store holds under `worktree::STORE_KEY`, read once and written through.
-    made: Option<Worktrees>,
+    /// The folder of the window's own profile, whose database remembers the worktrees (and so the ports); `None`
+    /// until a window says (the data folder's default).
+    profile: Option<PathBuf>,
 }
 
 #[derive(uniffi::Object)]
@@ -68,7 +72,7 @@ impl WorktreeService {
     #[uniffi::constructor]
     pub fn new(base: Option<String>, clone_build_folders: bool) -> Result<Arc<Self>, GitBackendError> {
         crate::isolation::require()?;
-        let state = State { base: base_of(base), clone_build_folders, made: None };
+        let state = State { base: base_of(base), clone_build_folders, profile: None };
         Ok(Arc::new(Self { state: Mutex::new(state) }))
     }
 
@@ -77,6 +81,23 @@ impl WorktreeService {
         let mut state = self.state();
         state.base = base_of(base);
         state.clone_build_folders = clone_build_folders;
+    }
+
+    /// The window moved to profile `profile` (or opened in it): the worktrees are that profile's from here on, as the GPUI
+    /// app keeps them per profile. False (nothing changes) for a profile that is not in `profiles.json`.
+    pub fn follow_profile(&self, profile: String) -> bool {
+        let Some(dir) = crate::profile::dir_of(&profile) else { return false };
+        let mut state = self.state();
+        if state.profile.as_deref() != Some(dir.as_path()) {
+            state.profile = Some(dir);
+        }
+        true
+    }
+
+    /// The repository a worktree of `folder` is of: its main working tree (a terminal in a linked worktree makes
+    /// siblings of the same repository), and the folder whose project decides trust. `None` outside a repository.
+    pub fn repository(&self, folder: String) -> Option<String> {
+        repo_of(&folder).ok().map(|repo| names::path_key(&repo))
     }
 
     /// Why a worktree can't be made of `folder`: it is in no repository. `None` when it can.
@@ -89,10 +110,7 @@ impl WorktreeService {
         let base = self.state().base.clone();
         let planned = repo_of(&folder).and_then(|repo| worktree::plan(&repo, &branch, base.as_deref()));
         match planned {
-            Ok(plan) => GitWorktreePlan::Ready {
-                branch: plan.branch,
-                folder: plan.folder.to_string_lossy().into_owned(),
-            },
+            Ok(plan) => GitWorktreePlan::Ready { branch: plan.branch, folder: names::path_key(&plan.folder) },
             Err(reason) => GitWorktreePlan::Refused { reason },
         }
     }
@@ -111,11 +129,16 @@ impl WorktreeService {
         if clone {
             made.cloned = worktree::clone_build_folders(&made.repo, &made.folder);
         }
-        let mut state = self.state();
-        let all = Self::load(&mut state);
-        made.port = all.free_ports(worktree::port_free);
-        all.record(made.clone());
-        Self::save(&state);
+        // Read, picked and written under the one lock, from what the profile's database holds now: another window of the
+        // profile may have made one since, and its record and its ports stay.
+        let profile = self.state().profile.clone();
+        made.port = update(profile.as_deref(), |all| {
+            let port = all.free_ports(worktree::port_free);
+            let mut recorded = made.clone();
+            recorded.port = port;
+            all.record(recorded);
+            (port, true)
+        });
         tracing::info!(branch = made.branch, folder = %made.folder.display(), port = ?made.port, "worktree made");
         Ok(GitWorktree::of(&made))
     }
@@ -123,45 +146,41 @@ impl WorktreeService {
     /// The worktree Wormhole made that `folder` is in (or under), if any. Worktrees whose folder is gone
     /// are forgotten first.
     pub fn made_at(&self, folder: String) -> Option<GitWorktree> {
-        let mut state = self.state();
-        let all = Self::load(&mut state);
-        if all.prune() {
-            Self::save(&state);
-        }
-        Self::load(&mut state).find(Path::new(&folder)).map(GitWorktree::of)
+        let profile = self.state().profile.clone();
+        update(profile.as_deref(), |all| {
+            let pruned = all.prune();
+            (all.find(&names::folder(&folder)).map(GitWorktree::of), pruned)
+        })
     }
 
     /// Every worktree Wormhole made and that still exists.
     pub fn list(&self) -> Vec<GitWorktree> {
-        let mut state = self.state();
-        Self::load(&mut state).iter().filter(|w| w.folder.exists()).map(GitWorktree::of).collect()
+        let profile = self.state().profile.clone();
+        update(profile.as_deref(), |all| {
+            (all.iter().filter(|w| w.folder.exists()).map(GitWorktree::of).collect(), false)
+        })
     }
 
     /// Whether the worktree at `folder` has changed or untracked files, which keep it from being removed.
     pub fn is_dirty(&self, folder: String) -> Result<bool, GitBackendError> {
-        worktree::is_dirty(Path::new(&folder)).map_err(|err| GitBackendError::of(&err))
+        worktree::is_dirty(&names::folder(&folder)).map_err(|err| GitBackendError::of(&err))
     }
 
     /// Remove the folder of a worktree Wormhole made (its branch stays). Refused for one it did not make,
     /// and by git while the folder has changes: never forced.
     pub fn remove(&self, folder: String) -> Result<(), GitBackendError> {
-        let recorded = {
-            let mut state = self.state();
-            Self::load(&mut state)
-                .find(Path::new(&folder))
-                .filter(|w| w.folder == Path::new(&folder))
-                .cloned()
-        };
+        let profile = self.state().profile.clone();
+        let recorded = update(profile.as_deref(), |all| {
+            let folder = names::folder(&folder);
+            (all.find(&folder).filter(|w| w.folder == folder).cloned(), false)
+        });
         let Some(made) = recorded else {
             return Err(GitBackendError::failed(
                 "Wormhole didn't make a worktree there, so it won't remove it",
             ));
         };
         worktree::remove(&made).map_err(|err| GitBackendError::failed(format!("{err:#}")))?;
-        let mut state = self.state();
-        if Self::load(&mut state).forget(&made.folder) {
-            Self::save(&state);
-        }
+        update(profile.as_deref(), |all| ((), all.forget(&made.folder)));
         Ok(())
     }
 }
@@ -170,39 +189,70 @@ impl WorktreeService {
     fn state(&self) -> std::sync::MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
+}
 
-    fn load(state: &mut State) -> &mut Worktrees {
-        state.made.get_or_insert_with(|| {
-            let stored = Store::open().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
-            stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default()
-        })
+/// One lock for every window's read-modify-write of the stored worktrees (the windows of a profile share its database, and
+/// no window keeps a copy that could be written back stale).
+static STORE_LOCK: Mutex<()> = Mutex::new(());
+
+/// Runs `edit` on the worktrees the profile's database holds now and writes them back when it says it changed them.
+fn update<R>(profile: Option<&Path>, edit: impl FnOnce(&mut Worktrees) -> (R, bool)) -> R {
+    let _held = STORE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+    let store = open_store(profile).map_err(|err| format!("{err:#}"));
+    let stored = store
+        .as_ref()
+        .map_err(Clone::clone)
+        .and_then(|store| store.meta(worktree::STORE_KEY).map_err(|err| format!("{err:#}")));
+    let (result, write) = edited(stored, edit);
+    if let (Some(all), Ok(store)) = (write, &store)
+        && let Err(err) = store.set_meta(worktree::STORE_KEY, &all.to_json())
+    {
+        tracing::warn!("remembering the worktrees: {err:#}");
     }
+    result
+}
 
-    fn save(state: &State) {
-        let Some(all) = &state.made else { return };
-        match Store::open() {
-            Ok(store) => {
-                if let Err(err) = store.set_meta(worktree::STORE_KEY, &all.to_json()) {
-                    tracing::warn!("remembering the worktrees: {err:#}");
-                }
-            }
-            Err(err) => tracing::warn!("remembering the worktrees: {err:#}"),
+/// `edit` run on what was read of the stored worktrees, and the list to write back: none when nothing changed, and none
+/// when the stored list could not be read. An error is not an empty list: written back, it would replace every worktree
+/// the profile remembers (their ports, what removing one may delete) with what this one edit made.
+fn edited<R>(
+    stored: Result<Option<String>, String>,
+    edit: impl FnOnce(&mut Worktrees) -> (R, bool),
+) -> (R, Option<Worktrees>) {
+    let readable = stored.as_ref().is_ok();
+    let mut all = match stored {
+        Ok(json) => json.map(|json| Worktrees::from_json(&json)).unwrap_or_default(),
+        Err(err) => {
+            tracing::warn!("reading the worktrees: {err}; nothing is written over them");
+            Worktrees::default()
         }
-    }
+    };
+    let (result, changed) = edit(&mut all);
+    (result, (changed && readable).then_some(all))
 }
 
 /// What a terminal started in `cwd` gets from the worktree Wormhole made there: its own ports (GPUI's spawn hook,
 /// `features/git/worktree/def.rs`). Read from the store as it is at the start, so every terminal of the app, local or
 /// hosted, asks the same place; nothing for a folder that is no worktree of Wormhole's.
-pub(crate) fn env_for(cwd: &Path) -> Vec<(String, String)> {
+pub(crate) fn env_for(cwd: &Path, profile: &ProfilePaths) -> Vec<(String, String)> {
     if crate::isolation::require().is_err() {
         return Vec::new();
     }
-    let stored = Store::open().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
+    // The terminal's own profile's database, where that profile's windows remember the worktrees they made.
+    let stored =
+        Store::open_for(profile).ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
     let all = stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default();
     all.find(cwd)
         .map(|made| made.env().into_iter().map(|(name, value)| (name.to_owned(), value)).collect())
         .unwrap_or_default()
+}
+
+/// The database of the profile in `dir`, the data folder's default when no window has said.
+fn open_store(dir: Option<&Path>) -> anyhow::Result<Store> {
+    match dir {
+        Some(dir) => Store::open_at(dir),
+        None => Store::open(),
+    }
 }
 
 /// `worktree_base` as a folder (`~` is the caller's to expand); empty puts worktrees beside the repository.
@@ -224,6 +274,46 @@ pub(crate) fn base_of(base: Option<String>) -> Option<PathBuf> {
 /// The repository a worktree of `folder` is of: its main working tree, so a terminal in a worktree makes
 /// its siblings of the same repository.
 fn repo_of(folder: &str) -> Result<PathBuf, String> {
-    let root = find_root(Path::new(folder)).ok_or_else(|| format!("{folder} is not in a git repository"))?;
+    let folder = names::folder(folder);
+    let root =
+        find_root(&folder).ok_or_else(|| format!("{} is not in a git repository", folder.display()))?;
     Ok(worktree_of(&root).unwrap_or(root))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use wormhole_core::git::worktree::{Worktree, Worktrees};
+
+    use super::edited;
+
+    fn made(folder: &str) -> Worktree {
+        Worktree {
+            repo: PathBuf::from("/repo"),
+            branch: folder.to_owned(),
+            folder: PathBuf::from(folder),
+            port: Some(41000),
+            cloned: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_stored_list_that_cannot_be_read_is_never_written_over() {
+        let record = |all: &mut Worktrees| {
+            all.record(made("/repo-worktrees/new"));
+            ((), true)
+        };
+        let (_, write) = edited(Err("database is locked".to_owned()), record);
+        assert!(write.is_none(), "an error is not an empty list to write back");
+
+        let mut stored = Worktrees::default();
+        stored.record(made("/repo-worktrees/old"));
+        let (_, write) = edited(Ok(Some(stored.to_json())), record);
+        let folders: Vec<PathBuf> = write.expect("written").iter().map(|w| w.folder.clone()).collect();
+        assert_eq!(folders, [PathBuf::from("/repo-worktrees/old"), PathBuf::from("/repo-worktrees/new")]);
+
+        let (_, write) = edited(Ok(None), |_| ((), false));
+        assert!(write.is_none(), "nothing changed: nothing written");
+    }
 }

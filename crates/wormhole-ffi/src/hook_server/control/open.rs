@@ -15,7 +15,7 @@ use wormhole_core::ipc::control::{
 use wormhole_core::terminal::default_terminal;
 use wormhole_core::workspace::{Action, Event, Refusal};
 
-use super::joined::open_beside;
+use super::joined::{open_beside, zone_of};
 use super::worktree;
 use super::{automation_off, not_found};
 use crate::hook_server::core::Core;
@@ -54,10 +54,10 @@ pub(super) fn new_terminal(
     if let Err(error) = launch_check(folder.as_deref(), command.as_deref()) {
         return error.into();
     }
-    // The window asked for; else the caller's own terminal's; else the first.
+    // The window asked for; else the front one (the GPUI app's rule, `cli.md`), whichever terminal the request came from.
     let target = match window {
         Some(id) => core.share_of_window(id),
-        None => from.and_then(|tab| core.owner_of(tab)).or_else(|| Some(core.shared.clone())),
+        None => Some(core.front_share()),
     };
     let Some(target) = target else {
         return Reply::error(ErrorCode::NotFound, format!("no window {}", window.unwrap_or_default()));
@@ -67,7 +67,7 @@ pub(super) fn new_terminal(
     }
     // A worktree is never made on a script's say alone: the question is put up in the window instead.
     if let Some(branch) = worktree {
-        return worktree::ask(core, folder, &branch, command);
+        return worktree::ask(core, &target, folder, &branch, command);
     }
     let opened = open(&target, Action::NewTerminal, folder);
     match opened {
@@ -146,22 +146,17 @@ pub(super) fn split(
         return error.into();
     }
     let Some(anchor) = core.find(spec.target, peer) else { return not_found(spec.target) };
+    let Some(owner) = core.owner_of(anchor) else { return not_found(spec.target) };
+    // No room is a mistake that costs nothing: said before the budget is spent.
+    if !owner.peek_model(|model| model.split_fits(anchor, zone_of(spec.direction))) {
+        return no_room(&owner, anchor, spec.direction);
+    }
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
-    let Some(owner) = core.owner_of(anchor) else { return not_found(spec.target) };
     let before = owner.peek_model(|model| model.selected());
     let Some((terminal, cwd)) = open_beside(&owner, anchor, spec.direction, spec.folder.clone()) else {
-        return Error::new(
-            ErrorCode::Refused,
-            format!(
-                "window {} has no room to split terminal {anchor} {}",
-                owner.window_id(),
-                spec.direction.word()
-            ),
-        )
-        .because(Reason::NoRoom)
-        .into();
+        return no_room(&owner, anchor, spec.direction);
     };
     // A split takes the selection in the model; the control line leaves it where it was unless asked.
     if !spec.select
@@ -173,6 +168,12 @@ pub(super) fn split(
     if let Some(command) = spec.command.clone() {
         run_first(core, terminal, command);
     }
+    // `--size`: the new pane's share of the split, held by the room as a divider's drag is; the answer is what it got.
+    let size = spec.size.and_then(|percent| {
+        let (applied, events) = owner.with_model(|model| model.set_split_share(terminal, anchor, percent));
+        owner.post(events);
+        applied
+    });
     let split = core
         .listing()
         .windows
@@ -182,7 +183,17 @@ pub(super) fn split(
         .and_then(|t| t.split)
         .unwrap_or_default();
     tracing::info!(terminal, split, ?from, "control: a terminal was split off");
-    Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size: None })
+    Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size })
+}
+
+/// The refusal of a split that would leave a pane under the minimum size.
+fn no_room(owner: &Shared, anchor: i64, side: wormhole_core::ipc::control::Side) -> Reply {
+    Error::new(
+        ErrorCode::Refused,
+        format!("window {} has no room to split terminal {anchor} {}", owner.window_id(), side.word()),
+    )
+    .because(Reason::NoRoom)
+    .into()
 }
 
 /// Do `action`, which makes a terminal: the id and folder it opened (`folder` in the place of the model's

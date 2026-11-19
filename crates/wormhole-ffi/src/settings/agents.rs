@@ -126,12 +126,18 @@ pub(crate) fn set_hooks_in(home: &Path, agent: &str, install: bool) -> Result<()
 pub(super) fn agent_home_for_writing() -> Result<PathBuf, SettingsError> {
     let home = std::env::var_os("WORMHOLE_AGENT_HOME")
         .map(PathBuf::from)
-        .filter(|home| !home.as_os_str().is_empty() && Some(home) != paths::home().as_ref());
+        .filter(|home| !home.as_os_str().is_empty() && !is_real_home(home));
     home.ok_or_else(|| SettingsError::Agents {
         reason:
             "WORMHOLE_AGENT_HOME is not set to a folder of its own: hooks are not written into the real home"
                 .into(),
     })
+}
+
+/// Whether `dir` is the real home however it is written (`<home>/../<name>`, a link to it): compared as real paths.
+fn is_real_home(dir: &Path) -> bool {
+    let real = |path: &Path| path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    paths::home().is_some_and(|home| real(&home) == real(dir))
 }
 
 /// Every agent with its hooks' state, read under `WORMHOLE_AGENT_HOME` or the home folder. Stats every

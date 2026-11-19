@@ -8,6 +8,7 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
@@ -23,6 +24,10 @@ use crate::terminal::Terminal;
 /// How long after a close the checkpoint is looked for once more: the host drops its writer before it hangs up the
 /// shell, so nothing should be left; this is for a write already under way.
 const FORGET_AGAIN_AFTER: Duration = Duration::from_secs(5);
+
+/// How long the new host has to say its first checkpoint is on disk (`checkpoint_plan.rs` `CONFIRM_WITHIN`); after
+/// that the old checkpoint stays, for the retention sweep, and a late word from the host no longer removes it.
+const CONFIRM_WITHIN: Duration = Duration::from_secs(10);
 
 /// Whether terminals of `profile` keep checkpoints: the flag, persistent terminals (checkpoints are the host's) and the
 /// profile's "restore terminal text after restart" (the screen is the same sort of thing).
@@ -71,7 +76,25 @@ impl Checkpoints {
         }
         let Some(old) = replaces else { return };
         let (dir, new, pending) = (self.dir.clone(), id.to_owned(), Arc::clone(&self.pending));
+        // Whichever comes first, the host's word or the timeout, settles it; the other then does nothing.
+        let settled = Arc::new(AtomicBool::new(false));
+        let (late, late_pending, late_old) = (Arc::clone(&settled), Arc::clone(&self.pending), old.clone());
+        let timeout =
+            std::thread::Builder::new().name("wormhole-ffi-checkpoint-confirm".into()).spawn(move || {
+                std::thread::sleep(CONFIRM_WITHIN);
+                if !late.swap(true, Ordering::AcqRel) {
+                    tracing::warn!(
+                        old = late_old,
+                        "the new host said nothing of its first checkpoint; the old one stays"
+                    );
+                    late_pending.lock().unwrap_or_else(PoisonError::into_inner).remove(&late_old);
+                }
+            });
+        drop(timeout);
         terminal.events.on_checkpoint_written(Box::new(move |_generation| {
+            if settled.swap(true, Ordering::AcqRel) {
+                return;
+            }
             if core::forget_when_confirmed(&dir, &old, &new, &key) {
                 pending.lock().unwrap_or_else(PoisonError::into_inner).remove(&old);
             } else {

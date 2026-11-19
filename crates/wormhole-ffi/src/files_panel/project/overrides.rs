@@ -3,8 +3,6 @@
 //! rule (`features/project/detect.rs`): only while the project's Settings switch is on and trust allows it
 //! (core's `enabled`, the one rule every project action passes), and only when it sets something.
 
-use std::path::Path;
-
 use wormhole_core::project::{self as proj, Feature};
 use wormhole_text::keys::settings_window_set_by_project;
 
@@ -17,6 +15,7 @@ pub struct ProjectSettingsRecord {
     pub name: String,
     /// `.wormhole` (or an older project's `.andromeda`).
     pub dir: String,
+    /// The project's folder as a key of `names` where its name is not text: what the Project folders page selects it by.
     pub root: String,
     /// What the rows it sets say under their label: "Set by <name>/<dir>/config.json while one of its terminals
     /// is in front; yours is kept", in the catalogs' words.
@@ -28,9 +27,13 @@ pub struct ProjectSettingsRecord {
 
 #[uniffi::export]
 impl ProjectService {
-    /// The project of `folder` (a terminal's) and its settings; `None` where there is no project.
+    /// The project of `folder` (a terminal's, a key of `names` where its name is not text) and its settings; `None`
+    /// where there is no project.
     pub fn settings_overrides(&self, folder: String) -> Option<ProjectSettingsRecord> {
-        let found = proj::find_project(Path::new(&folder))?;
+        if self.off() {
+            return None;
+        }
+        let found = proj::find_project(&crate::files_panel::names::folder(&folder))?;
         let mut hub = self.lock();
         let snapshot = hub.snapshot(&found);
         let settings = hub
@@ -44,7 +47,7 @@ impl ProjectService {
             note: settings_window_set_by_project(&name, &dir, "config.json"),
             name,
             dir,
-            root: found.root.to_string_lossy().into_owned(),
+            root: crate::files_panel::names::path_key(&found.root),
             json: settings.and_then(|map| serde_json::to_string(&map).ok()),
         })
     }

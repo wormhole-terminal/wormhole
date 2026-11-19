@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::agents::{AGENTS, Agent, installed};
-use wormhole_core::config::Config;
 use wormhole_core::ipc::access::agent_word;
 use wormhole_core::onboarding::{self, ONBOARDED_KEY, PlaceKind};
 use wormhole_core::platform::paths;
@@ -92,11 +91,22 @@ impl FirstRun {
         }))
     }
 
+    /// The project a picked folder belongs to, as the trust card shows it (`FirstRun::trust_root`): the folder's nearest
+    /// project, found by core's rule; `None` for a folder that is in none.
+    /// Both are keys of `files_panel::names` where a name is not text, so the trust card names the very project.
+    pub fn project_root(&self, folder: String) -> Option<String> {
+        use crate::files_panel::names;
+        wormhole_core::project::find_project(&names::folder(&folder))
+            .map(|found| names::path_key(&found.root))
+    }
+
     /// The folders the first step lists: the recent roots that exist, then Home, Desktop, Documents and
     /// Developer when there is one, under `home` (the person's, when `None`).
     pub fn places(&self, home: Option<String>, recents: Vec<String>) -> Vec<PlaceRecord> {
         let home = home.map(PathBuf::from).or_else(paths::home).unwrap_or_default();
-        let recents: Vec<PathBuf> = recents.into_iter().map(PathBuf::from).collect();
+        // The recent roots are kept as keys where a name is not text (`recent_projects`), and handed back as keys.
+        let recents: Vec<PathBuf> =
+            recents.iter().filter_map(|root| crate::files_panel::names::path(root)).collect();
         onboarding::places(&home, &recents, |path| path.is_dir())
             .into_iter()
             .map(|place| PlaceRecord {
@@ -108,7 +118,7 @@ impl FirstRun {
                     PlaceKind::Developer => PlaceKindRecord::Developer,
                 },
                 name: place.name,
-                path: place.path.display().to_string(),
+                path: crate::files_panel::names::path_key(&place.path),
                 detail: place.detail,
             })
             .collect()
@@ -141,10 +151,11 @@ impl FirstRun {
     }
 
     /// Writes what the Look and Agents steps chose into the Default profile's `config.json`, through core's
-    /// settings (clamped and sanitised as every write is).
+    /// settings (clamped and sanitised as every write is) as the app holds them (`settings::live`; the GPUI app's
+    /// steps write through its settings store, `onboarding/look_step.rs:64-72`).
     pub fn write_look(&self, look: LookRecord) {
         let profile = DataRoot::new(&self.data_dir).default_profile();
-        Config::load_for(&profile).update(|settings| {
+        crate::settings::live::update(&profile, |settings| {
             settings.choose_primary(look.primary.unwrap_or_default());
             settings.font_family = look.font_family;
             settings.font_size = look.font_size as f32;

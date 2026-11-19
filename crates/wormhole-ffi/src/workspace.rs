@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
 use wormhole_core::view::layout::Edge;
@@ -41,7 +41,7 @@ pub trait WorkspaceListener: Send + Sync {
     fn wake(&self);
 }
 
-/// What the model tells Swift (core's `Event`, with the folder as text).
+/// What the model tells Swift (core's `Event`, with the folder as a key of `files_panel::names`).
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
 pub enum WorkspaceEvent {
     /// A terminal was made: start a program for it (`Terminal.start`), then `register_terminal`.
@@ -87,9 +87,12 @@ pub enum WorkspaceEvent {
 
 impl From<Event> for WorkspaceEvent {
     fn from(event: Event) -> Self {
-        let text = |path: PathBuf| path.to_string_lossy().into_owned();
         match event {
-            Event::Opened { id, cwd } => Self::Opened { id, cwd: cwd.map(text) },
+            // A key of `files_panel::names` where a name is not text: the terminal starts in the very folder
+            // (`launch::options` reads it back), never one the text with U+FFFD happens to name.
+            Event::Opened { id, cwd } => {
+                Self::Opened { id, cwd: cwd.map(|cwd| crate::files_panel::names::path_key(&cwd)) }
+            }
             Event::Closed { id } => Self::Closed { id },
             Event::Adopted { id } => Self::Adopted { id },
             Event::Selected { id } => Self::Selected { id },
@@ -187,9 +190,13 @@ impl From<TerminalFactsRecord> for TerminalFacts {
             ahead: record.ahead,
             behind: record.behind,
             repo_files: record.repo_files.map(|n| n as usize),
+            superproject: None,
         }
     }
 }
+
+/// How long the look at a process waits for the list to be pulled after a hook moved a row.
+const UNPULLED_FOR: Duration = Duration::from_millis(3000);
 
 /// What the object and the threads that feed it share.
 pub(crate) struct Shared {
@@ -217,6 +224,9 @@ pub(crate) struct Shared {
     windows: Mutex<Option<(Arc<Windows>, i64)>>,
     /// The texts of the terminals the window was restored with, until each starts (`workspace_texts`).
     pub(crate) restored_texts: crate::workspace_texts::RestoredTexts,
+    /// Terminals whose row a hook moved and that the view has not yet read and looked at, with when and whether the list was pulled
+    /// since: the look at the process waits for the pull and then for the notification rules' look (`Shared::note_unpulled`).
+    unpulled: Mutex<HashMap<i64, (Instant, bool)>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -224,6 +234,34 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl Shared {
+    /// A hook moved terminal `id`'s row (`moved`): until the list is pulled and the rules have looked, or `UNPULLED_FOR` has passed,
+    /// the look at its process waits. The notification rules compare looks at the rows, so a status that came and went between two never made its banner;
+    /// the GPUI app decides at the hook, on the thread that looks at the process too, so it cannot happen there.
+    pub(crate) fn note_unpulled(&self, id: i64, moved: bool) {
+        if moved {
+            locked(&self.unpulled).insert(id, (Instant::now(), false));
+        }
+    }
+
+    /// The notification rules looked at the terminals' facts: what a hook moved and the list has been pulled for is seen.
+    pub(crate) fn looked_at_facts(&self) {
+        locked(&self.unpulled).retain(|_, (_, pulled)| !*pulled);
+    }
+
+    /// Whether the look at terminal `id`'s process is to wait: a hook moved its row and the list has not been pulled since
+    /// (for at most `UNPULLED_FOR`: a window nobody pulls for is looked at as before).
+    pub(crate) fn waits_for_a_pull(&self, id: i64) -> bool {
+        let mut unpulled = locked(&self.unpulled);
+        match unpulled.get(&id) {
+            Some((since, _)) if since.elapsed() < UNPULLED_FOR => true,
+            Some(_) => {
+                unpulled.remove(&id);
+                false
+            }
+            None => false,
+        }
+    }
+
     /// The registered `Terminal` of terminal `id`.
     pub(crate) fn terminal_of(&self, id: i64) -> Option<Arc<Terminal>> {
         locked(&self.terminals).get(&id).cloned()
@@ -349,6 +387,11 @@ impl Workspace {
 
     /// Do what the person did. What changed comes back as events (see the module's note).
     pub fn apply(&self, action: Action) -> Vec<WorkspaceEvent> {
+        // The Project feature was switched: which pull requests may be asked for and shown is judged again in the round
+        // this starts, not at the minute's end (the GPUI app asks on every tick).
+        if matches!(action, Action::SetFeature { feature: wormhole_core::config::FeatureId::Project, .. }) {
+            crate::workspace_extras::judge_again(&self.shared);
+        }
         let events = self.shared.with_model(|model| model.apply(action));
         // Selecting looks at a terminal, which may ask for its programs' reports to be dropped; a new
         // or closed terminal and a new selection move what the pump waits for.
@@ -371,7 +414,12 @@ impl Workspace {
 
     /// [`Self::sidebar`] as it reads at `now_ms` on the workspace's clock (tests, previews).
     pub fn sidebar_at(&self, now_ms: u64) -> SidebarSnapshot {
-        self.shared.with_model(|model| model.sidebar_snapshot(now_ms))
+        // The pull that reads the rows: what a hook moved is read with them. The notification rules' look, which reads the
+        // terminals' facts next (`notice_facts`), is what lets the look at the process hand it back.
+        self.shared.with_model(|model| {
+            locked(&self.shared.unpulled).values_mut().for_each(|(_, pulled)| *pulled = true);
+            model.sidebar_snapshot(now_ms)
+        })
     }
 
     /// The panes of the selected terminal's split in an area of `width` x `height` points.
@@ -386,7 +434,10 @@ impl Workspace {
     /// Every terminal, those a folded group hides included, in the list's order: the palette, the
     /// status bar's counts and menus read it. Pull it when `revisions().terminals` moved.
     pub fn terminals(&self) -> TerminalsSnapshot {
-        self.shared.with_model(|model| model.terminals_snapshot())
+        self.shared.with_model(|model| {
+            let snapshot = model.terminals_snapshot();
+            crate::workspace_cwd::keyed(model, snapshot)
+        })
     }
 
     /// The selected terminal's title row: parts, chevrons, path steps to measure and the path menu.
@@ -449,6 +500,11 @@ impl Workspace {
         })
     }
 
+    /// How many of `group`'s terminals would leave it if it kept only the terminals in `folder`: the folder question's count.
+    pub fn group_folder_leaving(&self, group: u32, folder: String) -> u32 {
+        self.shared.with_model(|model| model.members_leaving(group, std::path::Path::new(&folder)) as u32)
+    }
+
     /// An agent's hook event for terminal `id` (what `WORMHOLE_TAB_ID` names): `agent` is its command
     /// ("claude"), `event` as the hook script spells it (`Stop`, `Notification:permission_prompt`,
     /// `PostToolUse:wakes=b7`), `message` the words it carries. What the event means for the status is
@@ -464,6 +520,7 @@ impl Workspace {
         let at = self.shared.now();
         let status = StatusEvent::Hook { agent, event, message };
         let events = self.shared.with_model(|model| model.feed(id, status, at));
+        self.shared.note_unpulled(id, !events.is_empty());
         let events = self.shared.close_what_closed(events);
         self.shared.serve_asks();
         self.shared.pump.kick();
@@ -570,6 +627,7 @@ impl Workspace {
             tap: OnceLock::new(),
             windows: Mutex::new(None),
             restored_texts: Default::default(),
+            unpulled: Mutex::new(HashMap::new()),
         });
         workspace_pump::spawn(&shared);
         Arc::new(Self { shared })

@@ -1,7 +1,9 @@
 //! The Project tab's state, made from a snapshot of the folder, the person's switches and the trust
 //! store: the wording is the app's (`features/project/panel.rs`), written once here.
 
-use wormhole_core::project::{Action, ActionKind, Feature, ProjectSnapshot, TrustStatus, trust_applies};
+use wormhole_core::project::{
+    Action, ActionKind, Feature, ProjectSnapshot, TrustStatus, dir_name_at, trust_applies,
+};
 
 use super::hub::Hub;
 use super::records::{
@@ -11,7 +13,7 @@ use super::records::{
 /// The tab's state for `snapshot`; remembers what it showed, which approving trusts.
 pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRecord {
     let root = snapshot.root().to_path_buf();
-    let status = hub.trust.status_of(snapshot);
+    let status = hub.trust().status_of(snapshot);
     let request = snapshot.trust_request();
     match &request {
         Some(request) => hub.shown.insert(root.clone(), request.clone()),
@@ -23,7 +25,7 @@ pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRe
     // Notes sync waits for trust too (its notes.md is repository content), so the notice is there to say
     // so, though nothing else in the project asks for it.
     let notes_wait =
-        status != TrustStatus::Trusted && hub.prefs.notes_sync(&root, snapshot.has(Feature::Notes));
+        status != TrustStatus::Trusted && hub.prefs().notes_sync(&root, snapshot.has(Feature::Notes));
     let applies = match (trust_applies(&needing), notes_wait) {
         (applies, false) => applies,
         (applies, true) if applies.is_empty() => "its notes.md sync".to_string(),
@@ -38,8 +40,8 @@ pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRe
             let present = snapshot.has(feature);
             let on = match feature {
                 // Notes sync where the file is, not wherever the switch defaults to.
-                Feature::Notes => hub.prefs.notes_sync(&root, present),
-                _ => hub.prefs.enabled(&root, feature),
+                Feature::Notes => hub.prefs().notes_sync(&root, present),
+                _ => hub.prefs().enabled(&root, feature),
             };
             let (hint, warns) = feature_hint(snapshot, status, feature);
             ProjectFeatureRecord { key: feature.key().to_string(), on, hint, warns }
@@ -80,7 +82,8 @@ pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRe
         .chain(notes_error)
         .collect();
     ProjectStateRecord {
-        root: root.to_string_lossy().into_owned(),
+        dir: dir_name_at(&root),
+        root: crate::files_panel::names::path_key(&root),
         status: status.into(),
         commands,
         applies,

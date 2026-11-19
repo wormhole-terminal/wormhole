@@ -1,22 +1,22 @@
-//! What the service knows of the project folders it has looked at: the person's switches, the trust
-//! store, the notes sync's bases and files. The app's `ProjectHub` in one place, over core's stores.
+//! What the service knows of the project folders it has looked at: the person's switches, the trust store and the
+//! notes sync's bases (the profile's, shared by its windows: `stores`), and what this window showed and was told. The
+//! app's `ProjectHub` in one place, over core's stores.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 
 use wormhole_core::project::{
-    Feature, NotesBaseStore, NotesFile, ProjectFolder, ProjectPrefs, ProjectSnapshot, TrustRequest,
-    TrustStatus, TrustStore,
+    Feature, NotesBaseStore, ProjectFolder, ProjectPrefs, ProjectSnapshot, TrustRequest, TrustStore,
 };
+
+use super::stores::{self, OnDisk, Stores};
 
 pub(super) struct Hub {
     /// The profile folder the stores live in.
     dir: PathBuf,
-    pub(super) prefs: ProjectPrefs,
-    pub(super) trust: TrustStore,
-    pub(super) notes_bases: NotesBaseStore,
-    pub(super) notes_files: HashMap<PathBuf, NotesFile>,
+    /// The profile's, shared by every window of it.
+    stores: Stores,
     /// Why a project's notes.md can't be synced right now, shown in the Project tab.
     pub(super) notes_errors: HashMap<PathBuf, String>,
     /// What the tab last showed of each project: approving trusts exactly this, so a file changed while
@@ -31,40 +31,63 @@ pub(super) struct Hub {
 }
 
 impl Hub {
+    /// The profile folder the stores live in.
+    pub(super) fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     pub(super) fn load(dir: &Path) -> Self {
-        let mut problems = Vec::new();
-        let (prefs, err) = ProjectPrefs::load_or_recover(dir);
-        problems.extend(err.map(|err| format!("Project preferences were reset: {err}")));
-        let (trust, err) = TrustStore::load_or_recover(dir);
-        problems.extend(err.map(|err| format!("Trusted projects were reset, approve them again: {err}")));
-        let (notes_bases, err) = NotesBaseStore::load_or_recover(dir);
-        if let Some(err) = err {
-            tracing::warn!("notes sync state: {err}");
-        }
-        for problem in &problems {
-            tracing::warn!("{problem}");
-        }
+        let stores = stores::of_profile(dir);
         Self {
             dir: dir.to_path_buf(),
-            prefs,
-            trust,
-            notes_bases,
-            notes_files: HashMap::new(),
+            error: stores.problems.clone(),
+            stores,
             notes_errors: HashMap::new(),
             shown: HashMap::new(),
             snapshots: HashMap::new(),
             approving: false,
-            error: (!problems.is_empty()).then(|| problems.join("\n")),
         }
     }
 
-    /// The approvals as the file has them now: the project commands window approves through a desk of its own, and
-    /// the tab must say what it did.
-    pub(super) fn reload_trust(&mut self) {
-        let (trust, err) = TrustStore::load_or_recover(&self.dir);
-        match err {
-            Some(err) => tracing::warn!("trusted projects were not read again: {err}"),
-            None => self.trust = trust,
+    /// The profile's stores, to hold their locks while this hub is changed (the notes sync).
+    pub(super) fn stores(&self) -> Stores {
+        self.stores.clone()
+    }
+
+    /// The person's switches as the profile has them now (another window's change included).
+    pub(super) fn prefs(&self) -> MutexGuard<'_, OnDisk<ProjectPrefs>> {
+        stores::now(&self.stores.prefs)
+    }
+
+    /// The approvals as the profile has them now: a project revoked in another window, in Settings or by the command
+    /// line reads revoked here at once.
+    pub(super) fn trust(&self) -> MutexGuard<'_, OnDisk<TrustStore>> {
+        stores::now(&self.stores.trust)
+    }
+
+    /// Changes the person's switches as the file has them now and saves them, under the profile's lock: what another
+    /// window switched stays as it switched it. A failure is said in the tab.
+    pub(super) fn change_prefs(&mut self, change: impl FnOnce(&mut ProjectPrefs)) {
+        let prefs = Arc::clone(&self.stores.prefs);
+        let saved = stores::lock(&prefs).change(|prefs| {
+            change(prefs);
+            true
+        });
+        if let Err(err) = saved {
+            tracing::warn!("saving project preferences: {err}");
+            self.error = Some(format!("Couldn't save your project settings: {err}"));
+        }
+    }
+
+    /// Changes the approvals as the file has them now and saves them when `change` says it changed them, under the
+    /// profile's lock: an approval never writes back a project another window revoked. A failure is said in the tab,
+    /// which would otherwise read "trusted" while nothing was saved.
+    pub(super) fn change_trust(&mut self, change: impl FnOnce(&mut TrustStore) -> bool) {
+        let trust = Arc::clone(&self.stores.trust);
+        let saved = stores::lock(&trust).change(change);
+        if let Err(err) = saved {
+            tracing::warn!("saving trusted projects: {err}");
+            self.error = Some(format!("Couldn't save trusted projects: {err}"));
         }
     }
 
@@ -88,9 +111,7 @@ impl Hub {
         }
         let snapshot = Arc::clone(&self.snapshots[&folder.root]);
         // An approval given under an older fingerprint is rewritten once, as the app does at load.
-        if self.trust.upgrade(&snapshot) {
-            self.save_trust();
-        }
+        self.change_trust(|trust| trust.upgrade(&snapshot));
         snapshot
     }
 
@@ -101,10 +122,10 @@ impl Hub {
         if !snapshot.has(feature) {
             return Some(format!("this project has no {}", feature.file_name()));
         }
-        if !self.prefs.enabled(snapshot.root(), feature) {
+        if !self.prefs().enabled(snapshot.root(), feature) {
             return Some(format!("{} is switched off for this project", feature.label()));
         }
-        if !self.trust.allows_in(snapshot, feature) {
+        if !self.trust().allows_in(snapshot, feature) {
             return Some(
                 "the project is not trusted (its files changed, or were never approved)".to_string(),
             );
@@ -114,28 +135,6 @@ impl Hub {
 
     pub(super) fn enabled(&self, snapshot: &ProjectSnapshot, feature: Feature) -> bool {
         self.refusal(snapshot, feature).is_none()
-    }
-
-    /// The folder's current content is approved (what lets a notes.md be read and written).
-    pub(super) fn trusted(&self, snapshot: &ProjectSnapshot) -> bool {
-        self.trust.status_of(snapshot) == TrustStatus::Trusted
-    }
-
-    /// Persists the person's switches and the approvals; a failure is said in the tab, which would
-    /// otherwise read "trusted" while nothing was saved.
-    pub(super) fn save(&mut self) {
-        if let Err(err) = self.prefs.save() {
-            tracing::warn!("saving project preferences: {err}");
-            self.error = Some(format!("Couldn't save your project settings: {err}"));
-        }
-        self.save_trust();
-    }
-
-    fn save_trust(&mut self) {
-        if let Err(err) = self.trust.save() {
-            tracing::warn!("saving trusted projects: {err}");
-            self.error = Some(format!("Couldn't save trusted projects: {err}"));
-        }
     }
 
     /// Notes why `root`'s notes.md can't be synced (`None`: it can). Whether what the tab says changed.
@@ -150,9 +149,15 @@ impl Hub {
         }
     }
 
+    /// The notes sync's merge bases, every window's of the profile.
+    pub(super) fn bases(&self) -> MutexGuard<'_, NotesBaseStore> {
+        stores::lock(&self.stores.bases)
+    }
+
     pub(super) fn save_notes_bases(&mut self) {
-        if self.notes_bases.is_dirty()
-            && let Err(err) = self.notes_bases.save()
+        let mut bases = self.bases();
+        if bases.is_dirty()
+            && let Err(err) = bases.save()
         {
             tracing::warn!("saving notes sync state: {err}");
         }

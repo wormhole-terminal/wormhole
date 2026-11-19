@@ -2,9 +2,7 @@
 //! front (the GPUI app's `detect.rs` and the Studio's "Use in this project"), under the same gate every project
 //! action passes (`Hub::enabled`: the file is there, the person has it on, and trust where the feature needs it).
 
-use std::path::Path;
-
-use wormhole_core::project::{self as proj, Feature, TrustStatus};
+use wormhole_core::project::{self as proj, Feature, ProjectFolder, TrustStatus};
 
 use super::records::ProjectFailure;
 use super::service::ProjectService;
@@ -15,9 +13,11 @@ impl ProjectService {
     /// there and the person has it on; a theme is harmless, so core asks no trust); `None` otherwise. Hand it to
     /// `resolve_theme_json`.
     pub fn theme_overlay(&self, folder: String) -> Option<String> {
-        let found = proj::find_project(Path::new(&folder))?;
+        if self.off() {
+            return None;
+        }
+        let found = proj::find_project(&crate::files_panel::names::folder(&folder))?;
         let mut hub = self.lock();
-        hub.reload_trust();
         let snapshot = hub.snapshot(&found);
         if !hub.enabled(&snapshot, Feature::Theme) {
             return None;
@@ -28,30 +28,38 @@ impl ProjectService {
     /// Whether "Use in this project" may write to the project that governs `folder`, and the folder's root:
     /// the project is trusted and its theme is not switched off. The reason otherwise, in the person's words.
     pub fn theme_target(&self, folder: String) -> Result<String, ProjectFailure> {
-        let found = proj::find_project(Path::new(&folder))
-            .ok_or_else(|| ProjectFailure::not_found(folder.clone()))?;
-        let mut hub = self.lock();
-        hub.reload_trust();
-        let snapshot = hub.snapshot(&found);
-        if hub.trust.status_of(&snapshot) != TrustStatus::Trusted {
-            return Err(ProjectFailure::refused(
-                "Trust this project first (Project tab), then use the theme in it.",
-            ));
-        }
-        if !hub.prefs.enabled(&found.root, Feature::Theme) {
-            return Err(ProjectFailure::refused("This project's theme is switched off (Project tab)."));
-        }
-        Ok(found.root.to_string_lossy().into_owned())
+        self.theme_project(&folder).map(|found| found.root.to_string_lossy().into_owned())
     }
 
     /// Writes `json` (a theme as Export writes it) as the `theme.json` of the project that governs `folder`,
     /// under the same gate as `theme_target`; the path it went to.
     pub fn write_theme(&self, folder: String, json: String) -> Result<String, ProjectFailure> {
-        let root = self.theme_target(folder)?;
-        let project = super::service::open(&root).ok_or_else(|| ProjectFailure::not_found(root))?;
+        // Into the very folder the gate passed, never one opened again by its name as text: a root whose name is not
+        // text reads with U+FFFD there, which can name a planted sibling (`caf\u{FFFD}/.wormhole` beside `caf\xE9/`).
+        let project = self.theme_project(&folder)?;
         let path = project.write_theme(&json).map_err(ProjectFailure::failed)?;
         self.changed();
         Ok(path.to_string_lossy().into_owned())
+    }
+}
+
+impl ProjectService {
+    /// The project that governs `folder` when "Use in this project" may write to it: it is trusted and its theme is not
+    /// switched off. The reason otherwise, in the person's words.
+    fn theme_project(&self, folder: &str) -> Result<ProjectFolder, ProjectFailure> {
+        let found = proj::find_project(&crate::files_panel::names::folder(folder))
+            .ok_or_else(|| ProjectFailure::not_found(folder.to_string()))?;
+        let mut hub = self.lock();
+        let snapshot = hub.snapshot(&found);
+        if hub.trust().status_of(&snapshot) != TrustStatus::Trusted {
+            return Err(ProjectFailure::refused(
+                "Trust this project first (Project tab), then use the theme in it.",
+            ));
+        }
+        if !hub.prefs().enabled(&found.root, Feature::Theme) {
+            return Err(ProjectFailure::refused("This project's theme is switched off (Project tab)."));
+        }
+        Ok(found)
     }
 }
 
@@ -83,7 +91,10 @@ mod tests {
         let root = std::fs::canonicalize(project.path()).expect("canonical").to_string_lossy().into_owned();
 
         // Not trusted: the theme is in effect all the same (the switch is on by default), but nothing may be written.
-        assert_eq!(service.theme_overlay(folder.clone()).as_deref(), Some(r#"{"name":"App","extends":"Nord"}"#));
+        assert_eq!(
+            service.theme_overlay(folder.clone()).as_deref(),
+            Some(r#"{"name":"App","extends":"Nord"}"#)
+        );
         assert!(matches!(service.theme_target(folder.clone()), Err(ProjectFailure::Refused { .. })));
         assert!(service.write_theme(folder.clone(), "{}".into()).is_err());
         assert_eq!(

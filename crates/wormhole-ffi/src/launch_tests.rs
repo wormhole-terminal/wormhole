@@ -69,7 +69,7 @@ fn options_of(root: &DataRoot, cwd: Option<&Path>) -> wormhole_core::terminal::S
 }
 
 #[test]
-fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_as_it_is() {
+fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_over_both() {
     let dir = scratch("shells");
     let root = DataRoot::new(dir.path());
     config(
@@ -92,10 +92,12 @@ fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_as_
     let named = options(&root, &profile, &HostedStart { program: Some("/bin/cat".into()), ..request(None) });
     let named = named.shell.expect("a shell");
     assert_eq!((named.program.as_str(), named.args.len(), named.name.as_str()), ("/bin/cat", 0, "cat"));
-    // The terminal's own shell still wins over it (New Terminal with ▸ in a `--shell` run).
+    // It runs in a terminal opened with a shell of its own too (New Terminal with ▸): a named program is never
+    // replaced by a choice, so the bridge cannot hand core a real shell where the app asked for `cat`.
     let both =
         HostedStart { program: Some("/bin/cat".into()), shell: Some("fish-ish".into()), ..request(None) };
-    assert_eq!(options(&root, &profile, &both).shell.map(|s| s.program), Some("/bin/bash".into()));
+    let both = options(&root, &profile, &both).shell.expect("a shell");
+    assert_eq!((both.program.as_str(), both.args.len(), both.name.as_str()), ("/bin/cat", 0, "cat"));
 }
 
 #[test]
@@ -125,6 +127,35 @@ fn only_a_trusted_project_sets_the_environment_and_the_shell() {
     // Project folders off: nothing, trusted or not.
     config(&root, r#"{"feature_flags": {"project_folders": false}}"#);
     assert!(options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none());
+}
+
+/// A revoke that could not be saved holds for a terminal's start as it does for the panel: the approvals are the
+/// process's one store, never the file read again on its own, which still says trusted.
+#[test]
+fn a_revoke_that_could_not_be_saved_still_keeps_the_projects_environment_out() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = scratch("revoke-unsaved");
+    let root = DataRoot::new(dir.path());
+    let project = dir.path().join("app");
+    std::fs::create_dir_all(project.join(".wormhole")).expect("project folder");
+    std::fs::write(project.join(".wormhole/config.json"), r#"{"env": {"PROJECT_FLAG": "on"}}"#)
+        .expect("project config");
+    let profile = profile_in(&root, None);
+    let folder = ProjectFolder::open(&project.canonicalize().expect("canonical")).expect("a project");
+    let mut trust = TrustStore::load(profile.dir()).expect("trust store");
+    trust.trust(&folder);
+    trust.save().expect("saves");
+    assert_eq!(options_of(&root, Some(&project)).env.get("PROJECT_FLAG").map(String::as_str), Some("on"));
+
+    // The profile folder refuses the save: the file keeps the approval, the process takes it back.
+    std::fs::set_permissions(profile.dir(), std::fs::Permissions::from_mode(0o500)).expect("read-only");
+    let revoked = crate::files_panel::change_trust_in(profile.dir(), |store| store.revoke(&folder.root));
+    std::fs::set_permissions(profile.dir(), std::fs::Permissions::from_mode(0o700)).expect("writable again");
+    assert!(revoked.is_err(), "the save failed");
+    assert!(
+        options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none(),
+        "revoked in the process: nothing of the project reaches a new terminal"
+    );
 }
 
 /// A real shell, started as the window starts it: the shell `default_shell` names as a login shell, the profile's
@@ -190,12 +221,14 @@ fn a_program_acts_on_the_window_only_when_settings_allow_it() {
             args: vec!["-c".into(), script.into()],
             ..request(None)
         };
-        let options = options(&root, &profile_in(&root, None), &what);
+        let profile = profile_in(&root, None);
+        let options = options(&root, &profile, &what);
         assert_eq!(options.allow_window_ops, allowed);
         let size = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
         let (pty, events) = wormhole_core::terminal::spawn(size, &options).expect("spawns");
         let terminal =
-            Terminal::from_parts(pty, events, &options, Arc::new(Quiet), None).expect("a terminal");
+            Terminal::from_parts(pty, events, &options, &profile.id().to_string(), Arc::new(Quiet), None)
+                .expect("a terminal");
         let (mut seen, deadline) = (Vec::new(), Instant::now() + Duration::from_secs(10));
         while !terminal.screen_text().split_whitespace().any(|word| word == "80" || word == "100") {
             assert!(Instant::now() < deadline, "timed out:\n{}", terminal.screen_text());
@@ -224,4 +257,79 @@ fn a_program_acts_on_the_window_only_when_settings_allow_it() {
             WindowOpRecord::Move { x: 10, y: 20 },
         ]
     );
+}
+
+/// Two profiles with different palettes: a terminal of each starts in its own profile's colours and answers a program's
+/// OSC 11 with them before any view has told it anything, and a change of one profile's theme reaches that profile's
+/// terminal alone (`engine_look`).
+#[test]
+fn each_profiles_terminal_answers_with_its_own_colours() {
+    use std::sync::Arc;
+
+    use wormhole_core::storage::paths::ProfileId;
+    use wormhole_term::types::COLOR_COUNT;
+
+    use crate::engine_look::set_terminal_colors;
+    use crate::events::TerminalListener;
+    use crate::terminal::Terminal;
+
+    struct Quiet;
+    impl TerminalListener for Quiet {
+        fn wake(&self) {}
+    }
+
+    // Only the background matters here: `grey` in each channel.
+    let palette = |grey: u32| {
+        let mut slots = vec![0; COLOR_COUNT];
+        slots[COLOR_COUNT - 2] = grey * 0x0001_0101;
+        slots
+    };
+    // Ids of their own: the looks are the process's, shared with the other tests.
+    let (a, b) = ("looks-test-a", "looks-test-b");
+    set_terminal_colors(a.into(), palette(0x22));
+    set_terminal_colors(b.into(), palette(0x77));
+
+    // Asks for the background, prints the answer without its escapes (`got]11;rgb:2222/2222/2222`), then again for
+    // each line typed.
+    let script = r#"while :; do stty raw -echo min 0 time 10; printf '\033]11;?\007'; r=$(dd bs=64 count=1 2>/dev/null); stty sane; printf 'got%s\n' "$(printf '%s' "$r" | tr -d '\033\007\\')"; IFS= read -r line; done"#;
+    let dir = scratch("looks");
+    let root = DataRoot::new(dir.path());
+    let start = |id: &str| {
+        let profile = root.profile(&ProfileId::parse(id).expect("an id"));
+        let what = HostedStart {
+            program: Some("/bin/sh".into()),
+            args: vec!["-c".into(), script.into()],
+            ..request(None)
+        };
+        let options = options(&root, &profile, &what);
+        let size = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
+        let (pty, events) = wormhole_core::terminal::spawn(size, &options).expect("spawns");
+        Terminal::from_parts(pty, events, &options, id, Arc::new(Quiet), None).expect("a terminal")
+    };
+    let answers = |terminal: &Terminal, grey: &str, times: usize| {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let want = format!("rgb:{grey}{grey}/");
+        while terminal.screen_text().matches(&want).count() < times {
+            assert!(Instant::now() < deadline, "never answered {want} {times}x:\n{}", terminal.screen_text());
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    };
+    let (first, second) = (start(a), start(b));
+    answers(first.as_ref(), "22", 1);
+    answers(second.as_ref(), "77", 1);
+
+    // Profile b's theme changes: its terminal answers with the new colours, a's keeps its own.
+    set_terminal_colors(b.into(), palette(0x44));
+    first.write(b"\n".to_vec());
+    second.write(b"\n".to_vec());
+    answers(second.as_ref(), "44", 1);
+    answers(first.as_ref(), "22", 2);
+    assert!(
+        !first.screen_text().contains("rgb:4444/"),
+        "a's terminal never hears b's theme:\n{}",
+        first.screen_text()
+    );
+    assert!(!first.screen_text().contains("rgb:7777/"), "nor b's first one:\n{}", first.screen_text());
+    first.close();
+    second.close();
 }

@@ -169,6 +169,10 @@ impl Windows {
         if let Err(err) = self.store_locked().delete_window(window) {
             tracing::warn!("removing window {window} from its old profile: {err:#}");
         }
+        // Its terminals no view dresses yet answer programs in the colours of the profile it went to.
+        let terminals: Vec<_> =
+            workspace.shared().registered().into_iter().map(|(_, terminal)| terminal).collect();
+        crate::engine_look::move_to(&terminals, &to.profile().id().to_string());
         workspace.shared().set_windows(to, window);
         true
     }

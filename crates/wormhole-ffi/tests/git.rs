@@ -390,9 +390,9 @@ fn a_submodule_is_a_row_in_core_s_words_and_a_diff_of_its_commits() {
     let row = status.files.iter().find(|f| f.path == "vendor").expect("the submodule");
     assert_eq!(row.submodule.as_deref(), Some("1 new commit"));
     match git_obj.diff(folder, "vendor".into(), None, false).expect("diff") {
-        GitDiff::Submodule { label, ahead, .. } => {
+        GitDiff::Submodule { label, card } => {
             assert_eq!(label, "1 new commit");
-            assert_eq!(ahead.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["newer"]);
+            assert_eq!(card.ahead.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["newer"]);
         }
         other => panic!("{other:?}"),
     }
@@ -439,6 +439,67 @@ fn the_watch_calls_once_after_a_burst_of_edits_and_not_for_ignored_files() {
 
     git(root, &["add", "-A"]);
     wait_until("the index change is reported", || calls.load(Ordering::SeqCst) >= 2);
+    watch.stop();
+}
+
+// GPUI: `window/repo/state.rs` `Sight`: a window nobody sees reads only repositories something works in; the panel's
+// own reader is told nothing while unseen and once when seen again.
+#[test]
+fn a_watch_in_a_window_nobody_sees_tells_nothing_until_it_is_seen_and_then_once() {
+    let (_dir, folder) = repo_with(&[("a.txt", "a\n")]);
+    let root = Path::new(&folder);
+    let calls = Arc::new(AtomicUsize::new(0));
+    let watch = GitWatch::start(folder.clone(), Arc::new(Counting(calls.clone()))).expect("starts");
+    wait_until("the watch is live", || watch.is_live());
+    // The ignored list is read right after it starts; let it land.
+    std::thread::sleep(Duration::from_millis(600));
+
+    watch.set_seen(false);
+    write(root, "a.txt", "edited unseen\n");
+    write(root, "b.txt", "new unseen\n");
+    // Well past the debounce, well inside the quiet backstop.
+    std::thread::sleep(Duration::from_millis(1500));
+    assert_eq!(calls.load(Ordering::SeqCst), 0, "nothing is told to a window nobody sees");
+
+    watch.set_seen(true);
+    wait_until("what came meanwhile is told once it is seen", || calls.load(Ordering::SeqCst) >= 1);
+    std::thread::sleep(Duration::from_millis(500));
+    assert_eq!(calls.load(Ordering::SeqCst), 1, "everything that came unseen is one call");
+
+    // Seen again, a change is told as before; seen with nothing owed, nothing is told.
+    watch.set_seen(true);
+    write(root, "a.txt", "edited seen\n");
+    wait_until("a change in sight is told", || calls.load(Ordering::SeqCst) >= 2);
+    watch.stop();
+}
+
+// The panel's reader tells its watches the sight of its window: one made after the window was last told it cannot be
+// seen starts unseen, and the one call owed is made when the window is seen.
+#[test]
+fn a_reader_hands_its_sight_to_the_watches_it_starts_and_the_ones_it_has() {
+    let (_dir, folder) = repo_with(&[("a.txt", "a\n")]);
+    let root = Path::new(&folder);
+    let reader = Git::new().expect("isolated");
+    let calls = Arc::new(AtomicUsize::new(0));
+    reader.set_seen(false);
+    let watch = reader.watch(folder.clone(), Arc::new(Counting(calls.clone()))).expect("starts");
+    wait_until("the watch is live", || watch.is_live());
+    std::thread::sleep(Duration::from_millis(600));
+
+    write(root, "a.txt", "edited while unseen\n");
+    std::thread::sleep(Duration::from_millis(1500));
+    assert_eq!(calls.load(Ordering::SeqCst), 0, "a watch started in a window nobody sees tells nothing");
+
+    reader.set_seen(true);
+    wait_until("what came meanwhile is told once the window is seen", || calls.load(Ordering::SeqCst) >= 1);
+    std::thread::sleep(Duration::from_millis(500));
+    assert_eq!(calls.load(Ordering::SeqCst), 1, "as one call");
+
+    // Another reader's sight is its own.
+    let other = Git::new().expect("isolated");
+    other.set_seen(false);
+    write(root, "a.txt", "edited again, this reader is seen\n");
+    wait_until("a seen window is told", || calls.load(Ordering::SeqCst) >= 2);
     watch.stop();
 }
 
@@ -544,4 +605,35 @@ fn an_existing_branch_is_checked_out_and_the_base_setting_moves_the_folder() {
     let name = Path::new(&folder).file_name().expect("name").to_owned();
     assert_eq!(PathBuf::from(&made.folder), base_path.join(name).join("existing"));
     service.remove(made.folder).expect("removed");
+}
+
+/// Two windows of one profile each hold a service: what one makes the other's next write must not lose, and the two
+/// never hand out the same ports.
+#[test]
+fn two_services_of_one_profile_keep_each_others_worktrees_and_ports() {
+    let (_dir, folder) = repo_with(&[("a.txt", "a\n")]);
+    let (first, second) = (
+        WorktreeService::new(None, false).expect("isolated"),
+        WorktreeService::new(None, false).expect("isolated"),
+    );
+    // Both read the (empty) list before either writes.
+    assert!(!worktrees_of(&first).contains(&"two/a".to_string()));
+    assert!(!worktrees_of(&second).contains(&"two/b".to_string()));
+    let a = first.create("two/a".into(), folder.clone()).expect("created");
+    let b = second.create("two/b".into(), folder.clone()).expect("created");
+    for service in [&first, &second] {
+        let branches = worktrees_of(service);
+        assert!(
+            branches.contains(&"two/a".to_string()) && branches.contains(&"two/b".to_string()),
+            "{branches:?}"
+        );
+    }
+    let port = |w: &wormhole_ffi::GitWorktree| {
+        w.env.iter().find(|v| v.name == "WORMHOLE_PORT").map(|v| v.value.clone())
+    };
+    assert!(port(&a).is_some() && port(&a) != port(&b), "one block of ports each");
+    // The second forgets nothing of the first's when it removes its own.
+    second.remove(b.folder).expect("removed");
+    assert!(worktrees_of(&first).contains(&"two/a".to_string()));
+    first.remove(a.folder).expect("removed");
 }

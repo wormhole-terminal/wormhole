@@ -121,6 +121,27 @@ fn an_agent_in_a_real_terminal_is_found_and_its_hooks_are_its_status() {
     assert!(ws.hook(99, "claude".into(), "Stop".into(), None).is_empty());
 }
 
+/// The look at a terminal's process comes from a thread of its own and hands a hook's status back when it finds no agent and the
+/// shell holding the terminal; the view takes the row on its own turn. A status the hook made that the view never pulled was
+/// never seen by the notification rules, which compare looks: no banner for it (the GPUI app decides at the hook, on one thread).
+/// So the look at the process waits until the row has been pulled and the rules have looked at the facts, or a moment has passed.
+#[test]
+fn a_hooks_status_is_pulled_once_before_the_look_at_the_process_can_hand_it_back() {
+    let (ws, wakes) = workspace();
+    let id = start(&ws, &wakes, "/bin/cat", &[]);
+    ws.hook(id, "codex".into(), "PermissionRequest".into(), None);
+    // The look comes before the view has pulled the row: it is held back, and what the pull finds is what the hook said.
+    ws.shared().probe(id);
+    assert_eq!(row(&ws, id).map(|r| r.state), Some(RowState::NeedsYou), "the pull saw the hook's status");
+    // Pulled, but the rules have not looked at the facts yet (the banner is decided from the row and these facts together).
+    ws.shared().probe(id);
+    assert_eq!(row(&ws, id).map(|r| r.state), Some(RowState::NeedsYou), "still held until the rules look");
+    ws.notice_facts(0);
+    // Looked at: the next look hands it back, as before.
+    ws.shared().probe(id);
+    assert_eq!(row(&ws, id).map(|r| r.state), Some(RowState::Idle), "the look found no agent and the shell in front");
+}
+
 #[test]
 fn an_agents_bell_asks_for_you_and_its_output_going_quiet_settles_it() {
     let (ws, wakes) = workspace();

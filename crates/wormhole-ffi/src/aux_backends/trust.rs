@@ -7,7 +7,7 @@
 //! dialog was up) reads "changed" again and must be reviewed anew. Nothing here asks
 //! for Touch ID: that is the platform's (Swift's `Authenticating`), asked before `approve_reviewed` is called.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use wormhole_core::platform::watch::{self as os_watch, Watch};
@@ -70,7 +70,9 @@ impl TrustDesk {
             None => data.default_profile(),
         };
         Ok(Arc::new(Self {
-            root: PathBuf::from(root),
+            // The panel hands the project's root as a key of `files_panel::names` where its name is not text: the very
+            // folder, never one its name as text happens to name.
+            root: crate::files_panel::names::folder(&root),
             profile_dir: paths.dir().to_path_buf(),
             shown: Mutex::new(None),
             held: Mutex::new(None),
@@ -96,8 +98,8 @@ impl TrustDesk {
             };
         };
         let snapshot = folder.snapshot();
-        let (store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        let status = match store.status_of(&snapshot) {
+        // The approvals as the process holds them, the ones every window and the panel act by.
+        let status = match crate::files_panel::trust_status_in(&self.profile_dir, &snapshot) {
             TrustStatus::Trusted => ReviewStatusRecord::Trusted,
             TrustStatus::Changed => ReviewStatusRecord::Changed,
             TrustStatus::Untrusted => ReviewStatusRecord::Untrusted,
@@ -131,28 +133,44 @@ impl TrustDesk {
         let request = locked(&self.held)
             .take()
             .ok_or_else(|| AuxError::failed("there is nothing reviewed to approve"))?;
-        let (mut store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        store.trust_request(&request);
-        store.save().map_err(AuxError::failed)?;
+        // Under the profile's one lock, to the approvals as they are now: never a stale copy over another window's revoke.
+        crate::files_panel::change_trust_in(&self.profile_dir, |store| {
+            store.trust_request(&request);
+            true
+        })
+        .map_err(AuxError::failed)?;
         self.waker.notify();
         Ok(())
     }
 
     /// Takes the approval back.
     pub fn revoke(&self) -> Result<(), AuxError> {
-        let (mut store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        if store.revoke(&self.root) {
-            store.save().map_err(AuxError::failed)?;
-        }
+        crate::files_panel::change_trust_in(&self.profile_dir, |store| store.revoke(&self.root))
+            .map_err(AuxError::failed)?;
         self.waker.notify();
         Ok(())
     }
 
-    /// Follows the project folder: a wake when a file of it changes (`git pull`). `false` where it cannot.
+    /// Follows the project folder and the profile's approvals: a wake when a file of the project changes (`git pull`)
+    /// or when the project is trusted or revoked elsewhere (another window, the command line). `false` where it cannot.
     pub fn follow(&self) -> bool {
         let Some(folder) = ProjectFolder::open(&self.root) else { return false };
         let waker = Arc::clone(&self.waker);
-        match os_watch::watch(&[folder.dir.as_path()], move |_| waker.notify()) {
+        // The system names paths by their real path: compare against the real ones.
+        let real = |path: &Path| path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let project = real(&folder.dir);
+        let approvals = real(&self.profile_dir).join(TrustStore::FILE_NAME);
+        let mut roots = vec![folder.dir.as_path()];
+        if self.profile_dir.is_dir() {
+            roots.push(self.profile_dir.as_path());
+        }
+        let watched = os_watch::watch(&roots, move |batch| {
+            if batch.rescan || batch.paths.iter().any(|path| path.starts_with(&project) || *path == approvals)
+            {
+                waker.notify();
+            }
+        });
+        match watched {
             Ok(watch) => {
                 *locked(&self.watch) = Some(watch);
                 true

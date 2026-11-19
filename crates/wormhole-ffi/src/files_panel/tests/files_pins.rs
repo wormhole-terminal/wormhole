@@ -10,7 +10,7 @@ fn pins_keep_their_order_follow_a_renamed_folder_and_ignore_what_cannot_be_one()
     let root = dir.path().canonicalize().expect("canonical");
     write(&root.join("keep/inner/x"), "x");
     write(&root.join("other/x"), "x");
-    let files = FilesService;
+    let files = FilesService::default();
     let (keep, inner, other) = (root.join("keep"), root.join("keep/inner"), root.join("other"));
     let pin = |p: &std::path::Path| files.set_pinned(p.to_string_lossy().into_owned(), true);
     for p in [&keep, &other, &inner] {

@@ -142,6 +142,11 @@ impl Terminal {
         self.with_pty(|pty| pty.display_offset()).unwrap_or(0) as u32
     }
 
+    /// The grid line the view's top row shows: under folds not "minus the offset" (`blocks.rs` `jump_prompt`).
+    pub fn top_line(&self) -> i32 {
+        self.with_pty(|pty| pty.line_at_row(0).0).unwrap_or(0)
+    }
+
     /// The grid's last line (the live screen's bottom row).
     pub fn bottommost_line(&self) -> i32 {
         self.with_pty(|pty| pty.bottommost_line().0).unwrap_or(0)

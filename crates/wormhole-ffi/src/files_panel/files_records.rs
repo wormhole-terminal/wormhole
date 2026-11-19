@@ -5,6 +5,8 @@ use wormhole_core::storage::files::listing::EntryKind as CoreKind;
 use wormhole_core::storage::files::{Loaded, Problem, RenameError};
 use wormhole_core::view::file_tree::{Dir, Failure};
 
+use crate::files_panel::names;
+
 /// What an entry is, by its own type: a link is never looked through.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum FileEntryKind {
@@ -13,11 +15,11 @@ pub enum FileEntryKind {
     Link,
 }
 
-/// An entry of a folder. A name that is not UTF-8 reads with U+FFFD in its place, so a path made from it
-/// names nothing and every call on it answers "gone": hostile bytes never become another path.
+/// An entry of a folder. A name that is not UTF-8 crosses as a key (`names`) that reads back as its bytes, so
+/// it opens, renames and pins like any other; hostile bytes never become another path.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct EntryRecord {
-    /// What a path is made of.
+    /// What a path is made of: the name, or its key where it is not text. Never drawn.
     pub name: String,
     /// As drawn: control and bidirectional characters replaced.
     pub label: String,
@@ -40,7 +42,7 @@ impl From<&Dir> for DirectoryRecord {
             .entries
             .iter()
             .map(|entry| EntryRecord {
-                name: entry.name.to_string_lossy().into_owned(),
+                name: names::key(&entry.name),
                 label: entry.label.clone(),
                 kind: match entry.kind {
                     CoreKind::Folder => FileEntryKind::Folder,

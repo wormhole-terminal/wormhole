@@ -88,7 +88,9 @@ impl Registry {
             .collect())
     }
 
-    /// Terminal `tab` runs in host `host_id` (saved at once: a crash right after must still find it).
+    /// Terminal `tab` runs in host `host_id` (saved at once: a crash right after must still find it). A terminal the
+    /// window saved already keeps the rest of its row (name, notes, tasks, pin, split): the store writes the record
+    /// whole, so a bare one would wipe them (the GPUI app saves the session's own record, `save_host_row`).
     pub(crate) fn remember(
         &self,
         tab: i64,
@@ -96,7 +98,10 @@ impl Registry {
         cwd: Option<String>,
         shell: Option<String>,
     ) -> Result<(), HostingError> {
-        let session = SessionRecord { shell, ..SessionRecord::new(tab, None, cwd) };
+        let session = match self.sessions()?.into_iter().find(|s| s.id == tab) {
+            Some(saved) => SessionRecord { cwd: cwd.or(saved.cwd), shell: shell.or(saved.shell), ..saved },
+            None => SessionRecord { shell, ..SessionRecord::new(tab, None, cwd) },
+        };
         self.store().save_session_host(self.window, &session, host_id).map_err(HostingError::store)
     }
 
@@ -112,10 +117,18 @@ impl Registry {
         self.keep_only(&keep)
     }
 
-    /// No row names a host any more (Quit and End All Terminals: the saves on the way out must not name
-    /// hosts that are going away). Sessions that name none are not this registry's and stay.
-    pub(crate) fn forget_all(&self) -> Result<(), HostingError> {
-        self.keep_only(&self.unhosted_ids()?)
+    /// No row of the window names a host any more, `only` one when given (Quit and End All Terminals: the hosts end,
+    /// the terminals do not). Every row stays whole, its notes, tasks and saved text with it, and the next launch
+    /// starts each terminal again above its text, as the GPUI app's saves with `ending_hosts` leave them.
+    pub(crate) fn unname_hosts(&self, only: Option<i64>) -> Result<(), HostingError> {
+        let named =
+            self.sessions()?.into_iter().filter(|s| s.host_id.is_some() && only.is_none_or(|id| id == s.id));
+        let mut store = self.store();
+        for session in named {
+            let session = SessionRecord { host_id: None, ..session };
+            store.save_session(self.window, &session).map_err(HostingError::store)?;
+        }
+        Ok(())
     }
 
     /// The ids of the window's sessions that name no host: not this registry's to forget.

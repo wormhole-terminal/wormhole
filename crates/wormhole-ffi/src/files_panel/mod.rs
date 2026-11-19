@@ -11,6 +11,7 @@
 mod files;
 mod files_records;
 mod listener;
+pub(crate) mod names;
 mod notes_store;
 mod project;
 mod settings_edit;
@@ -32,5 +33,6 @@ pub use project::{
     ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
     TrustStatusRecord,
 };
+pub(crate) use project::{allows_in, change_trust_in, trust_status_in, worktree_refusal_in};
 pub use usage::{AgentLogoRecord, PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;
