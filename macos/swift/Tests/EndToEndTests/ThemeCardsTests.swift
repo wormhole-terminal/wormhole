@@ -33,10 +33,11 @@ extension EndToEnd {
             // A file a newer Wormhole made has this version's shape and more (a hand-written `extends` under a version
             // number is no theme at all, so it gets no card).
             try await Self.newerThemeFile(app, named: "Newer")
-            // The card is found by its file: what a card is called is the theme's own business.
+            // The card is found by its file, and is called what the file's `name` says.
             let isNewer: (Readout.Line) -> Bool = { ($0["file"] ?? "").hasSuffix("/Newer.json") }
             let listed = Readout(await app.until("theme-cards") { Readout($0).all("card").contains(where: isNewer) })
             let card = listed.all("card").first(where: isNewer)
+            app.expect(card?.label == "Newer", "the card has the theme's name:\n\(listed.text)")
             app.expect(card?["newer"].flatMap { Int($0) }.map { $0 > 0 } == true, "the card says values were skipped:\n\(listed.text)")
         }
     }

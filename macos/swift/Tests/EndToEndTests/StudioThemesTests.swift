@@ -8,8 +8,13 @@ extension EndToEnd {
     /// A version 1 theme file's text as a newer Wormhole would have written it: version 9, renamed, with one entry this
     /// version does not know (which a reader counts as skipped).
     nonisolated static func asNewer(_ text: String, from old: String, to name: String) -> String {
-        text.replacingOccurrences(of: #""version"\s*:\s*1\b"#, with: #""version": 9, "from_the_future": true"#, options: .regularExpression)
+        var renamed = text.replacingOccurrences(of: #""version"\s*:\s*1\b"#, with: #""version": 9, "from_the_future": true"#, options: .regularExpression)
             .replacingOccurrences(of: "\"\(old)\"", with: "\"\(name)\"")
+        // The file's own `name` is what its card is called (the file's first, the theme's: a variant's comes after it).
+        // (The first `id` and `name` of the file are the theme's; a file without a `name` is called by its `id`.)
+        if let range = renamed.range(of: #""name"\s*:\s*"[^"]*""#, options: .regularExpression) { renamed.replaceSubrange(range, with: "\"name\": \"\(name)\"") }
+        if let range = renamed.range(of: #""id"\s*:\s*"[^"]*""#, options: .regularExpression) { renamed.replaceSubrange(range, with: "\"id\": \"\(name.lowercased())\"") }
+        return renamed
     }
 
     /// Puts `<name>.json` in the themes folder, made by a newer Wormhole: the Studio saves a new theme (a complete
