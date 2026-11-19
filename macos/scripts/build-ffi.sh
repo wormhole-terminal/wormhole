@@ -8,6 +8,9 @@
 # `WormholeBindings.swift`, plus `ffi-bench/` and any other package that lists a destination
 # (`scripts/build-ffi.sh <package dir>...` also links them into those: see FFI-CONTRACT.md).
 # Run from anywhere; `CARGO_BUILD_JOBS` defaults to 4.
+# `WORMHOLE_FFI_PERF_COUNTERS=1` builds the library with its `perf-counters` feature, so the app's `perf-profile` can
+# say what reading output cost (the reader's bytes and the screens' lock): a library made to measure. Off by default: the
+# shipped library does not count.
 set -euo pipefail
 
 macos="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,7 +24,9 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 
 # Two invocations: the library alone has no generator in it (smaller, and cargo's feature
 # unification would otherwise turn `uniffi/cli` on for it); the generator is a package of its own.
-(cd "$bridge" && cargo build --release -p wormhole-ffi && cargo build --release -p uniffi-bindgen)
+features=()
+if [ "${WORMHOLE_FFI_PERF_COUNTERS:-0}" = "1" ]; then features=(--features perf-counters); fi
+(cd "$bridge" && cargo build --release -p wormhole-ffi ${features[@]+"${features[@]}"} && cargo build --release -p uniffi-bindgen)
 
 # Cargo's output may live elsewhere (a target dir shared by worktrees); what is generated per worktree
 # (bindings, headers) stays in the bridge's own `target/`. A relative CARGO_TARGET_DIR is cargo's, read from

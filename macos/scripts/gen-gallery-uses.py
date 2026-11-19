@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Writes `StudioUI/Gallery/GalleryUses.swift`: which theme tokens each component of the Theme Studio's gallery draws
-with, read from the Swift sources themselves, so "Used by" and the outline in the gallery cannot drift from what the
-views really use.
+with, read from the Swift sources themselves, so the outline in the gallery cannot drift from what the views really
+use. "Used by" and a metric's "n uses" tell core's `TOKEN_USES` (`studio_token_uses`), as the GPUI Studio does.
 
     python3 -I macos/scripts/gen-gallery-uses.py [--check]
 
 A component is one of core's `TOKEN_USES` (ELEMENTS): its label and area are core's, its tokens those of the Swift source files that
 draw it, or core's own list for a control that is the system's. A token is found as an accessor of the generated `ThemeTokens`
-(`tokens.sidebarRowSelected`), a `Palette` reader (which names the accessor it forwards to), a `named: "x"` string,
-or a corner and rule role (`Radius.card`, `Rule.border`). `--check` changes nothing and fails when the file is stale.
+(`tokens.sidebarRowSelected`), a `Palette` reader (which names the accessor it forwards to), in the window's own files a
+`ChromeColours` reader (`colours.bandHover`, the same way), a `named: "x"` string, or a corner and rule role (`Radius.card`, `Rule.border`). `--check` changes nothing and fails when the file is stale.
 """
 import re
 import sys
@@ -27,16 +27,18 @@ ELEMENTS = {
     "sidebar.band": ["SidebarUI/Group/GroupHeadView.swift", "SidebarUI/Group/HeadControls.swift", "SidebarUI/Group/FoldedSummary.swift"],
     "status.tile": ["SidebarUI/Tile/*"],
     "status.glyph": ["DesignSystem/StatusDot.swift"],
+    "status.bar": ["WindowUI/StatusBar.swift"],
     "folder.color": ["PanelUI/Project/ColorChoice.swift", "PanelUI/Project/FolderColorCard.swift"],
     "branch.chip": ["PanesUI/Title/BranchCrumb.swift"],
     "panel.card": ["PanelUI/Shell/PanelCard.swift"],
-    "panel.band": ["PanelUI/Shell/CardBand.swift", "PanelUI/Shell/BandButton.swift", "PanelUI/Shell/BandCount.swift", "PanelUI/Shell/Disclosure.swift"],
+    "panel.band": ["PanelUI/Shell/CardBand.swift", "PanelUI/Shell/BandButton.swift", "PanelUI/Shell/Disclosure.swift"],
     "panel.item": ["PanelUI/Notes/TaskRowView.swift", "PanelUI/Notes/TaskCheckbox.swift"],
     "file.row": ["PanelUI/Changes/FileRowView.swift", "PanelUI/Changes/LineCounts.swift"],
     "commit.row": ["PanelUI/History/CommitRowView.swift", "PanelUI/History/CommitRefs.swift"],
     "diff": ["PanelUI/Diff/Diff*"],
     "callout": ["PanelUI/Shell/Callout.swift"],
-    "icon.button": ["DesignSystem/IconButton.swift"],
+    "icon.button": ["DesignSystem/IconButton.swift", "DesignSystem/IconMenuButton.swift"],
+    "icon.tab": ["WindowUI/PanelTabBar.swift"],
     "title.tab": ["PanesUI/Tabs/TerminalTabView.swift"],
     "keycap": ["DesignSystem/KeyCap.swift", "SidebarUI/Row/Keycap.swift"],
     "badge": ["DesignSystem/CountBadge.swift", "DesignSystem/StatusBadge.swift", "AuxWindows/Shared/StatusBadge.swift"],
@@ -58,8 +60,13 @@ ELEMENTS = {
     "button.primary": [],
     "input": [],
     "checkbox": [],
+    "menu": ["PanelUI/Shell/RevPicker.swift"],
     "banner": ["DesignSystem/Banner.swift"],
     "palette.row": ["PaletteUI/ResultRow.swift"],
+    "readout": ["WindowUI/Columns/ResizeReadout.swift", "TerminalUI/Scaling/SizeReadoutChip.swift", "TerminalUI/Support/ReadoutPill.swift"],
+    "readout.block": ["TerminalUI/Blocks/BlockReadout.swift", "TerminalUI/Support/ReadoutPill.swift"],
+    "resize.handle": ["WindowUI/Columns/ColumnHandle.swift"],
+    "scrollbar": ["PanelUI/Diff/OverflowCue.swift"],
     "terminal": [],
     "code": [],
 }
@@ -86,13 +93,33 @@ def accessors() -> dict[str, str]:
     return table
 
 
-def tokens_of(text: str, table: dict[str, str]) -> set[str]:
+def chrome(table: dict[str, str]) -> dict[str, str]:
+    """The window's `ChromeColours` readers: name -> token, each a one-line forward to a token or a metric."""
+    text = (SWIFT / "WindowUI/ChromeColours.swift").read_text()
+    out = {name: table[accessor] for name, accessor in re.findall(r"var (\w+): Color \{ tokens\.(\w+) \}", text) if accessor in table}
+    for name, metric in re.findall(r"var (\w+): CGFloat \{ tokens\.metrics\.(\w+) \}", text):
+        out[name] = "metrics." + re.sub(r"(?<!^)([A-Z])", r"_\1", metric).lower()
+    return out
+
+
+def tokens_of(text: str, table: dict[str, str], colours: dict[str, str]) -> set[str]:
     found = {table[m] for m in re.findall(r"\b(?:tokens|Palette|ui)\.(\w+)", text) if m in table}
+    found |= {colours[m] for m in re.findall(r"\bcolours\.(\w+)", text) if m in colours}
     found |= set(re.findall(r'(?:named|rgba\(named): "([a-z_.0-9]+)"', text))
     found |= {token for role, token in ROLES.items() if role in text}
     # The theme's metrics read through `tokens.metrics.radiusLg`: the token is `metrics.radius_lg`.
     metrics = {"radiusSm", "radiusChip", "radius", "radiusLg", "borderWidth", "dividerWidth", "focusRingWidth"}
     found |= {"metrics." + re.sub(r"(?<!^)([A-Z])", r"_\1", m).lower() for m in re.findall(r"\bmetrics\.(\w+)", text) if m in metrics}
+    # The shared `Chip` (DesignSystem/Chip.swift) draws in chip corners, and an outline passed to it at the border width.
+    if re.search(r"\bChip\(", text):
+        found.add("metrics.radius_chip")
+    if re.search(r"\bChip\([^{]*?\boutline:", text, re.S):
+        found.add("metrics.border_width")
+    # The shared rings (DesignSystem/FocusRing.swift) draw in the focus colours at the focus ring's width.
+    if "keyboardFocusRing(" in text:
+        found |= {"border.focus", "metrics.focus_ring_width"}
+    if "flatFocusRing(" in text:
+        found |= {"input.border.focus", "metrics.focus_ring_width"}
     return found
 
 
@@ -105,7 +132,8 @@ def core_uses() -> dict[str, tuple[str, str, list[str]]]:
 
 def swift_tokens(patterns: list[str], table: dict[str, str]) -> set[str]:
     files = sorted(p for p in SWIFT.glob("*/**/*.swift") if any(fnmatch(str(p.relative_to(SWIFT)), g) for g in patterns))
-    return set().union(*(tokens_of(f.read_text(), table) for f in files))
+    colours = chrome(table)
+    return set().union(*(tokens_of(f.read_text(), table, colours if f.relative_to(SWIFT).parts[0] == "WindowUI" else {}) for f in files))
 
 
 def main() -> int:
@@ -120,7 +148,7 @@ def main() -> int:
         rows.append((ident, label, area, sorted(swift_tokens(patterns, table) | set(extra))))
     lines = ["// Generated by macos/scripts/gen-gallery-uses.py from the Swift sources: do not edit.",
              "// The components of the gallery and the tokens each draws with (`TOKEN_USES`' ids, which the views mark with",
-             "// `.marked(id)`): what the Studio outlines while a token is selected and lists as \"Used by\".",
+             "// `.marked(id)`): what the Studio outlines while a token is selected. \"Used by\" is core's `TOKEN_USES`.",
              "// text-file: generated; the labels are core's `TOKEN_USES` names, which the GPUI Studio shows untranslated too",
              "", "import StudioModel", "", "enum GalleryUses {", "    static let elements: [TokenUse] = ["]
     for ident, label, area, tokens in rows:

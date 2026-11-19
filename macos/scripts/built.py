@@ -16,4 +16,12 @@ weight = sum(float(r["weight"]) for r in features.values())
 verified = sum(float(r["weight"]) * float(r["works_real"]) for r in features.values()) / weight * 100
 written = sum(float(r["weight"]) * max(float(built[i]), float(r["works_real"])) for i, r in features.items()) / weight * 100
 waiting = sorted(i for i, r in features.items() if float(built[i]) > float(r["works_real"]))
+# The last audit's finer figure, where there is one (`written.csv`: per row, how much of it is written and reachable, 0 to 100).
+audit = parity / "written.csv"
+if audit.exists():
+    read = {r["id"]: float(r["written"]) for r in csv.DictReader(open(audit))}
+    unknown = [i for i in read if i not in features] + [i for i in features if i not in read]
+    if unknown:
+        print("written.csv: rows do not match the tracker: " + " ".join(unknown)); sys.exit(1)
+    print(f"written by the last audit {sum(float(r['weight']) * read[i] for i, r in features.items()) / weight:.1f} %")
 print(f"built {written:.1f} %   verified {verified:.1f} %   ({len(waiting)} rows built and waiting for the check: {' '.join(waiting)})")
