@@ -128,6 +128,7 @@ extension EndToEnd {
             let repo = try app.scratch.repository("reload-repo", files: ["a.txt": "one\n"])
             try app.scratch.write(repo, "a.txt", "one\ntwo\n")
             await app.terminal(in: repo)
+            await app.seeWindow()
             await app.until("changes") { $0.contains("phase=loaded") && $0.contains("a.txt") }
             await app.send(["diff 1"])
             let spans = Readout(await app.until("diff-spans 0 40") { Readout($0).all("line").contains { $0.words.dropFirst().first == "added" } })
