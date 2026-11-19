@@ -123,7 +123,9 @@ extension EndToEnd {
             let open = await app.reply("import-open ghostty")
             app.expect(open, contains: "open=ghostty")
             // The card reads the terminal's settings a moment after it opens; Apply is there once they are read.
-            let applied = await app.until("import-apply ghostty") { !$0.hasPrefix("error:") }
+            // Only "not read yet" is asked again; any other error is the answer, and fails below.
+            let applied = await app.until("import-apply ghostty") { !$0.contains("are not read yet") }
+            app.expect(!applied.hasPrefix("error"), "Apply was taken:\n\(applied)")
             app.expect(!applied.contains("import-apply nothing"), "something was applied:\n\(applied)")
             _ = await app.waitForConfig { $0.contains("\"font_size\"") }
         }
