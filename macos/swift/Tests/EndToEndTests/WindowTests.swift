@@ -106,6 +106,14 @@ extension EndToEnd {
             await app.live(3)
             await app.until("title") { $0.contains("superproject: Optional(") }
 
+            // A terminal whose program ended still has its folder, but nothing can be typed into it.
+            let live = await app.path(menu: "Insert into terminal")
+            app.expect(live?.contains("[off]") == false, "Insert into terminal is on while the program runs: \(live ?? "-")")
+            await app.send(["type \u{04}"])
+            await app.until("pane-bar") { $0.contains("exited") }
+            let exited = await app.path(menu: "Insert into terminal")
+            app.expect(exited?.contains("[off]") == true, "Insert into terminal is off for an exited terminal: \(exited ?? "-")")
+
             // Hide from Agents marks the title row (`agent-hide` takes the row's place in the list).
             let listed = await app.rows()
             let place = (listed.rows.firstIndex { $0.id == listed.selected } ?? 2) + 1
@@ -116,14 +124,6 @@ extension EndToEnd {
             await app.until("title") { $0.contains("hidden-from-agents: true") }
             await app.until("marked title.lock") { $0.hasPrefix("marked n=1") }
             await app.send(["inspect off"])
-
-            // A terminal whose program ended still has its folder, but nothing can be typed into it.
-            let live = await app.path(menu: "Insert into terminal")
-            app.expect(live?.contains("[off]") == false, "Insert into terminal is on while the program runs: \(live ?? "-")")
-            await app.send(["type \u{04}"])
-            await app.until("pane-bar") { $0.contains("exited") }
-            let exited = await app.path(menu: "Insert into terminal")
-            app.expect(exited?.contains("[off]") == true, "Insert into terminal is off for an exited terminal: \(exited ?? "-")")
         }
     }
 }
