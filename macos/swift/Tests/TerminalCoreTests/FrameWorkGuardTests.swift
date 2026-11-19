@@ -54,6 +54,25 @@ import TerminalCore
         #expect(allocations <= Budget.perRow * size.rows, "\(size.rows) rows allocated \(allocations) times")
     }
 
+    /// The cursor's blink phase (GPUI paints the cursor apart from the rows, so a flip costs them nothing): the flip rebuilds the
+    /// cursor's own row at most, shapes no word, and a flip to the phase it is already in does nothing at all.
+    @Test func theCursorsBlinkPhaseRebuildsItsRowAtMostAndShapesNothing() throws {
+        let renderer = try warmed()
+        let cursor = FrameHeader.Cursor(row: 3, column: 4, shape: .block, blinking: true)
+        let writer = FrameWriter(
+            header: FrameHeader(cols: size.cols, rows: size.rows, changedRows: 0, isFull: false, cursor: cursor), rowCapacity: 0)
+        _ = try renderer.apply(frame: writer.bytes)
+        let before = renderer.counters
+        renderer.setCursorBlinkOn(false)
+        renderer.setCursorBlinkOn(true)
+        let flips = renderer.counters - before
+        #expect(flips.rowsRebuilt <= 2, "two flips rebuilt \(flips.rowsRebuilt) rows: only the cursor's own row may be")
+        #expect(flips.wordsShaped == 0, "a flip shapes no word")
+        let again = renderer.counters
+        renderer.setCursorBlinkOn(true)
+        #expect((renderer.counters - again).rowsRebuilt == 0, "the phase it is already in costs nothing")
+    }
+
     @Test func theCounterSeesAllocationsOnTheMainThread() {
         let (boxes, allocations) = AllocationCounter.counting { (0..<100).map { NSNumber(value: Double($0) + 0.5) } }
         #expect(boxes.count == 100)

@@ -77,7 +77,7 @@ final class MarkTests: XCTestCase {
         guard let files = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil) else {
             throw XCTSkip("the Swift sources are not beside the tests")
         }
-        let pattern = try NSRegularExpression(pattern: #"\.marked\("([^"]+)"\)"#)
+        let pattern = try NSRegularExpression(pattern: #"\.marked\("([^"]+)"[,)]"#)
         var marked = Set<String>()
         for case let url as URL in files where url.pathExtension == "swift" && url.lastPathComponent != "GalleryUses.swift" {
             let text = try String(contentsOf: url, encoding: .utf8)

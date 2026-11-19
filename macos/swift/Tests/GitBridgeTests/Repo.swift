@@ -13,7 +13,7 @@ enum Repo {
 
     static func backends(
         allowed: @escaping @Sendable (String) async -> String? = { _ in nil },
-        created: @escaping @Sendable (MadeWorktree, [String: String]) async -> Void = { _, _ in }
+        created: @escaping @Sendable (MadeWorktree, [String: String], String?) async -> Void = { _, _, _ in }
     ) throws -> GitBackends {
         _ = dataDir
         return try GitBridge.makeBackends(worktreeAllowed: allowed, worktreeCreated: created)

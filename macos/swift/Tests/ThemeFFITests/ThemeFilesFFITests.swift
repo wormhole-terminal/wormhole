@@ -33,8 +33,46 @@ final class ThemeFilesFFITests: XCTestCase {
 
     private func environment() -> StudioEnvironment {
         StudioEnvironment(
-            resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: folder), knowledge: GalleryKnowledge(),
+            resolver: FfiThemeResolver(), folder: FfiThemeFolder(directory: folder), knowledge: GalleryKnowledge(),
             files: FfiStudioFiles(directory: folder))
+    }
+
+    // MARK: The folder and the editor's help, through core
+
+    func testASaveKeepsWhatItReplacedAsAVersionAndCoreReadsItBack() throws {
+        let themes = FfiThemeFolder(directory: folder)
+        let file = folder.appendingPathComponent("Mine.json")
+        let before = try themes.read(file)
+        try themes.write("{ \"name\": \"Mine\" }\n", to: file)
+        let kept = try XCTUnwrap(themes.versions(of: file).first)
+        XCTAssertTrue(kept.pinned, "a file written by hand is kept as the pinned original")
+        XCTAssertEqual(try themes.readVersion(kept), before)
+        XCTAssertEqual(themes.files().map(\.lastPathComponent), ["Mine.json"])
+    }
+
+    func testCoreOffersFunctionsAndNamesAtTheCaretAndFixesAPairThatFallsShort() throws {
+        let files = FfiStudioFiles(directory: folder)
+        let found = try XCTUnwrap(files.completions("mix(pri", caret: 7, target: "primary.hover"))
+        XCTAssertEqual(found.range, 4..<7)
+        XCTAssertTrue(found.items.contains { $0.label == "primary" && !$0.function })
+        XCTAssertNil(files.completions("primary", caret: 7, target: "primary.hover"), "a finished name offers nothing")
+        let weak = "{ \"name\": \"Weak\", \"extends\": \"Nord\", \"ui\": { \"text.muted\": \"#333847\" } }"
+        let report = try files.contrast(weak, shown: nil, increaseContrast: false)
+        let issue = try XCTUnwrap(report.issues.first { $0.check.fg == "text.muted" })
+        XCTAssertTrue(try XCTUnwrap(issue.fix).expression.hasPrefix("readable(#333847"))
+        // One answer: the row is marked and the editor's section lists the same pair, failing.
+        XCTAssertTrue(report.lowTokens.contains("text.muted"))
+        XCTAssertTrue(report.checks(of: "text.muted").contains { $0.bg == issue.check.bg && !$0.passes })
+        XCTAssertEqual(Set(report.checks.filter { !$0.passes }.map(\.fg)), report.lowTokens)
+    }
+
+    func testUsedByIsCoresTableAndTheOutlinesAreWhatTheViewsDraw() {
+        let core = FfiTokenUses.all()
+        XCTAssertTrue(core.contains { $0.id == "dialog" }, "core lists the dialog, which macOS draws here")
+        let knowledge = GalleryKnowledge(uses: core)
+        XCTAssertEqual(knowledge.uses, core)
+        XCTAssertFalse(knowledge.drawn.contains { $0.id == "dialog" }, "the gallery outlines only what its views draw")
+        XCTAssertTrue(knowledge.drawn.first { $0.id == "neutral.chip" }?.draws(with: "metrics.radius_chip") == true, "the shared chip's corners")
     }
 
     // MARK: Picks (audit gap 7)
@@ -133,6 +171,26 @@ final class ThemeFilesFFITests: XCTestCase {
         XCTAssertEqual(doc.versionRows().count, 2, "the file it replaced is kept")
     }
 
+    /// A profile switch under an open draft: the draft is kept (as in the GPUI Studio) and saved back to its own file;
+    /// nothing of it, not even the version its save keeps, lands in the folder of the profile switched to.
+    func testADraftOpenBeforeAProfileSwitchIsNeverSavedIntoTheOtherProfilesFolder() throws {
+        let other = FileManager.default.temporaryDirectory.appendingPathComponent("wh-theme-other-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: other) }
+        let active = ActiveFolder(folder)
+        let environment = StudioEnvironment(
+            resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: { active.url }), knowledge: GalleryKnowledge(),
+            files: FfiStudioFiles(folder: { active.url }))
+        let mine = folder.appendingPathComponent("Mine.json")
+        let doc = try StudioDocument.open(file: mine, environment: environment, store: store())
+        doc.set("primary", to: "#00aa44")
+        active.url = other
+        XCTAssertEqual(try doc.save(), mine)
+        XCTAssertTrue(try String(contentsOf: mine, encoding: .utf8).contains("#00aa44"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: other.path), [], "the other profile's folder stays empty")
+        XCTAssertEqual(doc.versionRows().count, 2, "the file it replaced is kept beside it and listed")
+    }
+
     func testASingleThemeBecomesAPairAndExportsOneAppearance() throws {
         let doc = try StudioDocument.open(theme: "Wormhole Dark", environment: environment(), store: store())
         XCTAssertEqual(doc.missingAppearance, .light)
@@ -178,7 +236,13 @@ final class ThemeFilesFFITests: XCTestCase {
     }
 }
 
-@MainActor
+/// The active profile's themes folder, which a profile switch changes under an open Studio.
+/// why: only the test's own thread writes and reads it; the folder's closures are `@Sendable`, so it is not the main actor's.
+private final class ActiveFolder: @unchecked Sendable {
+    var url: URL
+    init(_ url: URL) { self.url = url }
+}
+
 private final class RecordingPicks: ThemePicking {
     var saved: [(value: String, dark: Bool)] = []
     func pick(_ value: String, dark: Bool) {}

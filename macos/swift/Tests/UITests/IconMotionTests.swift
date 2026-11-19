@@ -63,12 +63,10 @@ final class IconMotionTests: XCTestCase {
 
     /// The shared segmented control wears an outline under Increase Contrast and none otherwise.
     func testSegmentedControlIsOutlinedOnlyUnderIncreaseContrast() throws {
-        let store = ThemeStore.shared
-        let before = store.increaseContrast
-        defer { store.increaseContrast = before }
         func shown(_ contrast: Bool) throws -> [UInt8] {
-            store.increaseContrast = contrast
+            // The window's own switch, as its theme hands it down (not the shared store's).
             let view = Segmented([("Split", 1), ("Unified", 2)], selection: .constant(1)).padding(8).background(.black)
+                .environment(\.increaseContrast, contrast)
             let rep = try ThemeRender(view, size: CGSize(width: 160, height: 80), dark: true).bitmap()
             return Array(UnsafeBufferPointer(start: rep.bitmapData, count: rep.bytesPerRow * rep.pixelsHigh))
         }
@@ -136,7 +134,7 @@ final class IconMotionTests: XCTestCase {
                 let window = try XCTUnwrap(tokens.rgba(named: "surface.window")).withAlpha(1)
                 for color in GroupColor.allCases {
                     XCTAssertGreaterThanOrEqual(
-                        RGBA.contrast(color.titleLine(tokens), window), 3.0 - 0.02, "\(theme.id) \(color) contrast \(contrast)")
+                        RGBA.contrast(GroupWash.titleLine(color.mark(tokens), tokens), window), 3.0 - 0.02, "\(theme.id) \(color) contrast \(contrast)")
                 }
             }
         }
