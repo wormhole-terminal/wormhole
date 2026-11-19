@@ -18,6 +18,8 @@ extension EndToEnd {
     @MainActor func paletteCloseAsks() async throws {
         try await Instance.with(shell: .zsh) { app in
             await app.shell("sleep 300")
+            // The row is named after the command once the look at its process has seen it; the palette finds it by that name.
+            await app.until("rows") { $0.contains("sleep") }
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.send(["palette", "wait-idle 3000", "text sleep", "wait-idle 3000", "key cmd-backspace"])
