@@ -31,12 +31,20 @@ extension SidebarView {
 
     func aim(_ item: DragItem, at point: CGPoint, _ sections: [SidebarSection]) -> DropAim? {
         let lines = lines(sections)
-        guard let over = lines.over(at: point.y) else { return nil }
+        // The edges between parts are held by the part the pointer was over, with the Motion feature on (`edge_memory`).
+        let held: DropOver? = appearance.motionInForce ? drag?.aim.flatMap(\.over) : nil
+        guard let over = lines.over(at: point.y, held: held, part: { dropPlanner?.dropPart(fraction: $0, previous: $1) ?? DropPart(fraction: $0) })
+        else { return nil }
         let gap = SidebarMetrics(density: appearance.density, cards: appearance.cards).cardGap
         switch item {
         case .terminal(let id):
             guard let plan = dropPlanner?.dropPlan(dragged: id, over: over) else { return nil }
-            return DropAim(action: .dropTerminal(id, over: over), mark: lines.mark(for: plan, over: over, gap: gap))
+            var aim = DropAim(action: .dropTerminal(id, over: over), mark: lines.mark(for: plan, over: over, gap: gap))
+            // Rows make room for a row that only moves, with the Motion feature on (`room.rs`).
+            if appearance.motionInForce, let tables = RowMotion.tables {
+                aim.room = lines.room(for: plan, dragged: id, splitOf: { target in state.all.first { $0.id == target }?.splitID }, tables: tables)
+            }
+            return aim
         case .group(let id):
             // The core says where the group would land (nil: nothing would change); the mark is that place.
             guard let landing = dropPlanner?.groupDropPlan(group: id, over: over) else { return nil }
@@ -97,7 +105,7 @@ extension SidebarView {
         }
         if let aimed = aim(item, at: point, sections) {
             let joins = if case .row = aimed.mark { true } else { false }
-            withAnimation(joins ? SidebarMotion.joinSettle : SidebarMotion.list) { act(aimed.action) }
+            withAnimation(reduce ? Motion.fade : joins ? SidebarMotion.joinSettle : SidebarMotion.list) { act(aimed.action) }
         }
         drag = nil
     }
@@ -107,7 +115,8 @@ extension SidebarView {
         if drag != nil || paneAim != nil {
             let lines = lines(sections)
             ZStack(alignment: .topLeading) {
-                if let mark = (drag?.aim ?? paneAim)?.mark { DropMarkView(mark: mark, lines: lines) }
+                // While the rows make room the gap is the mark: no line is drawn.
+                if let aim = drag?.aim ?? paneAim, let mark = aim.mark, !aim.room.isOpen { DropMarkView(mark: mark, lines: lines) }
                 if let drag {
                     if case .terminal(let id) = drag.item, let row = sections.lazy.flatMap(\.rows).first(where: { $0.id == id }), let frame = frames[.row(id)] {
                         LiftedPicture(row: row, context: context(sections), drag: drag, width: frame.width, target: onto(drag.aim?.mark, lines))

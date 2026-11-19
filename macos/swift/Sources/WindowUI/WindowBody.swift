@@ -58,7 +58,11 @@ struct WindowBody: View {
                     facts: facts, sidebarOpen: sidebarWanted, sidebarShown: look.iconAnimations ? sidebarSlide.shown : (sidebarWanted ? 1 : 0),
                     panelOpen: panelFits, panelShown: look.iconAnimations ? panelSlide.shown : (panelFits ? 1 : 0),
                     panelWaiting: fit.panelWaiting && look.zen == nil, leaveZen: look.zen == nil ? nil : { hub.actions.perform("toggleZenMode") },
-                    send: send)
+                    send: { action in
+                        send(action)
+                        // A panel the button closed had the keys in a note or a list: the terminal takes them (`toggle_notes`).
+                        if case .togglePanel = action, !hub.state.panelVisible { hub.focus.focusTerminal() }
+                    })
             }
             // The status bar fades in and out (Reduce Motion cuts); the terminal resizes once, when it is gone.
             .animation(animates ? Motion.fade : nil, value: look.statusBar)
@@ -84,8 +88,8 @@ struct WindowBody: View {
                 old, new in
                 let wantedChanged = old.sidebar != new.sidebar || old.panelWanted != new.panelWanted
                 let animated = animates && wantedChanged && drag == nil
-                sidebarSlide.set(open: new.sidebar, animated: animated)
-                panelSlide.set(open: new.panelWanted && new.panelFits, animated: animated)
+                sidebarSlide.set(open: new.sidebar, animated: animated, motion: look.columnMotion)
+                panelSlide.set(open: new.panelWanted && new.panelFits, animated: animated, motion: look.columnMotion)
             }
         }
     }
@@ -112,12 +116,14 @@ struct WindowBody: View {
                 .frame(width: sidebarWidth)
                 .frame(width: frames.sidebarVisible, alignment: .leading)
                 .clipped()
+                .opacity(sidebarSlide.content)
                 .reachable(sidebarShown > 0)
 
             PanelColumn(hub: hub)
                 .frame(width: panelWidth)
                 .frame(width: frames.panelVisible, alignment: .trailing)
                 .clipped()
+                .opacity(panelSlide.content)
                 .reachable(panelShown > 0)
                 .frame(width: window, alignment: .trailing)
 
@@ -159,7 +165,10 @@ struct WindowBody: View {
             program: state.selected.flatMap { hub.store.programName(of: $0) }, profile: hub.actions.windowProfile?(),
             size: grid.map { "\($0.cols)×\($0.rows)" },
             hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window,
-            waited: { hub.store.waited(since: $0) }
+            waited: { hub.store.waited(since: $0) },
+            spokenAttention: { hub.store.spoken(attention: $0, since: $1) },
+            spokenCount: { hub.store.spoken(count: $0, of: $1) },
+            tile: hub.tileMaker(appearance: look.sidebar)
         ) { hub.actions.showTerminal?($0) ?? send(.select($0)) }
     }
 }

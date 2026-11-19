@@ -13,7 +13,7 @@ public enum ExternalOpen {
 
     /// Opens `url` with the system (a file or folder in the app that opens it, a link in the browser).
     public static func open(_ url: URL) {
-        if !record("open \(url.isFileURL ? url.path : url.absoluteString)") { NSWorkspace.shared.open(url) }
+        if !record("open \(url.isFileURL ? url.path : url.absoluteString)") { NSWorkspace.shared.open(url) } // text: the test instance's record of a launch
     }
 
     /// Opens `target` in the app with bundle identifier `bundle` found at `app` (Open in…); a test instance records it.
@@ -26,7 +26,7 @@ public enum ExternalOpen {
 
     /// Shows `urls` in a Finder window with them selected.
     public static func reveal(_ urls: [URL]) {
-        if !record("reveal " + urls.map(\.path).joined(separator: " ")) { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+        if !record("reveal " + urls.map(\.path).joined(separator: " ")) { NSWorkspace.shared.activateFileViewerSelecting(urls) } // text: the test instance's record of a launch
     }
 
     /// Writes the line when diverted; false when calls open for real.

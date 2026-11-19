@@ -32,6 +32,9 @@ public final class FolderPickerDriver {
         self.decorators = decorators
     }
 
+    /// Some provider has not answered the text yet (the control folder's `folder-picker state` says so).
+    public var isBusy: Bool { answers.count < providers.count }
+
     /// Asks with nothing typed: the folders below the terminal's, and the recent ones.
     public func open() { ask(model.text) }
 

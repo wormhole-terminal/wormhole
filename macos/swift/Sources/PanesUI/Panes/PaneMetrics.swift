@@ -26,9 +26,6 @@ enum PaneMetrics {
     static let dragLift: Double = 0.4
     /// A header's name is at most this wide (`TITLE_TAB_MAX_W`).
     static let nameMax: CGFloat = 220
-    /// A header's button: a control inside a row (`CONTROL_H_SM`), and its glyph (`GLYPH`).
-    static let button: CGFloat = 22
-    static let glyph: CGFloat = 14
     /// The drop line round the zone the pointer is on (`DROP_LINE_W`).
     static let dropLine: CGFloat = 2
     /// A divider lights after the pointer rests on it this long, so crossing it doesn't flash it

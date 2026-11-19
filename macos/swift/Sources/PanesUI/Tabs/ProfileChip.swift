@@ -4,7 +4,9 @@
 // one, and leads to the sheet that makes a profile, to Settings and to the page that manages them. A
 // borderless pop-up: 24 tall, a 16 pt avatar, the name in 13, up-down chevrons, a fill only under the pointer.
 
+import AppKit
 import DesignSystem
+import SidebarUI
 import SwiftUI
 
 public struct ProfileChoice: Identifiable, Equatable, Sendable {
@@ -19,6 +21,14 @@ public struct ProfileChoice: Identifiable, Equatable, Sendable {
 
     public init(id: String, name: String, letter: Character, colour: Color? = nil, current: Bool, here: Bool) {
         (self.id, self.name, self.letter, self.colour, self.current, self.here) = (id, name, letter, colour, current, here)
+    }
+}
+
+extension ProfileChoice {
+    /// The profile a chip given `choices` names; nil draws no chip: only while there are two profiles or more to choose
+    /// between (`sidebar/profile_chip.rs:65`). `ProfileChip` draws from it, and the control folder's `profile-chip` reads it.
+    public static func named(by choices: [ProfileChoice]) -> ProfileChoice? {
+        choices.count > 1 ? choices.first(where: \.current) : nil
     }
 }
 
@@ -51,12 +61,11 @@ public struct ProfileChip: View {
     public init(choices: [ProfileChoice], actions: ProfileActions = ProfileActions()) { (self.choices, self.actions) = (choices, actions) }
 
     public var body: some View {
-        // Only drawn while there are two profiles or more to choose between.
-        if choices.count > 1, let current = choices.first(where: \.current) {
+        if let current = ProfileChoice.named(by: choices) {
             Menu { ProfileMenuItems(choices: choices, actions: actions) } label: {
                 HStack(spacing: Space._2) {
                     ProfileAvatar(choice: current, size: TabMetrics.avatar)
-                    Text(current.name).font(TextRole.label.font.weight(.medium)).foregroundStyle(tokens.textPrimary)
+                    Text(current.name).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                         .lineLimit(1).frame(maxWidth: TabMetrics.chipName, alignment: .leading).fixedSize()
                     Image(systemName: "chevron.up.chevron.down").font(.system(size: Metric.chevron, weight: .semibold)).foregroundStyle(tokens.textMuted)
                 }
@@ -66,6 +75,7 @@ public struct ProfileChip: View {
                 .contentShape(Rectangle())
             }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+            .inspectSite("profile.chip")
             .onHover { hovering = $0 }
             .accessibilityLabel(PanesText.profileChip(current.name))
         }
@@ -73,7 +83,8 @@ public struct ProfileChip: View {
 }
 
 /// A profile's avatar: its letter, bold, on its colour, in the surface's ink where that reads (4.5:1) else the
-/// colour's own contrasting one; below 24 pt the letter is caption type.
+/// colour's own contrasting one, black or white (`profile_avatar`: the text adapts, the person's colour is never changed);
+/// below 24 pt the letter is caption type.
 struct ProfileAvatar: View {
     let choice: ProfileChoice
     let size: CGFloat
@@ -81,12 +92,30 @@ struct ProfileAvatar: View {
 
     /// From this size the letter is body text, below it caption text (`AVATAR_BODY_FROM`).
     private static let bodyFrom: CGFloat = 24
+    /// The least contrast the window's colour must have on the profile's to be the letter's (`LETTER_CONTRAST`).
+    private static let letterContrast = 4.5
 
     var body: some View {
+        let fill = choice.colour ?? tokens.primary
         Text(String(choice.letter).uppercased())
-            .font((size >= Self.bodyFrom ? TextRole.body : TextRole.caption).font.weight(.bold))
-            .foregroundStyle(tokens.surfaceWindow)
+            .font(tokens.font(size >= Self.bodyFrom ? .body : .caption).weight(.bold))
+            .foregroundStyle(ink(on: fill))
             .frame(width: size, height: size)
-            .background(choice.colour ?? tokens.primary, in: Circle())
+            .background(fill, in: Circle())
+    }
+
+    /// The window's own colour where it reads on `fill`, else black or white, whichever contrasts more (`text_on`).
+    private func ink(on fill: Color) -> Color {
+        guard let back = Self.rgba(fill), let window = Self.rgba(tokens.surfaceWindow),
+            RGBA.contrast(window, back) < Self.letterContrast
+        else { return tokens.surfaceWindow }
+        let (white, black) = (RGBA(1, 1, 1), RGBA(0, 0, 0))
+        let opaque = back.over(black)
+        return (RGBA.contrast(white, opaque) >= RGBA.contrast(black, opaque) ? white : black).color
+    }
+
+    private static func rgba(_ colour: Color) -> RGBA? {
+        guard let srgb = NSColor(colour).usingColorSpace(.sRGB) else { return nil }
+        return RGBA(srgb.redComponent, srgb.greenComponent, srgb.blueComponent, srgb.alphaComponent)
     }
 }

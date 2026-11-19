@@ -151,7 +151,7 @@ public enum CommandCatalog {
             Command(
                 id: "terminal-\(item.id)", title: item.name, detail: item.detail(scoped: false, now: now),
                 scopedDetail: item.detail(scoped: true, now: now), second: item.question, group: .terminals,
-                lead: .status(item.activity), shortcut: item.number.map { Shortcut(.command, String($0)) },
+                lead: .status(item.activity, told: item.told), shortcut: item.number.map { Shortcut(.command, String($0)) },
                 target: .terminal(item.id), isStrong: true,
                 searchText: [item.folder, item.branch, item.command, item.who, item.message].compactMap { $0 })
         }

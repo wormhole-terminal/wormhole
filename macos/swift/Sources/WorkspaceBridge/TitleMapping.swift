@@ -45,5 +45,7 @@ extension WorkspaceModel.TerminalSummary {
             id: Int(core.id), title: core.name, folder: core.folder, branch: core.branch, activity: Activity(core.state),
             agent: core.agent.flatMap { AgentID(command: $0.key) }, message: core.message,
             glyph: WorkspaceModel.TileGlyph(core.glyph))
+        superproject = core.superproject
+        detached = core.detached
     }
 }

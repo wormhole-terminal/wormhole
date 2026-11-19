@@ -64,6 +64,17 @@ enum GroupWash {
             .reduce(color) { $0.readable(on: $1.withAlpha(1), ratio: markContrast) }.withAlpha(1)
     }
 
+    /// The line that stands in for a group's colour under the title row while Increase Contrast is on (core's
+    /// `ProjectColor::from_color` then `line`): the colour kept in the lightness that reads as a colour (a black or a white
+    /// says nothing as a line), then moved far enough from the window to be seen on it (`LINE_CONTRAST`, 3:1).
+    static func titleLine(_ mark: RGBA, _ tokens: ThemeTokens) -> RGBA {
+        let lightness = mark.oklab.l
+        let kept = min(max(lightness, 0.30), 0.88)
+        let tint = kept == lightness ? mark : mark.lightened(kept - lightness)
+        guard let window = tokens.rgba(named: "surface.window") else { return tint }
+        return tint.readable(on: window.withAlpha(1), ratio: markContrast)
+    }
+
     /// The hue of a name and the lightness and chroma of the theme's own palette (ANSI 1 to 6, red to cyan), then made
     /// legible.
     static func swatch(hue: Double, grey: Bool = false, _ tokens: ThemeTokens) -> RGBA {
@@ -93,18 +104,6 @@ extension GroupColor {
 
     /// The colour as the head's dot and the menu show it.
     public func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, grey: self == .grey, tokens) }
-
-    /// The line that stands in for the group's colour under the title row while Increase Contrast is on (core's
-    /// `ProjectColor::from_color` then `line`): the colour kept in the lightness that reads as a colour (a black or a white
-    /// says nothing as a tint), then moved far enough from the window to be seen on it (`LINE_CONTRAST`, 3:1).
-    public func titleLine(_ tokens: ThemeTokens) -> RGBA {
-        let mark = mark(tokens)
-        let lightness = mark.oklab.l
-        let kept = min(max(lightness, 0.30), 0.88)
-        let tint = kept == lightness ? mark : mark.lightened(kept - lightness)
-        guard let window = tokens.rgba(named: "surface.window") else { return tint }
-        return tint.readable(on: window.withAlpha(1), ratio: GroupWash.markContrast)
-    }
 
     /// The colour its card is washed with.
     func wash(_ tokens: ThemeTokens) -> RGBA { GroupWash.tint(mark(tokens), tokens) }

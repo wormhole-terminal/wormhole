@@ -14,7 +14,10 @@ struct ExtraChip: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusChip)
+        Chip(
+            fill: filled ? tokens.stateActive : nil, text: filled ? tokens.textPrimary : tokens.textMuted,
+            outline: filled ? tokens.border : nil, height: TitleMetrics.chipHeight, leading: TitleMetrics.extraPad
+        ) {
         HStack(spacing: TitleMetrics.extraGap) {
             if let symbol {
                 Image(systemName: symbol.name).font(.system(size: TitleMetrics.extraIcon - 2, weight: .medium))
@@ -22,13 +25,8 @@ struct ExtraChip: View {
             }
             Text(text).lineLimit(1).fixedSize()
         }
-        .font(TextRole.caption.font.weight(.medium))
-        .foregroundStyle(filled ? tokens.textPrimary : tokens.textMuted)
-        .padding(.horizontal, TitleMetrics.extraPad)
-        .frame(height: TitleMetrics.chipHeight)
-        .background { if filled { shape.fill(tokens.stateActive) } }
-        .overlay { if filled { shape.strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) } }
-        .contentShape(shape)
+        .font(tokens.font(.caption).weight(.medium))
+        }
         .marked("neutral.chip")
     }
 }

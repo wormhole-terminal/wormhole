@@ -3,6 +3,9 @@
 // at the right a chevron that turns when the group folds, a + under the pointer, and, folded, its terminals' tiles, their
 // count and a dot while one needs input or failed. A group with nothing in it says "No terminals". The whole head folds
 // and opens it; the name opens the group's popover (its folder shows as a tooltip) and turns into a field to rename it.
+// To VoiceOver the head is a container named by the core's words (name, colour, folder, count, open or folded), with what a
+// pointer can press as buttons in it, as GPUI's head is (`groups.rs`): the name ("Edit group …"), the chevron ("Fold group
+// …") and the + ("New terminal in …"), which stays in the tree while VoiceOver runs since it shows only under the pointer.
 
 import DesignSystem
 import SwiftUI
@@ -20,6 +23,7 @@ struct GroupHeadView: View {
     @Environment(\.sidebarLook) private var look
     @Environment(\.keyedStop) private var keyed
     @Environment(\.reduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
     private var isEmpty: Bool { section.terminalCount == 0 && head.isPinned }
     /// The core has `~`-shortened it; a long one is cut from the front, as a row's place is.
@@ -36,17 +40,20 @@ struct GroupHeadView: View {
     var body: some View {
         HStack(spacing: Space._2) {
             if !metrics.cards, let mark {
-                Circle().fill(mark).frame(width: Metric.statusDot, height: Metric.statusDot)
+                Circle().fill(mark).frame(width: Metric.statusDot, height: Metric.statusDot).accessibilityHidden(true)
             }
             label
             Spacer(minLength: 0)
-            if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
-            if hovering && !isEmpty { HeadAddButton(group: head.name) { context.newInGroup(head.id) } }
+            // The head's own words say the count and the alert; the tiles are for the eyes.
+            if head.isFolded {
+                FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity).accessibilityHidden(true)
+            }
+            if (hovering || voiceOver) && !isEmpty { HeadAddButton(group: head.name) { context.newInGroup(head.id) } }
             if isEmpty {
-                Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(tokens.font(.caption)).foregroundStyle(tokens.textFaint)
                 HeadAddButton(group: head.name) { context.newInGroup(head.id) }
             } else {
-                HeadChevron(isFolded: head.isFolded)
+                HeadChevron(isFolded: head.isFolded, spoken: foldWords) { context.send(.toggleGroup(head.id)) }
             }
         }
         .padding(.horizontal, metrics.rowInset)
@@ -57,19 +64,14 @@ struct GroupHeadView: View {
         .onHover { hovering = $0 }
         .ringWhileMenuOpen(hovering: hovering)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { context.frames.heads[head.id] = $0 }
-        .overlay {
-            if keyed == .group(head.id) {
-                RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
-            }
-        }
+        .keyboardFocusRing(keyed == .group(head.id), radius: Radius.row)
         .animation(summaryAnimation, value: head.isFolded)
         .opacity(context.drag.lifts(.group(head.id)) ? DragLift.opacity : 1)
         .dragSource(.group(head.id), hooks: context.drag)
         .dropFrame(.head(head.id))
         .nativeContextMenu { context.hooks.groupMenu(head.id) }
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(head.spoken)
-        .accessibilityAddTraits(.isButton)
         .accessibilityHint(Words.text("sidebar-group-head-hint", fallback: "Folds or opens the group"))
         .accessibilityAction { context.send(.toggleGroup(head.id)) }
         .accessibilityAction(named: Words.text("sidebar-group-edit-action", fallback: "Edit group")) { context.openPopover(head.id) }
@@ -80,7 +82,7 @@ struct GroupHeadView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space._1) {
                 name
-                if head.isPinned { LucideView(icon: .pin, size: RowGeometry.pin).foregroundStyle(tokens.textFaint) }
+                if head.isPinned { LucideView(icon: .pin, size: RowGeometry.pin).foregroundStyle(tokens.textFaint).accessibilityHidden(true) }
                 if let folder, !twoLines { folderText(folder) }
             }
             if let folder, twoLines { folderText(folder) }
@@ -91,20 +93,32 @@ struct GroupHeadView: View {
     /// (↩, ⎋ or a click elsewhere) gives the keyboard back to the terminal.
     @ViewBuilder private var name: some View {
         if context.renaming == .group(head.id) {
-            RenameField(name: head.name, font: TextRole.label.font, rename: RowRename { typed in
+            RenameField(name: head.name, font: tokens.font(.label), rename: RowRename { typed in
                 context.rename(nil)
                 if let typed { context.send(.renameGroup(head.id, typed)) }
                 context.hooks.focusTerminal()
             })
         } else {
-            Text(head.name).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+            Text(head.name).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 .contentShape(Rectangle())
                 .onTapGesture { context.openPopover(head.id) }
                 .help(head.folder ?? "")
+                .accessibilityLabel(Words.text("sidebar-group-edit-spoken", ["group": .text(head.name)], fallback: "Edit group \(head.name)"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { context.openPopover(head.id) }
         }
     }
 
+    /// The chevron's name, which says what a press does (`spoken::fold_label`).
+    private var foldWords: String {
+        head.isFolded
+            ? Words.text("sidebar-group-unfold-spoken", ["group": .text(head.name)], fallback: "Unfold group \(head.name)")
+            : Words.text("sidebar-group-fold-spoken", ["group": .text(head.name)], fallback: "Fold group \(head.name)")
+    }
+
     private func folderText(_ folder: String) -> some View {
-        Text(folder).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
+        // Said in the head's own words.
+        Text(folder).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
+            .accessibilityHidden(true)
     }
 }

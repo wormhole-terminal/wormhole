@@ -4,7 +4,7 @@
 import WorkspaceModel
 
 extension WindowHub {
-    public func askWorktree(branch: String, in folder: String) {
-        panel.worktrees.ask(branch: branch, in: folder)
+    public func askWorktree(branch: String, in folder: String, command: String? = nil) {
+        panel.worktrees.ask(branch: branch, in: folder, command: command)
     }
 }

@@ -13,6 +13,9 @@ extension TerminalOverlay {
         if now != markers { markers = now }
         let folds = view.source.probes?.hasFolds ?? false
         if folds != hasFolds { hasFolds = folds }
+        // The first prompt mark comes with drawn rows too: read with the folds, after each frame that rebuilt rows.
+        let blocks = view.source.scrollback?.blocksAvailable ?? false
+        if blocks != hasBlocks { hasBlocks = blocks }
     }
 
     /// The marker was clicked, or VoiceOver's Show: opening says how many lines it showed.

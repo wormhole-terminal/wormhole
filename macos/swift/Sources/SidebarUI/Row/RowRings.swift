@@ -1,6 +1,8 @@
 // Two things a row or a head wears for a while: the highlight of a row that just moved to another group (600 ms, fading
-// out; `MOVE_FLASH`) and the focus ring while its context menu is open (`row/mod.rs`, `group_head.rs`). A SwiftUI
-// `.contextMenu` reports no state, so the ring follows AppKit's menu tracking while the pointer is over the row.
+// out; `MOVE_FLASH`) and the focus ring while its context menu is open (`row/mod.rs`, `group_head.rs`: the same
+// `focus_ring` as a keyboard stop, so it is the shared `keyboardFocusRing`, hidden in a window behind, in Increase
+// Contrast's width). A SwiftUI `.contextMenu` reports no state, so the ring follows AppKit's menu tracking while the
+// pointer is over the row.
 
 import AppKit
 import DesignSystem
@@ -23,15 +25,10 @@ struct RowFlash: View {
 struct OpenMenuRing: ViewModifier {
     let hovering: Bool
     @State private var open = false
-    @Environment(\.tokens) private var tokens
 
     func body(content: Content) -> some View {
         content
-            .overlay {
-                if open {
-                    RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
-                }
-            }
+            .keyboardFocusRing(open, radius: Radius.row)
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in if hovering { open = true } }
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in open = false }
     }

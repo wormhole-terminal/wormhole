@@ -23,7 +23,7 @@ struct GaugeChip: View {
                 Text("\(percent)%").monospacedDigit()
             }
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .foregroundStyle(tokens.textMuted)
         .padding(.horizontal, TitleMetrics.extraPad)
         .frame(height: TitleMetrics.chipHeight)
@@ -41,6 +41,6 @@ struct GaugeChip: View {
             }
             .frame(width: TitleMetrics.meter, height: Self.meterHeight)
             .clipShape(shape)
-            .animation(Motion.selection, value: share)
+            .motion(Motion.selection, value: share)
     }
 }

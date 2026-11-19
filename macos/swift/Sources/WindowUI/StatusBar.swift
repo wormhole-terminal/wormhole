@@ -4,12 +4,15 @@
 // window the words go and the counts keep a glyph, in a narrower one the size goes too (`StatusSummary.Detail`).
 
 import DesignSystem
+import PlatformModel
 import PanesUI
+import SidebarUI
 import SwiftUI
 import WordsModel
 import WorkspaceModel
 
 struct StatusBar: View {
+    @Environment(\.tokens) private var tokens
     let terminals: [TerminalSummary]
     /// The shown terminal, whose state and size end the bar; the size is its grid, "100×30", nil when none is drawn.
     let selected: TerminalSummary?
@@ -23,10 +26,16 @@ struct StatusBar: View {
     let windowWidth: CGFloat
     /// How long ago a terminal got into its state, in the core's words (nil in the sample).
     var waited: (UInt64) -> Waited? = { _ in nil }
+    /// The core's spoken sentences for the needs-you button and the counts ("2 terminals working"); nil without a core.
+    var spokenAttention: (String, UInt64) -> String? = { _, _ in nil }
+    var spokenCount: (Int, Activity) -> String? = { _, _ in nil }
+    /// A terminal's tile as its row draws it (the agent's logo, the status light), for the attention button; nil draws the dot.
+    var tile: ((TerminalID, CGFloat) -> TerminalStatusTile?)?
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
     @Environment(WindowFocus.self) private var focus
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// The gap between items: 14 from one's text to the next's, less the room each has round its text.
     private static let gap: CGFloat = 14 - 2 * Chrome.itemPad
@@ -45,11 +54,14 @@ struct StatusBar: View {
                     Words.text(
                         "window-status-profile-edge", ["profile": .text(profile.name)],
                         fallback: "This window is in \(profile.name), not the profile Wormhole is in"))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    Words.text("window-status-profile-spoken", ["profile": .text(profile.name)], fallback: "Window in profile \(profile.name)"))
             }
             if let waiting = summary.attention {
                 Button { select(waiting.id) } label: {
                     HStack(spacing: Space._1) {
-                        StatusDot(.attention)
+                        if let mark = tile?(waiting.id, Chrome.statusTile) { mark } else { StatusDot(.attention) }
                         Text(waiting.title).lineLimit(1)
                         if let since = waiting.since, let waited = waited(since) {
                             WaitedWords(prefix: detail.words ? Words.text("window-state-needs-input", fallback: "needs input") + " · " : "", first: waited, waited: { self.waited(since) })
@@ -59,15 +71,17 @@ struct StatusBar: View {
                         }
                     }
                 }
-                .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
-                .help(summary.attentionTooltip ?? "")
-                .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
+                .buttonStyle(StatusItemStyle(tint: colours.attentionTint, hover: colours.attentionHover, radius: colours.radiusChip))
+                .accessibilityLabel(waiting.since.flatMap { spokenAttention(waiting.title, $0) } ?? waiting.title)
+                .help(summary.attentionTooltip(jumpKey: Keymap.shared.key(.goToWaiting)?.glyphText) ?? "")
+                .focusRing(focus.ring(.statusBar, 0), radius: colours.radiusChip)
             }
             HStack(spacing: 0) {
                 ForEach(Array(summary.rest.enumerated()), id: \.element.id) { index, count in
                     if index > 0 && detail.words { Text("·").foregroundStyle(colours.faint) }
                     Button { select(count.first) } label: { countLabel(count, words: detail.words) }
                         .buttonStyle(StatusItemStyle())
+                        .accessibilityLabel(spokenCount(count.number, count.activity) ?? count.words)
                         .focusRing(focus.ring(.statusBar, index + (summary.attention == nil ? 0 : 1)), radius: colours.radius)
                 }
             }
@@ -77,7 +91,7 @@ struct StatusBar: View {
                 separated { stateText(selected, words).foregroundStyle(selected.activity.stateColour(colours)) }
             }
             if let hosting, StatusHosting.words(hosting) != nil {
-                separated { StatusHostingItem(state: hosting, word: detail >= .numbers) }
+                separated { StatusHostingItem(state: hosting, word: StatusHosting.showsWord(detail)) }
             }
             if let selected, let size, detail.size {
                 separated { Text("\(program ?? selected.title) · \(size)") }
@@ -87,25 +101,35 @@ struct StatusBar: View {
                             fallback: "\(program ?? selected.title), terminal size \(size)"))
             }
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .monospacedDigit()
         .foregroundStyle(colours.muted)
         .padding(.horizontal, Chrome.edgeInset - Chrome.itemPad)
         .frame(height: Chrome.statusHeight)
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
         .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
-        .animation(Motion.fade, value: summary)
+        .marked("status.bar")
+        // Without the Motion feature the bar's changes are cuts, as in GPUI (the counts roll only with it).
+        .animation(look.motionFeature ? Motion.fade : nil, value: summary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("window-status-bar", fallback: "Status bar"))
     }
 
     /// "working · 4m", "done · 3m", "failed · 2m", "needs input", "exited": how long in whole minutes, as the title row says it.
     @ViewBuilder private func stateText(_ terminal: TerminalSummary, _ words: String) -> some View {
-        if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let first = waited(since) {
-            WaitedWords(prefix: words + " · ", first: first, waited: { self.waited(since) })
+        let said = Self.state(terminal, words)
+        if let since = said.since, let first = waited(since) {
+            WaitedWords(prefix: said.words + " · ", first: first, waited: { self.waited(since) })
         } else {
-            Text(words)
+            Text(said.words)
         }
+    }
+
+    /// The state item's words and the moment its " · 4m" counts from (nil: it has none): drawn here, read by `status-items`.
+    static func state(_ terminal: TerminalSummary, _ words: String) -> (words: String, since: UInt64?) {
+        if terminal.activity == .failed, let code = terminal.failureCode { return (StateWords.failedExit(code), nil) }
+        let counts = [.working, .finished, .failed].contains(terminal.activity)
+        return (words, counts ? terminal.since : nil)
     }
 
     /// An item read, not clicked, after a hairline.
@@ -119,20 +143,25 @@ struct StatusBar: View {
 
     @ViewBuilder private func countLabel(_ count: StatusSummary.Count, words: Bool) -> some View {
         if words {
-            Text(count.words)
+            Text(count.words).statusRoll(count.number, on: look.motionFeature && !reduceMotion)
         } else {
             HStack(spacing: Space._1) {
                 StatusDot(count.activity.status)
-                Text("\(count.number)")
+                Text("\(count.number)").statusRoll(count.number, on: look.motionFeature && !reduceMotion)
             }
         }
     }
 }
 
-/// An item of the bar: its metrics (22 pt tall, 4 round the text), the hover wash and the pressed one.
+/// An item of the bar: its metrics (22 pt tall, 4 round the text), the hover wash and the pressed one. It takes clicks across
+/// the bar's whole height (22 drawn, 28 hit: `status_item`) while laid out, and ringed, at its face's.
 private struct StatusItemStyle: ButtonStyle {
     /// A fill the item wears at rest: the needs-you button's attention tint.
     var tint: Color = .clear
+    /// Its fill under the pointer and while pressed, where it is not the bar's `band.hover` (the needs-you button's
+    /// attention ring at 30 %), and its corners where they are not the control's (that button is a chip: `status_attention`).
+    var hover: Color?
+    var radius: CGFloat?
     @State private var hovering = false
     @Environment(\.chrome) private var colours
 
@@ -141,12 +170,17 @@ private struct StatusItemStyle: ButtonStyle {
             .padding(.horizontal, Chrome.itemPad)
             .frame(height: Chrome.statusItem)
             .background(
-                configuration.isPressed || hovering ? colours.bandHover : tint,
-                in: RoundedRectangle(cornerRadius: colours.radius)
+                configuration.isPressed || hovering ? hover ?? colours.bandHover : tint,
+                in: RoundedRectangle(cornerRadius: radius ?? colours.radius)
             )
-            .onHover { hovering = $0 }
+            .padding(.vertical, Self.overhang)
             .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .padding(.vertical, -Self.overhang)
     }
+
+    /// How far the hit reaches above and below the face: the rest of the bar's height.
+    private static var overhang: CGFloat { (Metric.statusBar - Chrome.statusItem) / 2 }
 }
 
 /// "needs input · 2m": the words move with time, so a one-shot timer, armed for the moment they next read differently,
@@ -164,5 +198,14 @@ private struct WaitedWords: View {
                 try? await Task.sleep(for: shown.next)
                 if !Task.isCancelled { current = waited() }
             }
+    }
+}
+
+private extension View {
+    /// A count that turns over like a counter's digits when it changes (`window/status_rolls.rs`: 160 ms, the core's
+    /// `roll::DURATION`); a cut when `on` is false.
+    func statusRoll(_ number: Int, on: Bool) -> some View {
+        contentTransition(on ? .numericText(value: Double(number)) : .identity)
+            .animation(on ? .easeOut(duration: 0.16) : nil, value: number)
     }
 }

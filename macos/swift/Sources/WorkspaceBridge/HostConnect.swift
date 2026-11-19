@@ -10,7 +10,7 @@ import WormholeBindings
 struct Connected: Sendable {
     var terminal: Terminal?
     /// The host runs and cannot be shown: the terminal keeps its place and the bar says why.
-    var unavailable: (why: HostProblem.Why, host: String)?
+    var unavailable: (why: HostProblem.Why, host: String, detail: String)?
     /// No host would start, so the program runs in the app, which ends with it (`WorkspaceNotice.hostFallback`).
     var fallback: String?
     /// Nothing started.
@@ -21,15 +21,16 @@ struct Connected: Sendable {
 
 enum HostConnect {
     /// `attach`: the host a saved terminal ran in, when it runs. A host that is gone, or none, starts a new one; one that
-    /// would not start leaves the program in the app.
+    /// would not start leaves the program in the app. One that comes up after the app quit is let go of, or ended, by the
+    /// desk itself (`HostedTerminals.finish`): the main actor may be gone by then.
     static func run(
         desk: HostedTerminals, what: HostedStart, attach host: String?, visible: Bool, relay: TerminalRelay
     ) -> Connected {
         if let host {
             do {
                 return Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true)
-            } catch HostingError.Unavailable(_, let kind, _) {
-                return Connected(unavailable: (HostProblem.Why(kind), host))
+            } catch HostingError.Unavailable(let reason, let kind, _) {
+                return Connected(unavailable: (HostProblem.Why(kind), host, reason))
             } catch HostingError.Gone {
                 // Its program went with its host: a new terminal where it was.
             } catch { return Connected(failure: "\(error)") }

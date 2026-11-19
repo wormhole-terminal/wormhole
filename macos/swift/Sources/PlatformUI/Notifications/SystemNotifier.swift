@@ -3,9 +3,11 @@
 // Open / Reply… / Show Changes buttons. The centre aborts a process that isn't an app bundle, so it is never
 // touched without one, nor in a test instance: `make` returns the log notifier there.
 
+import AppLogging
 import Foundation
 import PlatformModel
 import UserNotifications
+import WordsModel
 
 @MainActor
 public final class SystemNotifier: Notifying {
@@ -44,11 +46,19 @@ public final class SystemNotifier: Notifying {
 
     public func post(_ notice: Notice) {
         if !asked { askPermission() }
-        // The same identifier replaces a terminal's earlier notification; a nil trigger delivers now.
-        let request = UNNotificationRequest(identifier: notice.id, content: NoticeContent.content(notice), trigger: nil)
-        center.add(request) { error in
-            if let error { NSLog("posting a notification failed: \(error.localizedDescription)") }
+        center.add(request(for: notice)) { error in
+            if let error { AppLog.log("error", "posting a notification failed: \(error.localizedDescription)") }
         }
+    }
+
+    public func deliver(_ notice: Notice) async throws {
+        if !asked { askPermission() }
+        try await center.add(request(for: notice))
+    }
+
+    /// The same identifier replaces a terminal's earlier notification; a nil trigger delivers now.
+    private func request(for notice: Notice) -> UNNotificationRequest {
+        UNNotificationRequest(identifier: notice.id, content: NoticeContent.content(notice), trigger: nil)
     }
 
     public func remove(id: String) {
@@ -64,7 +74,18 @@ public final class SystemNotifier: Notifying {
         }
     }
 
+    /// Asks and waits for the person's answer (the test banner's press waits for it; the permission is read again after it).
+    public func askPermissionAndWait() async {
+        asked = true
+        _ = try? await center.requestAuthorization(options: [.alert, .sound])
+        await refresh()
+    }
+
     func refreshPermission() { Task { await refresh() } }
+
+    /// Reads macOS's answer again: the centre sends no event when the person changes it in System Settings, so the app
+    /// coming forward, the Settings window becoming key and a test about to go out each ask (never a timer).
+    public func readPermission() async { await refresh() }
 
     private func refresh() async {
         let settings = await center.notificationSettings()

@@ -61,11 +61,7 @@ struct TerminalRowView: View {
         }
         .overlay { if solo { shape.strokeBorder(isSelected ? tokens.sidebarRowSelected : tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) } }
         .overlay { StatusWash(state: tileState, count: reduceMotion ? 0 : context.shifts[terminal.id]?.count ?? 0, enabled: look.statusMotion == .wash, shape: shape) }
-        .overlay {
-            if keyed == .row(terminal.id) {
-                RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
-            }
-        }
+        .keyboardFocusRing(keyed == .row(terminal.id), radius: Radius.row)
         .overlay { if let flash = context.flash, flash.id == terminal.id { RowFlash(shape: shape).id(flash.generation) } }
         .contentShape(shape)
         .ringWhileMenuOpen(hovering: hovering)

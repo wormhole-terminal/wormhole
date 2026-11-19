@@ -15,7 +15,7 @@ struct SheetBody: View {
     var body: some View {
         if found.shown == 0 {
             Text(Words.text("palette-sheet-none", fallback: "No shortcut matches"))
-                .font(.system(size: TextRole.body.size))
+                .font(.system(size: tokens.size(.body)))
                 .foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, OverlayMetrics.sheetMargin)
                 .padding(.vertical, Space._4)

@@ -10,35 +10,48 @@ struct FolderCrumb: View {
     let plan: TitlePlan
     let actions: TitleActions
     @State private var card = PathCardHover()
+    @State private var hovering = false
     @Environment(\.tokens) private var tokens
+    @Environment(\.titleTinted) private var tinted
 
     var body: some View {
+        // Under a group's tint the icon and the parents step up to the main text colour, so they keep their contrast
+        // on it (`breadcrumb.rs` `soft`); under the pointer they all take it (`path_crumb`'s hover).
+        let soft = tinted || hovering ? tokens.textPrimary : tokens.textMuted
         let text: PathText? = if case .step(let ix) = plan.fit.path { plan.steps[ix].text } else { nil }
         Button {
             card.close()
             actions.revealFolder()
         } label: {
             HStack(spacing: TitleMetrics.crumbGap) {
-                Image(systemName: "folder").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+                Image(systemName: "folder").font(.system(size: Metric.glyph)).foregroundStyle(soft)
                 if let text {
                     // The parents stand back; the folder itself is the text.
                     HStack(spacing: 0) {
-                        Text(text.parents).foregroundStyle(tokens.textMuted)
+                        Text(text.parents).foregroundStyle(soft)
                         Text(text.last).foregroundStyle(tokens.textPrimary).fontWeight(.medium)
                     }
-                    .font(TextRole.label.font.weight(.regular))
+                    .font(tokens.font(.label).weight(.regular))
                     .lineLimit(1).fixedSize()
                 }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { card.hover(.path, $0) }
-        .popover(isPresented: $card.shown, arrowEdge: .bottom) {
-            PathCard(path: plan.facts.shownFolder ?? "", actions: actions, hover: card)
+        .onHover { inside in
+            hovering = inside
+            card.hover(.path, inside)
         }
-        .contextMenu { PathMenuItems(facts: plan.facts, actions: actions) }
+        .popover(isPresented: $card.shown, arrowEdge: .bottom) {
+            PathCard(path: plan.facts.shownFolder ?? "", buttons: PathCardItem.allCases.map { $0.button(actions) }, hover: card)
+        }
+        .contextMenu { TitleMenuItems(entries: TitleMenuEntries.path(plan.facts.folder, shown: plan.facts.shownFolder ?? "", actions)) }
         .accessibilityLabel(PanesText.openFolder(plan.facts.shownFolder ?? ""))
         .accessibilityAddTraits(.isButton)
     }
+}
+
+extension EnvironmentValues {
+    /// The selected terminal's group has a colour, which is the title row's tint (`TitlePlan.tint` in the GPUI app).
+    @Entry public var titleTinted = false
 }

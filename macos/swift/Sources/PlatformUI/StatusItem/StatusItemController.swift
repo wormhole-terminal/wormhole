@@ -33,8 +33,8 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         super.init()
         guard policy.touchesSystem else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.setAccessibilityLabel("Wormhole")
-        item.menu = NSMenu(title: "Wormhole")
+        item.button?.setAccessibilityLabel("Wormhole") // text: the item's accessibility name, the product name
+        item.menu = NSMenu(title: "Wormhole") // text: the item's accessibility name, the product name
         item.menu?.delegate = self
         self.item = item
     }

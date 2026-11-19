@@ -22,11 +22,8 @@ struct BranchCrumb: View {
                             .frame(width: TitleMetrics.extraIcon)
                         if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
                     }
-                    .font(TextRole.caption.font.weight(.medium))
-                    .foregroundStyle(detached ? tokens.statusWarningText : tokens.gitBranch)
-                    .padding(.leading, Space._1).padding(.trailing, showsText ? Space._2 : Space._1)
-                    .frame(width: width, height: TitleMetrics.chipHeight, alignment: .leading)
-                    .background(detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+                    .font(tokens.font(.caption).weight(.medium))
+                    .modifier(BranchChip(detached: detached, showsText: showsText, width: width))
                     .clipped()
                     .marked("branch.chip")
                     .contentTransition(.interpolate)
@@ -34,11 +31,29 @@ struct BranchCrumb: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(PanesText.branch(branch ?? PanesText.detached))
                 if let whose = plan.facts.superproject, plan.fit.words {
-                    Text(whose).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                    Text(whose).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                         .lineLimit(1).fixedSize().padding(.leading, Space._2)
                         .help(PanesText.submodule(whose))
                 }
             }
         }
+    }
+}
+
+/// The branch chip's own colours and padding on the shared chip (the branch colour, or the warning one while detached).
+private struct BranchChip: ViewModifier {
+    let detached: Bool
+    let showsText: Bool
+    /// The width the title row planned for the chip: the wash fills all of it, as before the chip was shared.
+    let width: CGFloat
+    @Environment(\.tokens) private var tokens
+
+    func body(content: Content) -> some View {
+        Chip(
+            fill: detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground,
+            text: detached ? tokens.statusWarningText : tokens.gitBranch, height: TitleMetrics.chipHeight, width: width,
+            leading: Space._1,
+            trailing: showsText ? Space._2 : Space._1
+        ) { content }
     }
 }

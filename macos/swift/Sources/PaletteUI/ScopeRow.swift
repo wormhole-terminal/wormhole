@@ -34,7 +34,7 @@ struct ScopeRow: View {
         let label = item.prefix.map { "\($0) \(item.title)" } ?? item.title
         return Button { choose(item) } label: {
             Text(label)
-                .font(.system(size: TextRole.caption.size))
+                .font(.system(size: tokens.size(.caption)))
                 .foregroundStyle(active ? tokens.textOnSelected : hovered == item ? tokens.textPrimary : tokens.textMuted)
                 .padding(.horizontal, Space._2)
                 .frame(height: Metric.controlSmall - 2 * OverlayMetrics.segmentInset)

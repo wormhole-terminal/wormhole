@@ -18,7 +18,7 @@ extension MenuBuilder {
             [
                 list(
                     Words.text("platform-menu-project-actions", fallback: "Project Actions"),
-                    state.projectActions.map { .item(MenuItem(.runProjectAction($0.id), $0.title)) },
+                    state.projectActions.map { .item(MenuItem(.runProjectAction($0.id), $0.title, key: $0.key)) },
                     Words.text("platform-menu-no-project-actions", fallback: "No Project Actions"))
             ]
         case .newTerminalWith:

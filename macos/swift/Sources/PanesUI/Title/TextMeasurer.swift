@@ -6,6 +6,9 @@ import DesignSystem
 import PanesModel
 
 struct TextMeasurer: TextMeasuring {
+    /// The tokens of the window the row is in: the roles' sizes follow its theme's interface font.
+    let tokens: ThemeTokens
+
     func width(_ text: String, _ face: TitleFace) -> Double {
         guard !text.isEmpty else { return 0 }
         let (role, weight): (TextRole, NSFont.Weight) =
@@ -15,9 +18,7 @@ struct TextMeasurer: TextMeasuring {
             case .caption: (.caption, .regular)
             case .captionMedium: (.caption, .medium)
             }
-        // Only ever called while a view body lays out, on the main actor; `TextRole`'s size follows the theme's font.
-        let size = MainActor.assumeIsolated { role.size }
-        let font = NSFont.systemFont(ofSize: size, weight: weight)
+        let font = NSFont.systemFont(ofSize: tokens.size(role), weight: weight)
         return (text as NSString).size(withAttributes: [.font: font]).width.rounded(.up)
     }
 }

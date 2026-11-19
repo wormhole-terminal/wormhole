@@ -69,6 +69,8 @@ public struct NoticeTab: Sendable, Equatable {
     /// On screen in its window, and its window is the key window.
     public var selected = false
     public var key = false
+    /// The settings of the profile the terminal is in; nil: the look's own.
+    public var settings: NoticeSettings?
 
     public init(session: Int64, tab: Int64, name: String, state: NoticeState, sinceMs: UInt64 = 0) {
         (self.session, self.tab, self.name, self.state, self.sinceMs) = (session, tab, name, state, sinceMs)

@@ -10,7 +10,7 @@ struct DragChip: View {
     var body: some View {
         HStack(spacing: Space._2) {
             TerminalTile(activity: info.activity)
-            Text(info.title).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+            Text(info.title).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
         }
         .padding(.horizontal, Space._2).frame(height: Metric.row)
         .background(tokens.surfaceElevated, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))

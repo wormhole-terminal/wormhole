@@ -36,6 +36,7 @@ extension PanesText {
             alert ? Words.text("tab-switcher-card-alert", fallback: "needs you") : nil,
         ].compactMap { $0 }.joined(separator: ", ")
     }
+    static var editGroup: String { Words.text("sidebar-group-edit-action", fallback: "Edit group") }
     static func profileChip(_ name: String) -> String { Words.text("profile-chip-spoken", ["name": .text(name)], fallback: "Profile \(name), switch profile") }
     static var switchTo: String { Words.text("profile-menu-switch-to", fallback: "Switch Wormhole to") }
     static var openWindowIn: String { Words.text("profile-menu-open-in", fallback: "Open a window in…") }

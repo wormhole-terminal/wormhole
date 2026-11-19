@@ -19,15 +19,18 @@ extension WindowHub {
     }
 
     /// A coding agent runs in one of the terminals of the shown split (the Usage tab's reason to exist).
-    private var agentOnScreen: Bool {
+    var agentOnScreen: Bool {
         let shown = Set(state.panes.shown.map(\.id)).union(state.selected.map { [$0] } ?? [])
         return state.all.contains { shown.contains($0.id) && $0.agent != nil }
     }
 
     /// The tab on show went away (the agent left, the folder is unknown): back to the tab before Usage, else Changes.
     func leaveMissingTab() {
-        guard !panelTabs.contains(state.panelTab) else { return }
-        send(.showPanelTab(tabBeforeUsage ?? .changes))
+        let tabs = panelTabs
+        guard !tabs.isEmpty, !tabs.contains(state.panelTab) else { return }
+        let back = [tabBeforeUsage, WorkspaceModel.PanelTab.changes].compactMap { $0 }.first(where: tabs.contains) ?? tabs[0]
+        // The tab alone: leaving one never opens the panel.
+        _ = store.send(.setPanelTab(back))
     }
 
     /// The status bar's items the keys walk: the terminal that needs you, then each count's first terminal.

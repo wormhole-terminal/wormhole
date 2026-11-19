@@ -90,6 +90,14 @@ public final class RustWindowsBackend: WindowsBackend {
         WindowFrame(cascadeFrame(from: frame.record, display: display.record))
     }
 
+    public func windowAnimation(motion: Bool, reduceMotion: Bool, background: Bool, grows: Bool) -> WindowAnimation {
+        switch WormholeBindings.windowAnimation(motion: motion, reduceMotion: reduceMotion, background: background, grows: grows) {
+        case .standard: .standard
+        case .document: .document
+        case .cut: .cut
+        }
+    }
+
     public var minSize: CGSize {
         let least = windowMinSize()
         return CGSize(width: Double(least.width), height: Double(least.height))

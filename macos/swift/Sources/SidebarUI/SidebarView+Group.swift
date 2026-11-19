@@ -23,14 +23,11 @@ extension SidebarView {
     }
 
     func newInGroup(_ group: GroupID) {
-        if let folder = dropPlanner?.groupFolderOffer(group: group) {
-            let name = state.groups.first { $0.id == group }?.name ?? ""
-            switch GroupFolderQuestion.ask(folder: folder, group: name) {
-            case .use: send(.setGroupFolder(group, folder))
-            case .decline: send(.declineGroupFolder(group))
-            case .cancel: return
-            }
+        let name = state.groups.first { $0.id == group }?.name ?? ""
+        let send = send, planner = dropPlanner
+        // The question first (a test instance holds it for its control folder), the terminal after the answer, whatever it was.
+        Task { @MainActor in
+            await GroupFolderQuestion.openTerminal(inGroup: group, name: name, planner: planner, send: send)
         }
-        send(.newTerminalInGroup(group))
     }
 }

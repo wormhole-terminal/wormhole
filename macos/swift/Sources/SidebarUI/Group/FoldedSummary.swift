@@ -20,11 +20,7 @@ struct FoldedSummary: View {
                     surface: tokens.sidebarBackground)
                     .help(tile.name)
             }
-            Text(CountBadge.label(count))
-                .font(TextRole.caption.font.weight(.semibold).monospacedDigit()).foregroundStyle(tokens.textPrimary)
-                .padding(.horizontal, Space._1)
-                .frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
-                .background(tokens.border, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+            CountBadge(count)
             if let alert {
                 Circle().fill(alert == .failed ? tokens.statusDanger : tokens.agentAttention)
                     .frame(width: RowGeometry.alertDot, height: RowGeometry.alertDot)

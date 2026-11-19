@@ -1,8 +1,8 @@
 // The right panel's title row: its icon tabs (28 pt squares, 4 apart, as `icon_tab` draws them) from the 6 pt
 // pad, and room at the end for the panel toggle that floats over it. One selection shape sits under the tabs
 // and springs between them on the quick spring (400/30, `view::motion::tabs`), so a second switch mid-way
-// carries on from where the first was; Reduce Motion moves it at once. Each tab is a button for VoiceOver in
-// a tab list, and the arrow keys walk the list as one stop.
+// carries on from where the first was; Reduce Motion moves it at once. For VoiceOver the strip is a group of radio
+// buttons, one a tab, as AppKit's tab strip is, and the arrow keys walk the list as one stop.
 
 import DesignSystem
 import PanelUI
@@ -17,6 +17,9 @@ struct PanelTabBar: View {
     let select: @MainActor (PanelTab) -> Void
     /// The counts on the tabs that have one (the changed files, the agents that reported).
     var badges: [PanelTab: Int] = [:]
+    /// What VoiceOver says of a tab, with its counts (core's words), and its tooltip, which names its key.
+    var spoken: (PanelTab) -> String = { $0.title }
+    var tip: (PanelTab) -> String = { $0.title }
     @Namespace private var selection
     @Environment(\.chrome) private var colours
     @Environment(\.reduceMotion) private var reduceMotion
@@ -26,12 +29,8 @@ struct PanelTabBar: View {
 
     var body: some View {
         HStack(spacing: Chrome.tabGap) {
-            ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
-                PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], namespace: selection) { select(candidate) }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(candidate.title)
-                    .accessibilityValue(spoken(candidate, position: position))
-                    .accessibilityAddTraits(candidate == tab ? [.isButton, .isSelected] : .isButton)
+            ForEach(tabs, id: \.self) { candidate in
+                PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], tip: tip(candidate), namespace: selection) { select(candidate) }
             }
             Spacer(minLength: 0)
         }
@@ -41,16 +40,24 @@ struct PanelTabBar: View {
         .padding(.trailing, Chrome.panelToggleSlot)
         .frame(height: Chrome.titleHeight)
         .background(WindowDragArea())
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Words.text("window-panel", fallback: "Right panel"))
+        // Each tab a tab, the shown one selected (GPUI's `Role::Tab` with `aria_selected`, `window/chrome.rs`): SwiftUI gives no
+        // element of its own that role on macOS, and a segmented picker is AppKit's radio group of them. Nothing drawn changes.
+        .accessibilityRepresentation {
+            Picker(Words.text("window-panel", fallback: "Right panel"), selection: Binding(get: { tab }, set: { select($0) })) {
+                ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
+                    Text(spoken(candidate)).accessibilityValue(place(position)).tag(candidate)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        .accessibilityAddTraits(.isTabBar)
     }
 }
 
 extension PanelTabBar {
-    /// "2 of 6", and the count where the tab has one ("Changes: 3 files" is the tab's own label's business).
-    fileprivate func spoken(_ tab: PanelTab, position: Int) -> String {
-        let place = Words.text("window-tab-position", ["position": .whole(position + 1), "total": .whole(tabs.count)], fallback: "\(position + 1) of \(tabs.count)")
-        return badges[tab].map { "\(place), \($0)" } ?? place
+    /// "2 of 6": the tab's place in the list (its counts are in its own words, `spoken`).
+    fileprivate func place(_ position: Int) -> String {
+        Words.text("window-tab-position", ["position": .whole(position + 1), "total": .whole(tabs.count)], fallback: "\(position + 1) of \(tabs.count)")
     }
 }
 
@@ -58,6 +65,7 @@ private struct PanelTabButton: View {
     let tab: PanelTab
     let isSelected: Bool
     let badge: Int?
+    let tip: String
     let namespace: Namespace.ID
     let action: @MainActor () -> Void
     @State private var hovering = false
@@ -69,7 +77,7 @@ private struct PanelTabButton: View {
         Button(action: action) {
             HStack(spacing: Space._1) {
                 glyph
-                if let badge { TabCountBadge(count: badge, selected: isSelected) }
+                if let badge { CountBadge(badge, selected: isSelected) }
             }
             .padding(.horizontal, badge == nil ? 0 : Space._2)
             .frame(minWidth: Chrome.iconTab, minHeight: Chrome.iconTab)
@@ -85,10 +93,11 @@ private struct PanelTabButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .marked("icon.tab")
         .onHover { hovering = $0 }
         // The glyph plays as its tab becomes the active one, never as the window opens or the panel comes back.
         .onChange(of: isSelected) { _, now in if now { run.start() } }
-        .help(tab.title)
+        .help(tip)
     }
 
     @ViewBuilder private var glyph: some View {

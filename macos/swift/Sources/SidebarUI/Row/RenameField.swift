@@ -13,7 +13,8 @@ struct RowRename {
 
 struct RenameField: View {
     let name: String
-    var font = TextRole.body.font.weight(.medium)
+    /// The field's font; nil is the row's own (body, medium) in the window's theme.
+    var font: Font?
     let rename: RowRename
     @State private var text = ""
     @State private var done = false
@@ -23,11 +24,13 @@ struct RenameField: View {
     var body: some View {
         TextField("", text: $text)
             .textFieldStyle(.plain)
-            .font(font)
+            .font(font ?? tokens.font(.body).weight(.medium))
             .foregroundStyle(tokens.textPrimary)
             .focused($focused)
             .onSubmit { finish(text) }
             .onKeyPress(.escape) { finish(nil); return .handled }
+            // The field editor turns ⎋ into cancelOperation before a key press is offered: this is where it arrives.
+            .onExitCommand { finish(nil) }
             .onChange(of: focused) { _, now in if !now { finish(text) } }
             .onAppear {
                 text = name

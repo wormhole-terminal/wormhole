@@ -55,7 +55,7 @@ extension WindowHub {
     public func noteExit(of id: TerminalID, code: Int32?) {
         // The program ended with its host, which went away: the bar says so.
         let lost = store.hosting(of: id).map { if case .lost = $0 { true } else { false } } ?? false
-        overlay(for: id)?.exited(code: code, hostLost: lost)
+        overlay(for: id)?.exited(code: code, hostLost: lost, shell: store.shellName(of: id))
         hostChanged(id)
     }
 

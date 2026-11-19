@@ -86,9 +86,11 @@ extension WindowFocus {
         return true
     }
 
-    /// ← → on the strip: the previous or next terminal the sidebar lists, wrapping; the keys stay on the strip.
+    /// ← → on the strip: the previous or next tab shown (the terminal's set, a folded group's too), else the terminal the sidebar
+    /// lists; wrapping; the keys stay on the strip.
     private func walkTerminals(_ delta: Int) {
-        let ids = hub.state.sections.flatMap(\.rows).map(\.id)
+        let bar = hub.tabBar
+        let ids = bar.isShown ? bar.tabs.map(\.id) : hub.state.sections.flatMap(\.rows).map(\.id)
         guard let at = ids.firstIndex(where: { $0 == hub.state.selected }), ids.count > 1 else { return }
         hub.send(.select(ids[(at + delta + ids.count) % ids.count]))
     }

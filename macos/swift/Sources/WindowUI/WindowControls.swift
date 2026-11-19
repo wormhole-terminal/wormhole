@@ -22,14 +22,14 @@ struct WindowControls: View {
     var body: some View {
         // Centred in the 38 pt row, as the GPUI app's buttons are.
         ZStack(alignment: .leading) {
-            TitleButton(label: sidebarOpen ? "Hide sidebar" : "Show sidebar", help: sidebarHelp, stop: 0) { color in
+            TitleButton(label: sidebarLabel, help: sidebarHelp, stop: 0) { color in
                 PanelGlyph(side: .left, fill: sidebarShown, color: color)
             } action: {
                 send(.toggleSidebar)
             }
             .padding(.leading, facts.collapseX)
 
-            TitleButton(label: panelOpen ? "Hide right panel" : "Show right panel", help: panelHelp, glyph: { color in
+            TitleButton(label: panelLabel, help: panelHelp, glyph: { color in
                 PanelGlyph(side: .right, fill: panelShown, color: color)
             }, marked: panelWaiting) {
                 if let leaveZen { leaveZen() } else { send(.togglePanel) }
@@ -41,11 +41,19 @@ struct WindowControls: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private var sidebarHelp: String { (sidebarOpen ? "Hide sidebar" : "Show sidebar") + " (⌘B)" }
+    private var sidebarLabel: String {
+        sidebarOpen ? Words.text("window-focus-hide-sidebar", fallback: "Hide sidebar") : Words.text("window-focus-show-sidebar", fallback: "Show sidebar")
+    }
+
+    private var panelLabel: String {
+        panelOpen ? Words.text("window-hide-panel", fallback: "Hide right panel") : Words.text("window-show-panel", fallback: "Show right panel")
+    }
+
+    private var sidebarHelp: String { sidebarLabel + " (⌘B)" }
 
     private var panelHelp: String {
         if leaveZen != nil { return Words.text("zen-panel-hidden", fallback: "Zen mode hides the right panel · Click to leave Zen mode") }
-        let action = panelOpen ? "Hide right panel" : "Show right panel"
-        return (panelWaiting ? action + " · hides the sidebar to make room" : action) + " (⌥⌘B)"
+        let action = panelLabel
+        return (panelWaiting ? Words.text("window-panel-waiting", ["action": .text(action)], fallback: "\(action) · hides the sidebar to make room") : action) + " (⌥⌘B)"
     }
 }

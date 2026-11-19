@@ -10,7 +10,7 @@ import WorkspaceModel
 
 extension WindowHub {
     func titleActions(for terminal: TerminalSummary) -> TitleActions {
-        let folder = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
+        let folder = terminal.folder.map { HomeFolder.expanding($0) }
         var title = TitleActions(
             revealFolder: { if let folder { ExternalOpen.open(URL(fileURLWithPath: folder)) } },
             copyPath: { [unowned self] in
@@ -25,11 +25,17 @@ extension WindowHub {
             showChanges: { [unowned self] in send(.showPanelTab(.changes)) },
             split: { [unowned self] in split($0) },
             canSplit: { [unowned self] in canSplit($0) },
-            setPart: { [unowned self] in if !zenActive, titleRow.setShown($0, $1) { rowChanged() } },
-            resetRow: { [unowned self] in if !zenActive { titleRow = .default; rowChanged() } },
+            // The setting itself, not this window's row: the row changes when the setting comes back (`HubSettings.applyTitleRow`).
+            setPart: { [unowned self] in if !zenActive { actions.showTitlePart($0.rawValue, $1) } },
+            resetRow: { [unowned self] in if !zenActive { actions.resetTitleRow() } },
             customizeRow: { [unowned self] in actions.revealSetting("title-row") },
-            canInsert: folder != nil)
+            canInsert: terminal.activity != .exited)
         title.canEditRow = !zenActive && actions.editsSettings()
+        // Under Zen mode the row on screen is Zen's: the menu ticks the person's own.
+        title.ownRow = { [unowned self] in
+            guard zenActive, let keys = actions.ownTitleRow() else { return nil }
+            return TitleRow(keys.compactMap(TitlePart.init(rawValue:)))
+        }
         return title
     }
 
@@ -49,7 +55,7 @@ extension WindowHub {
 
 extension WindowHub {
     /// The selected terminal's folder as the row's buttons use it (`~` expanded), nil without one.
-    public var selectedFolder: String? { state.selectedTerminal?.folder.map { ($0 as NSString).expandingTildeInPath } }
+    public var selectedFolder: String? { state.selectedTerminal?.folder.map { HomeFolder.expanding($0) } }
 
     /// Open in… for the selected terminal: what the button and its menu list and do.
     public var selectedOpenIn: OpenInMenu? { selectedFolder.map { OpenInMenu(folder: $0, backend: openIn) } }

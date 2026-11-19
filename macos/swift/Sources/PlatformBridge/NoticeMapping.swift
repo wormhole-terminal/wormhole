@@ -81,7 +81,7 @@ extension NoticeTab {
             },
             notice: notice.map { ProgramNoticeRecord(serial: $0.serial, title: $0.title, body: $0.body) },
             foreground: foreground.map { ForegroundRecord(command: $0.command, startedUnixMs: $0.startedUnixMs) },
-            folder: folder, branch: branch, changed: changed, selected: selected, key: key, settings: nil)
+            folder: folder, branch: branch, changed: changed, selected: selected, key: key, settings: settings?.record)
     }
 }
 

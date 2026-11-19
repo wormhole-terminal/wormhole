@@ -11,6 +11,7 @@ public struct Row<Content: View>: View {
     public let action: () -> Void
     private let content: (Bool) -> Content
     @State private var hovering = false
+    @Environment(\.isEnabled) private var enabled
 
     public init(
         isSelected: Bool = false, selection: Namespace.ID, action: @escaping () -> Void,
@@ -23,14 +24,19 @@ public struct Row<Content: View>: View {
     }
 
     public var body: some View {
-        Button(action: action) { content(hovering).padding(.horizontal, Space._2) }
-            .buttonStyle(RowStyle(isSelected: isSelected, hovering: hovering, selection: selection))
+        // At least a row tall (`min_h(ROW_H)`); content that sets its own colour keeps it, the rest reads in the selection's.
+        Button(action: action) { content(hovering).padding(.horizontal, Space._2).frame(minHeight: Metric.row) }
+            .buttonStyle(RowStyle(isSelected: isSelected, hovering: hovering && enabled, selection: selection))
             .onHover { hovering = $0 }
+            // A row with nothing to do now is drawn held back, with no hover and no press; VoiceOver hears the selection.
+            .opacity(enabled ? 1 : 0.5)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
             .motion(Motion.selection, value: isSelected)
     }
 }
 
 private struct RowStyle: ButtonStyle {
+    @Environment(\.tokens) private var tokens
     let isSelected: Bool
     let hovering: Bool
     let selection: Namespace.ID
@@ -38,11 +44,13 @@ private struct RowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.row)
         return configuration.label
+            .foregroundStyle(isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary)
             .background {
                 ZStack {
-                    shape.fill(configuration.isPressed ? Palette.pressed : hovering ? Palette.hover : .clear)
+                    // No hover fill on the selected row: grey would swap the tint under text meant for it (`style::row`).
+                    shape.fill(configuration.isPressed ? tokens.stateActive : hovering && !isSelected ? tokens.stateHover : .clear)
                     if isSelected {
-                        shape.fill(Palette.selected).matchedGeometryEffect(id: "selection", in: selection)
+                        shape.fill(tokens.sidebarRowSelected).slidingSelection("selection", in: selection)
                     }
                 }
                 .motion(Motion.press, value: hovering)

@@ -44,13 +44,7 @@ extension View {
     }
 
     /// Reports where this line stands in the list, for the drop to find it.
-    func dropFrame(_ slot: DropSlot) -> some View {
-        background {
-            GeometryReader { area in
-                Color.clear.preference(key: DropFrames.self, value: [slot: area.frame(in: .named(DragLift.space))])
-            }
-        }
-    }
+    func dropFrame(_ slot: DropSlot) -> some View { modifier(DropFrame(slot: slot)) }
 }
 
 struct DropFrames: PreferenceKey {

@@ -15,20 +15,18 @@ struct WindowBackdrop: View {
         ZStack {
             // Under everything and always there: a translucent window with the blur off shows the desktop.
             if !look.isTranslucent { colours.terminal }
-            if look.blurShown { BlurMaterial() }
+            if look.blurShown { BlurMaterial(dark: look.themes.appearance == .dark) }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
     }
 }
 
-/// The material follows the theme, not the system: a light theme in Dark Mode sits on the light material, so the appearance is
-/// set on the effect views alone, never on the window, which keeps following the system (`platform/macos/appearance.rs`).
-@MainActor private func followTheme(_ view: NSView) {
-    view.appearance = NSAppearance(named: ThemeStore.shared.appearance == .dark ? .darkAqua : .aqua)
-}
-
+/// The material follows the window's theme, not the system: a light theme in Dark Mode sits on the light material, so the
+/// appearance is set on the effect views alone, never on the window, which keeps following the system (`platform/macos/appearance.rs`).
 private struct BlurMaterial: NSViewRepresentable {
+    let dark: Bool
+
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = .hudWindow
@@ -41,4 +39,6 @@ private struct BlurMaterial: NSViewRepresentable {
     }
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) { followTheme(view) }
+
+    private func followTheme(_ view: NSView) { view.appearance = NSAppearance(named: dark ? .darkAqua : .aqua) }
 }

@@ -36,6 +36,8 @@ public struct PaletteSources: Sendable {
     public var openInNewWindow: @MainActor @Sendable (Command.Target) -> Void
     /// ⌘⌫ on a terminal: close it, whichever window holds it.
     public var closeTerminal: @MainActor @Sendable (TerminalID) -> Void
+    /// The palette just opened: what is read once per opening (the commits of the terminal's branch) is read now.
+    public var opened: @MainActor @Sendable () -> Void
 
     public init(
         actions: @escaping @MainActor @Sendable () -> ActionList = { ActionList() },
@@ -53,8 +55,10 @@ public struct PaletteSources: Sendable {
         shells: @escaping @MainActor @Sendable () -> [PaletteShell] = { [] },
         recentFolders: @escaping @MainActor @Sendable () -> [String] = { [] },
         openInNewWindow: @escaping @MainActor @Sendable (Command.Target) -> Void = { _ in },
-        closeTerminal: @escaping @MainActor @Sendable (TerminalID) -> Void = { _ in }
+        closeTerminal: @escaping @MainActor @Sendable (TerminalID) -> Void = { _ in },
+        opened: @escaping @MainActor @Sendable () -> Void = {}
     ) {
+        self.opened = opened
         (self.terminals, self.project, self.shells, self.recentFolders) = (terminals, project, shells, recentFolders)
         (self.openInNewWindow, self.closeTerminal) = (openInNewWindow, closeTerminal)
         (self.hiddenActions, self.hotkey, self.profiles) = (hiddenActions, hotkey, profiles)

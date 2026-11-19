@@ -67,6 +67,9 @@ public protocol WorkspaceBackend: AnyObject {
     func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: Zone) -> Refusal?
     /// What dropping `dragged` on `over` would do; nil when nothing would change. Pure: nothing moves.
     func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan?
+    /// The part of a line the pointer `fraction` of the way down it is over, held by the edge it came from while `previous` is
+    /// given (core `Part::at_from`).
+    func dropPart(fraction: Double, previous: DropPart?) -> DropPart
     /// Where a dragged group would land on `over`; nil when nothing would change. Pure.
     func groupDropPlan(group: GroupID, over: DropOver) -> Landing?
     /// Every terminal, folded ones too, with the status counts.
@@ -77,10 +80,17 @@ public protocol WorkspaceBackend: AnyObject {
     func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout?
     /// The folder to ask about before a terminal opens in a group that has none, when one is worth offering.
     func groupFolderOffer(group: GroupID) -> String?
+    /// How many of the group's terminals would leave it if it kept only the terminals in `folder` (the question's count).
+    func groupFolderLeaving(group: GroupID, folder: String) -> Int
     /// Whether the group's fence lets the terminal (and its split) in: a group that refuses is greyed in the menus.
     func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool
     /// The terminal last selected in a group (nil: the terminals in no group): what opening a tab set selects.
     func lastSelected(in group: GroupID?) -> TerminalID?
+    /// What VoiceOver hears for each of these terminals as the tabs of one set, in order (the core's words: name, state,
+    /// selection, "n of m"); nil in the sample, whose tabs say their name.
+    func tabLabels(of ids: [TerminalID]) -> [String]?
+    /// The tab bar's sets, the current one and their alerts, as the core lists them; nil in the sample.
+    func tabSets() -> TabSetFacts?
     /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
     /// on screen is looked at, so a finished result is spent and a bell heard.
     func setWindowState(active: Bool, seen: Bool)
@@ -88,8 +98,14 @@ public protocol WorkspaceBackend: AnyObject {
     func hosting(of id: TerminalID) -> HostingState?
     /// How long ago a terminal's `since` was, as the status bar says it; nil in the sample (no clock of the core's).
     func waited(since: UInt64) -> Waited?
+    /// The core's spoken sentences (VoiceOver): the needs-you button ("Fix pile needs input, waiting 2 minutes") and a
+    /// count of the bar ("2 terminals working"); nil in the sample. A panel tab's are `FilesBridge`'s `TabSpeech`.
+    func spoken(attention name: String, since: UInt64) -> String?
+    func spoken(count: Int, of activity: Activity) -> String?
     /// What runs in terminal `id`, whatever title it set: the agent, the running command or the shell (nil in the sample).
     func programName(of id: TerminalID) -> String?
+    /// The program terminal `id` started with ("fish"), for its exited bar (nil in the sample).
+    func shellName(of id: TerminalID) -> String?
     /// What is wrong with terminal `id`'s host, while something is; nil for a terminal that is fine and for one in the app.
     func hostProblem(of id: TerminalID) -> HostProblem?
     /// "Try again": attach to the host a terminal could not be shown from. The pane is blank until it is done.
@@ -102,6 +118,9 @@ public protocol WorkspaceBackend: AnyObject {
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)
+    /// Quit and End All: what `finishQuit(endHosts: true)` does, with the part that takes seconds (hosts still starting,
+    /// each host's end) handed back to run off the main actor; nil when there is none. Called once, then the app quits.
+    func quitEndingHosts() -> (@Sendable () -> Void)?
     /// The settings changed: what the core keeps of the terminals follows them (saved text erased when its setting went
     /// off, checkpoints stopped).
     func settingsChanged()

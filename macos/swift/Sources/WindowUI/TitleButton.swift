@@ -1,7 +1,7 @@
-// An icon button of the title rows: a 24 pt face with a 16 pt glyph, clickable across 28 pt, as the GPUI
-// app's `icon_button(...).in_title_row()`. The glyph is muted until the pointer is over it, then primary on
-// a hover wash. Native buttons would draw bezels that fight the flat rows, so this is the one place the look
-// is ours. Hover has no animation, as in the GPUI app.
+// An icon button of the title rows (`icon_button(...).in_title_row()`): the shared `IconButton` on its 24 pt face, its
+// glyph drawn by the caller in the colour the button gives it (the column toggles fill their strip), the keyboard ring
+// where the title row's ⇥ order is on it, and the dot that says a wanted panel is waiting for room. `help` is the
+// tooltip with the key; `label` is what VoiceOver hears.
 
 import DesignSystem
 import SwiftUI
@@ -17,39 +17,15 @@ struct TitleButton<Glyph: View>: View {
     @ViewBuilder let glyph: (Color) -> Glyph
     var marked = false
     let action: @MainActor () -> Void
-    @State private var hovering = false
-    private let run = IconRun()
     @Environment(\.chrome) private var colours
     @Environment(WindowFocus.self) private var focus
 
     var body: some View {
-        Button {
-            run.start()
-            action()
-        } label: {
-            glyph(hovering ? colours.text : colours.muted)
-                .iconMotion(motion, run: run.count)
-                .frame(width: Chrome.face, height: Chrome.face)
-                .background(hovering ? colours.bandHover : .clear, in: RoundedRectangle(cornerRadius: colours.radius))
-                .focusRing(stop.map { focus.ring(.titleRow, $0) } ?? false, radius: colours.radius)
-                .overlay(alignment: .topTrailing) { if marked { MarkDot() } }
-                .frame(width: Chrome.hit, height: Chrome.hit)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(help)
-        .accessibilityLabel(label)
-    }
-}
-
-/// The dot that says a wanted panel is waiting for room: the primary colour, ringed by the surface.
-private struct MarkDot: View {
-    @Environment(\.chrome) private var colours
-
-    var body: some View {
-        Circle().fill(colours.primary).frame(width: Chrome.markDot, height: Chrome.markDot)
-            .padding(Chrome.markRing).background(colours.terminal, in: Circle())
-            .padding(Chrome.markInset - Chrome.markRing - Chrome.markDot / 2)
+        IconButton(label: help, action: { action() }, glyph: glyph)
+            .inTitleRow()
+            .answering(motion)
+            .dot(marked, on: colours.terminal)
+            .focusRing(stop.map { focus.ring(.titleRow, $0) } ?? false)
+            .spoken(label)
     }
 }

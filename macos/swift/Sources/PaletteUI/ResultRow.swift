@@ -31,7 +31,7 @@ struct ResultRow: View {
                 title
                 if let detail {
                     Text(detail)
-                        .font(command.detailIsCode ? codeFont.font(TextRole.caption.size) : .system(size: TextRole.caption.size))
+                        .font(command.detailIsCode ? codeFont.font(tokens.size(.caption)) : .system(size: tokens.size(.caption)))
                         .foregroundStyle(muted)
                         .lineLimit(1)
                         .layoutPriority(0)
@@ -39,7 +39,7 @@ struct ResultRow: View {
                 Spacer(minLength: 0)
                 if let trailing = command.trailing {
                     Text(trailing)
-                        .font(command.trailingIsCode ? codeFont.font(TextRole.caption.size) : .system(size: TextRole.caption.size))
+                        .font(command.trailingIsCode ? codeFont.font(tokens.size(.caption)) : .system(size: tokens.size(.caption)))
                         .foregroundStyle(muted).lineLimit(1)
                 }
                 // A setting says what ↩ does on the row that is chosen.
@@ -47,7 +47,7 @@ struct ResultRow: View {
                 if let shortcut = command.shortcut { KeyCap(text: shortcut.glyphs) }
             }
             if let second {
-                Text(second).font(.system(size: TextRole.caption.size)).foregroundStyle(muted).lineLimit(1)
+                Text(second).font(.system(size: tokens.size(.caption))).foregroundStyle(muted).lineLimit(1)
                     .padding(.leading, Metric.lead + Space._2)
             }
         }
@@ -70,7 +70,7 @@ struct ResultRow: View {
 
     private var title: some View {
         let weight: Font.Weight = isSelected ? .semibold : command.isStrong ? .medium : .regular
-        let size = TextRole.body.size
+        let size = tokens.size(.body)
         let mark = isSelected ? tokens.listSelectedText : tokens.primary
         return Text(MarkedText.title(command.title, ranges: result.ranges, mark: mark, size: size))
             .font(.system(size: size, weight: weight))
@@ -83,8 +83,8 @@ struct ResultRow: View {
             switch command.lead {
             case .symbol(let name):
                 Image(systemName: name).font(.system(size: Metric.glyph - 1, weight: .light)).accessibilityHidden(true)
-            case .status(let activity):
-                StatusDot(StatusKind(activity))
+            case .status(let activity, let told):
+                StatusDot(StatusKind(activity, told: told))
             }
         }
         .frame(width: Metric.lead, height: Metric.lead)
@@ -94,14 +94,17 @@ struct ResultRow: View {
 }
 
 extension StatusKind {
-    init(_ activity: Activity) {
+    /// What an agent or a program that reports says, else a plain terminal's bell, command or bare prompt
+    /// (`StatusGlyph::of`).
+    init(_ activity: Activity, told: Bool) {
         self =
             switch activity {
-            case .idle, .exited: .idle
-            case .working: .working
-            case .needsInput: .attention
+            case .needsInput: told ? .attention : .bell
+            case .working: told ? .working : .running
             case .finished: .done
             case .failed: .failed
+            case .idle: told ? .idle : .shell
+            case .exited: .idle
             }
     }
 }
