@@ -5,6 +5,7 @@
 import DesignSystem
 import StudioModel
 import SwiftUI
+import WordsModel
 
 struct BandView: View {
     let group: TokenGroup
@@ -25,7 +26,7 @@ struct BandView: View {
                     .rotationEffect(.degrees(isOpen ? 90 : 0))
                     .frame(width: Metric.lead)
                     .opacity(folds ? 1 : 0.4)
-                    .motion(Motion.layout, value: isOpen)
+                    .motionTurn(Motion.layout, value: isOpen)
                 Text(group.name).font(TextRole.label.font)
                 Spacer(minLength: 0)
                 if lowCount > 0 {
@@ -67,6 +68,6 @@ struct ChangedDot: View {
 
     var body: some View {
         Circle().fill(tokens.primary).frame(width: Metric.statusDot / 2, height: Metric.statusDot / 2)
-            .accessibilityLabel("changed")
+            .accessibilityLabel(Words.text("studio-changed-dot", fallback: "Changed"))
     }
 }

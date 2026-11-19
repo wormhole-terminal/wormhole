@@ -13,7 +13,14 @@ struct InputsSpecimen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
-            TextField("A field", text: $text).textFieldStyle(.roundedBorder).frame(maxWidth: 220).marked("input")
+            // The flat field in its states: rest, the focus ring, cleanable with a prefix, and disabled (`gallery/inputs.rs`).
+            VStack(alignment: .leading, spacing: Space._2) {
+                FlatField("A field", text: $text)
+                FlatField("Focused", text: $text, showFocus: true)
+                FlatField("Cleanable", text: $text, cleanable: true, clearLabel: "Clear", prefix: { Image(systemName: "magnifyingglass") }, suffix: { EmptyView() })
+                FlatField("Disabled", text: $text).disabled(true)
+            }
+            .frame(maxWidth: 220)
             HStack(spacing: Space._4) {
                 Toggle("Checkbox", isOn: .constant(false)).toggleStyle(.checkbox).marked("checkbox")
                 Toggle("Checked", isOn: $checked).toggleStyle(.checkbox).marked("checkbox")

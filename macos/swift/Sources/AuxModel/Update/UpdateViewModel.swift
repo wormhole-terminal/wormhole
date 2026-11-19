@@ -63,6 +63,28 @@ public final class UpdateViewModel {
         return AuxText.checked(ago: RelativeDateTimeFormatter().localizedString(for: lastChecked, relativeTo: now))
     }
 
+    /// Where the update stands, in the words Settings → Updates writes beside its button (`updates.rs` `draw_status`).
+    public var statusLine: String {
+        switch phase {
+        case .idle: checkedLine()
+        case .checking: AuxText.checking
+        case .upToDate: lastChecked == nil ? AuxText.upToDate : "\(AuxText.upToDate) \(checkedLine())"
+        case .available(let release): release.isSecurity ? AuxText.securityAvailable(release.version) : AuxText.available(release.version)
+        case .unsupported(let why): why
+        case .downloading: AuxText.downloading
+        case .installed(let version): restartPending ? AuxText.installedWaits(version) : AuxText.ready(version)
+        case .failed(let why): why
+        }
+    }
+
+    /// What a release brings, a line each: the changelog's Markdown without the list marker a line starts with (`updates.rs`
+    /// `draw_notes`). Only the start is cut: a line that ends in emphasis or a dash keeps its end.
+    public static func noteLines(_ notes: String) -> [String] {
+        notes.split(separator: "\n").map { line in
+            String(line.trimmingCharacters(in: .whitespaces).drop { $0 == "-" || $0 == "*" }).trimmingCharacters(in: .whitespaces)
+        }.filter { !$0.isEmpty }
+    }
+
     /// Bytes as the download line says them ("5.0 MB of 20.0 MB"); `nil` while the size is unknown.
     public static func progressText(received: Int64, expected: Int64) -> String? {
         guard expected > 0 else { return nil }

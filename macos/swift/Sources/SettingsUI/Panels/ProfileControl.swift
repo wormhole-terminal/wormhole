@@ -51,6 +51,7 @@ struct ProfileControl: View {
                     Button { draft.edit { $0.color = color.rawValue } } label: {
                         Circle().fill(color.mark(tokens).color).frame(width: Metric.glyph, height: Metric.glyph)
                             .overlay {
+                                // The chosen colour's mark (a selection, not the keyboard's ring).
                                 if draft.form?.color == color.rawValue {
                                     Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth).padding(-Space._1)
                                 }
@@ -77,7 +78,7 @@ struct ProfileControl: View {
                     Image(Icon.folder).foregroundStyle(tokens.textMuted)
                     Text(folder).textRole(.body).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 0)
-                    IconButton(symbol: Icon.remove.rawValue, label: LocalizedStringKey(Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile"))) {
+                    IconButton(symbol: Icon.remove.rawValue, label: Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile")) {
                         draft.edit { $0.folders.removeAll { $0 == folder } }
                     }
                 }
@@ -134,7 +135,7 @@ struct ProfileControl: View {
 
     /// The button that picks a folder for a field, as tall as the field beside it.
     private func chooser(_ picked: @escaping (String) -> Void) -> some View {
-        IconButton(symbol: Icon.folder.rawValue, label: LocalizedStringKey(Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder"))) {
+        IconButton(symbol: Icon.folder.rawValue, label: Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder")) {
             FolderPanel.choose(picked)
         }
         .frame(width: Metric.control, height: Metric.control)
@@ -164,8 +165,13 @@ enum FolderPanel {
 private struct CommitOnBlur: ViewModifier {
     let commit: () -> Void
     @FocusState private var focused: Bool
+    @Environment(\.tokens) private var tokens
+    @Environment(\.isEnabled) private var enabled
 
+    /// The multi-line well wears the flat field's ring while it has the keys and is held back when disabled.
     func body(content: Content) -> some View {
         content.focused($focused).onChange(of: focused) { _, now in if !now { commit() } }
+            .flatFocusRing(focused && enabled, radius: tokens.metrics.radius)
+            .opacity(enabled ? 1 : 0.5)
     }
 }

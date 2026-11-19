@@ -16,13 +16,31 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     public private(set) var trustCard: TrustCard?
 
     private let run: FirstRun
-    private let trustDesk: TrustDesk?
+    private var trustDesk: TrustDesk?
+    /// The folder `trustDesk` reads, to make a new one only when the project the intro is about changes.
+    private var trustRoot: String?
+    private let frontProject: () -> URL?
+    /// The last scan found no agent: the third step is the primer, and Start on it leaves the sidebar's note.
+    private var primer = false
+    private let onPrimer: () -> Void
+    private let notesFeature: () -> Bool
+    public var notesOn: Bool { notesFeature() }
     private let authenticator: any Authenticating
     private let recents: () -> [URL]
     private let dataDir: URL?
     private let windowPanel: (get: () -> Bool, set: (Bool) -> Void)
     private let onFinish: (_ folder: URL?, _ firstRun: Bool) -> Void
     private let hub = WakeHub()
+    /// The profile of the window the intro is in: the project's approval is asked as that profile (nil: the default one).
+    private let profile: () -> String?
+    /// The folder the card was first made for (`project:`), kept while nothing is picked and no terminal is in a project.
+    private let fixedRoot: String?
+    /// "Trust with Touch ID…" is waiting for the person: the card says so, and goes once the approval is given.
+    private var approving = false
+    private var cardChanged: (@MainActor () -> Void)?
+    /// Follows the desk the card is read from: an approval given or taken back elsewhere (another window, a hook, the CLI)
+    /// writes the profile's approvals, whose file the desk watches, and the card is read again (GPUI builds it every frame).
+    private var trustWakes: Task<Void, Never>?
 
     /// `preferences` start from the settings as they are; `project` is the folder the intro asks about, if it has
     /// a `.wormhole/` folder to trust. `onFinish` moves the first terminal to the folder picked.
@@ -30,6 +48,8 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         preferences: OnboardingPreferences, settingsKeys: String, project: URL? = nil, recents: @escaping () -> [URL] = { [] },
         agentHome: URL? = nil, dataDir: URL? = nil, authenticator: any Authenticating,
         panel: (get: () -> Bool, set: (Bool) -> Void) = ({ false }, { _ in }),
+        frontProject: @escaping () -> URL? = { nil }, onPrimer: @escaping () -> Void = {},
+        notesOn: @escaping () -> Bool = { true }, profile: @escaping () -> String? = { nil },
         onFinish: @escaping (_ folder: URL?, _ firstRun: Bool) -> Void
     ) throws {
         run = try FirstRun(agentHome: agentHome?.path, dataDir: dataDir?.path)
@@ -40,15 +60,23 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         self.dataDir = dataDir
         windowPanel = panel
         self.onFinish = onFinish
+        (self.frontProject, self.onPrimer, notesFeature) = (frontProject, onPrimer, notesOn)
+        self.profile = profile
+        fixedRoot = project?.path
         let wakes = hub
-        trustDesk = try project.map { try TrustDesk(root: $0.path, profile: nil, dataDir: dataDir?.path, listener: wakes) }
-        trustCard = trustDesk.flatMap(Self.card)
+        trustDesk = try project.map { try TrustDesk(root: $0.path, profile: profile(), dataDir: dataDir?.path, listener: wakes) }
+        trustRoot = project?.path
+        trustCard = trustDesk.flatMap(makeCard)
         preferences.onChange = { [weak self] in self?.writeLook() }
+        followTrust()
     }
+
+    deinit { trustWakes?.cancel() }
 
     public func scanAgents() async -> (found: [FoundAgent], others: Int) {
         let run = run
         let scan = await Task.detached { run.scanAgents() }.value
+        primer = scan.found.isEmpty
         return (scan.found.map(\.value), Int(scan.others))
     }
 
@@ -57,16 +85,79 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         return try await Task.detached { try run.installHooks(id: agent).value }.value
     }
 
+    /// The card of the project the folder picked is in (core's nearest-project rule), else the front terminal's project: its desk is
+    /// made when that project changes, so the card follows the pick (and `trust` approves the project the card showed). No project,
+    /// no card.
+    public func trustCard(for folder: URL?) -> TrustCard? {
+        let root: String? = if let folder { run.projectRoot(folder: folder.path) } else { frontProject()?.path }
+        guard let root else { return fixedRoot == nil ? nil : cardNow }
+        if root != trustRoot {
+            trustRoot = root
+            trustDesk = try? TrustDesk(root: root, profile: profile(), dataDir: dataDir?.path, listener: hub)
+            trustCard = trustDesk.flatMap(makeCard)
+            followTrust()
+        }
+        return cardNow
+    }
+
+    /// The card read again on every wake of the desk in use (its project folder or the profile's approvals changed); the
+    /// desk before it stops being followed.
+    private func followTrust() {
+        trustWakes?.cancel()
+        guard let desk = trustDesk else {
+            trustWakes = nil
+            return
+        }
+        let wakes = hub.stream(onFinish: { desk.unfollow() })
+        _ = desk.follow()
+        trustWakes = Task { @MainActor [weak self] in
+            for await _ in wakes {
+                guard let self, self.trustDesk === desk else { return }
+                trustCard = makeCard(desk)
+                cardChanged?()
+            }
+        }
+    }
+
+    public func watchesTrust(_ on: Bool) {
+        guard on else {
+            // The stream's end lets go of the desk's watch (`unfollow`).
+            trustWakes?.cancel()
+            trustWakes = nil
+            return
+        }
+        guard trustWakes == nil, let desk = trustDesk else { return }
+        // What changed while nobody watched is read now.
+        trustCard = makeCard(desk)
+        cardChanged?()
+        followTrust()
+    }
+
+    /// The card as it is shown: waiting while the approval is asked for.
+    private var cardNow: TrustCard? {
+        guard var card = trustCard else { return nil }
+        card.approving = approving
+        return card
+    }
+
+    public func observeTrust(_ changed: @escaping @MainActor () -> Void) { cardChanged = changed }
+
     public func trust(_ folder: URL) {
         // Held before the dialog: the answer approves what was read now, not what is on disk afterwards.
-        guard let trustDesk, trustDesk.review().problem == nil, trustDesk.holdReviewed() else { return }
+        guard !approving, let trustDesk, trustDesk.review().problem == nil, trustDesk.holdReviewed() else { return }
+        approving = true
+        cardChanged?()
         Task {
             do {
                 try await authenticator.authenticate(reason: AuxText.trustTouchIDReason(folder: folder.lastPathComponent))
                 try trustDesk.approveReviewed()
+                // Trusted: the card is read again and goes.
+                trustCard = makeCard(trustDesk)
             } catch {
-                // Cancelled or refused: nothing is trusted.
+                // Cancelled or refused: nothing is trusted, and the button is back.
             }
+            approving = false
+            cardChanged?()
         }
     }
 
@@ -87,7 +178,10 @@ public final class FFIOnboardingBackend: OnboardingBackend {
 
     public func finish(folder: URL?, firstRun: Bool) {
         // A replay of the intro changes nothing.
-        if firstRun { try? run.finish() }
+        if firstRun {
+            try? run.finish()
+            if primer { onPrimer() }
+        }
         onFinish(folder, firstRun)
     }
 
@@ -139,10 +233,13 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     }
 
     /// The card of a project that has something to approve; none when it is trusted, empty or does not load.
-    private static func card(_ desk: TrustDesk) -> TrustCard? {
+    private func makeCard(_ desk: TrustDesk) -> TrustCard? {
         let review = desk.review()
-        guard review.status != .trusted, review.problem == nil, !review.lines.isEmpty else { return nil }
-        return TrustCard(name: review.name, directory: review.directory, commands: review.lines.count)
+        // A project that runs no command yet has a card too, which says so (`features/project/api.rs` `trust_card`): none only
+        // for one that is trusted or cannot be read.
+        guard review.status != .trusted, review.problem == nil, let trustRoot else { return nil }
+        return TrustCard(
+            name: review.name, directory: review.directory, commands: review.lines.count, root: URL(fileURLWithPath: trustRoot))
     }
 }
 

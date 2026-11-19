@@ -34,7 +34,7 @@ private struct UpdateStatus: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._4) {
-                Text(status).textRole(.body).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
+                Text(model.statusLine).textRole(.body).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 actions
             }
@@ -52,19 +52,6 @@ private struct UpdateStatus: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var status: String {
-        switch model.phase {
-        case .idle: model.checkedLine()
-        case .checking: AuxText.checking
-        case .upToDate: model.lastChecked == nil ? AuxText.upToDate : "\(AuxText.upToDate) \(model.checkedLine())"
-        case .available(let release): release.isSecurity ? AuxText.securityAvailable(release.version) : AuxText.available(release.version)
-        case .unsupported(let why): why
-        case .downloading: AuxText.downloading
-        case .installed(let version): model.restartPending ? AuxText.installedWaits(version) : AuxText.ready(version)
-        case .failed(let why): why
-        }
-    }
-
     private var color: Color {
         switch model.phase {
         case .failed, .unsupported: tokens.statusWarningText
@@ -79,14 +66,14 @@ private struct UpdateStatus: View {
         case .available(let release):
             HStack(spacing: Space._2) {
                 // A security update cannot be skipped: checks would offer it again anyway.
-                if !release.isSecurity { LinkButton(title: AuxText.skipVersion) { model.skip(release) } }
-                ActionButton(title: AuxText.installUpdate, symbol: nil) { model.install(release) }
+                if !release.isSecurity { LinkButton(title: AuxText.skipVersion, frameId: "update.skip") { model.skip(release) } }
+                ActionButton(title: AuxText.installUpdate, symbol: nil, frameId: "update.install") { model.install(release) }
             }
         case .installed:
             HStack(spacing: Space._2) {
                 // Waiting for the terminals to be idle can be called off, or cut short by restarting now (no second question).
-                if model.restartPending { LinkButton(title: AuxText.dontRestart) { model.cancelRestart() } }
-                ActionButton(title: AuxText.restartNow, symbol: nil, action: restartNow)
+                if model.restartPending { LinkButton(title: AuxText.dontRestart, frameId: "update.keep") { model.cancelRestart() } }
+                ActionButton(title: AuxText.restartNow, symbol: nil, frameId: "update.restart", action: restartNow)
             }
         case .checking: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue, isSpinning: true) {}.disabled(true)
         case .downloading(let received, let expected): meter(received, expected)
@@ -141,7 +128,7 @@ private struct UpdateStatus: View {
     private func notes(_ release: Release) -> some View {
         VStack(alignment: .leading, spacing: Space._1) {
             Text("\(AuxText.releaseNotes) \(release.version)").textRole(.caption, weight: .semibold).foregroundStyle(tokens.textMuted)
-            ForEach(Array(lines(release.notes).enumerated()), id: \.offset) { _, line in
+            ForEach(Array(UpdateViewModel.noteLines(release.notes).enumerated()), id: \.offset) { _, line in
                 HStack(alignment: .firstTextBaseline, spacing: Space._2) {
                     Text("–").foregroundStyle(tokens.textFaint)
                     Text(line).foregroundStyle(tokens.textMuted)
@@ -150,9 +137,5 @@ private struct UpdateStatus: View {
             }
         }
         .padding(.vertical, Space._3)
-    }
-
-    private func lines(_ notes: String) -> [String] {
-        notes.split(separator: "\n").map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "-* ").union(.whitespaces)) }.filter { !$0.isEmpty }
     }
 }

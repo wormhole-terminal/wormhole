@@ -41,13 +41,14 @@ private struct FontRow: View {
             FontPicker(model: picker, look: look(size: size)) { FontSelectFace(picker: picker, resolved: Self.inherited(slot.slot, model)) }
                 .accessibilityLabel(entry.label)
             ValueStepper(
-                value: "\(Int(size)) pt", label: entry.label,
+                value: "\(Int(size)) pt", label: entry.label, // text: a unit
                 decrease: size > slot.min ? { model.set(entry.keys[1], .number(max(slot.min, size - 1))) } : nil,
                 increase: size < slot.max ? { model.set(entry.keys[1], .number(min(slot.max, size + 1))) } : nil)
         }
         // The page's scene shows the font being looked at in the open picker, and goes back when it closes.
+        .onAppear { SettingsFontPickers.register(slot.slot, picker) }
         .onChange(of: picker.isOpen ? picker.previewFamily : nil) { _, family in
-            model.fontPreview = family.map { FontPreview(family: $0, size: size) }
+            model.fontPreview = family.map { FontPreview(slot: slot.slot, family: $0, size: size) }
         }
     }
 
@@ -61,4 +62,16 @@ private struct FontRow: View {
     private static func inherited(_ slot: String, _ model: SettingsModel) -> String {
         slot == "code" ? model.value("font_family").string ?? "" : FontFace.system
     }
+}
+
+/// The font pickers on show by slot (`interface`, `code`, `terminal`), for the control folder's `font-picker` to open one as a click on
+/// its select does.
+@MainActor
+public enum SettingsFontPickers {
+    private struct Weak { weak var model: FontPickerModel? }
+    private static var shown: [String: Weak] = [:]
+
+    static func register(_ slot: String, _ model: FontPickerModel) { shown[slot] = Weak(model: model) }
+
+    public static func model(for slot: String) -> FontPickerModel? { shown[slot]?.model }
 }

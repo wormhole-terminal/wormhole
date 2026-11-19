@@ -27,6 +27,10 @@ struct LookStep: View {
                     ThemeCard(theme: theme, current: theme.id == store.theme.id) { store.setTheme(theme.id) }
                 }
             }
+            // A radio button a card (`choice_card`), in one group.
+            .radioGroupSpeech(AuxText.theme, titles: themes.map(\.name), selected: themes.firstIndex { $0.id == store.theme.id }) { index in
+                store.setTheme(themes[index].id)
+            }
             importOffer
             row(AuxText.primaryColour) { swatches }
             row(AuxText.terminalFont) { font }

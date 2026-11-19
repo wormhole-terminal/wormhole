@@ -25,6 +25,8 @@ struct PreviewStrip: View {
             }
             .frame(height: SettingsMetric.previewHeight - Metric.control - Space._2)
             .clipShape(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
+            // Under Increase Contrast, where a faint fill is no edge, the stage gets `card.edge` (`preview_frame`).
+            .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg), \.cardEdge)
             if let caption = scene.caption {
                 Text(caption).textRole(.caption).foregroundStyle(tokens.textMuted)
                     .lineLimit(1).padding(.horizontal, Space._4)
@@ -38,6 +40,7 @@ struct PreviewStrip: View {
         switch scene {
         case .window: WindowScene(model: model)
         case .fonts: FontsScene(model: model)
+        case .motion: MotionScene(model: model)
         case .sidebar: SidebarScene(model: model, withAgents: false)
         case .agents: SidebarScene(model: model, withAgents: true)
         case .notifications: NotificationsScene(model: model)

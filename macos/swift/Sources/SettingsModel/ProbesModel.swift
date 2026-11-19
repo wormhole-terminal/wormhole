@@ -22,6 +22,9 @@ public final class ProbesModel {
     public private(set) var open: Open?
     /// Why a Probe could not be turned off or read for its sheet, on the page until the next try.
     public private(set) var notice: String?
+    /// The Probes whose switch is being worked on (read for its sheet, turned off): the list holds their switches meanwhile, so a
+    /// second flip cannot start a second read.
+    public private(set) var pending: Set<String> = []
 
     public init(backend: any ProbesBackend) { self.backend = backend }
 
@@ -29,6 +32,8 @@ public final class ProbesModel {
 
     /// The switch of a row: on opens the sheet, off turns it off.
     public func switched(_ row: ProbeRow, on: Bool) async {
+        guard pending.insert(row.id).inserted else { return }
+        defer { pending.remove(row.id) }
         if on { await openSheet(row.id) } else { await turnOff(row.id) }
     }
 

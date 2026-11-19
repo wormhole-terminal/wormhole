@@ -19,7 +19,7 @@ struct EntryControl: View {
         case .segmented(let options, let fallback, _):
             OptionPicker(options: options, selected: current(fallback), label: entry.label, segmented: true) { model.set(key, $0) }
         case .select(let options, let fallback):
-            OptionPicker(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
+            OptionPicker(options: options, selected: current(fallback), label: entry.label, unknown: { RowCaptions.handWritten(key, $0) }) { model.set(key, $0) }
         case .dynamicSelect(.openIn): OpenInControl(model: model, key: key, label: entry.label)
         case .dynamicSelect(let source):
             OptionPicker(options: model.host.options(for: source), selected: model.value(key), label: entry.label) {
@@ -28,7 +28,7 @@ struct EntryControl: View {
         case .stepper(let spec):
             NumberStepper(model: model, key: key, label: entry.label, spec: spec)
         case .slider(let spec):
-            SettingSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label) {
+            SettingSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label, offWhenOpaque: entry.id == "opacity") {
                 model.set(key, .number($0))
             }
         case .checkboxes(let items):
@@ -48,7 +48,11 @@ struct EntryControl: View {
         case .action(.makeDefaultTerminal, let label, let icon): defaultTerminal(label, icon)
         case .action(.resetAll, let label, let icon): ResetAllButton(model: model, label: label, icon: icon)
         case .action(.resetTips, let label, let icon):
-            ActionButton(title: label, symbol: icon, frameId: "reset-tips") { model.host.perform(.resetTips) }.disabled(model.host.dismissedTips == 0)
+            let none = model.host.dismissedTips == 0
+            ActionButton(title: label, symbol: icon, frameId: "reset-tips") { model.host.perform(.resetTips) }.disabled(none)
+                .help(none
+                    ? Words.text("settings-advanced-no-tip-was-closed-for-good", fallback: "No tip was closed for good")
+                    : Words.text("settings-advanced-they-show-again-where-they-belong", fallback: "They show again where they belong"))
         case .action(let action, let label, let icon):
             ActionButton(title: label, symbol: icon) { model.host.perform(action) }
         case .info(let name): InfoValue(name: name)
@@ -66,11 +70,19 @@ struct EntryControl: View {
             symbol: state == true ? Icon.check.rawValue : icon
         ) { model.host.perform(.makeDefaultTerminal) }
         .disabled(state != false)
+        .help(state == true
+            ? Words.text("settings-terminal-to-change-it-pick-another-app", fallback: "To change it, pick another app for a .command file in Finder's Get Info")
+            : state == false
+                ? Words.text("settings-terminal-instead-of-terminal", fallback: "Instead of Terminal")
+                : Words.text("settings-terminal-default-only-app", fallback: "Only Wormhole.app can be the default terminal"))
     }
 
     /// Why the global hotkey set now does not work (`hotkey_problem`): macOS, the app or the shell has the keys (set by hand in
     /// config.json: the recorder refuses them), or the system did not register it. The jump key has none.
-    private func shortcutProblem() -> String? {
+    private func shortcutProblem() -> String? { Self.shortcutProblem(key: key, model: model) }
+
+    /// The same, for the control folder's `settings-page`.
+    static func shortcutProblem(key: String, model: SettingsModel) -> String? {
         let spec = model.value(key).string ?? ""
         guard key == "hotkey", !spec.isEmpty else { return nil }
         if case .refused(let reason)? = model.shortcuts?.check(key: key, spec: spec) { return reason }

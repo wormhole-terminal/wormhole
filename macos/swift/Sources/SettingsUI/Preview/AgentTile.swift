@@ -9,12 +9,20 @@ struct AgentTile: View {
     let size: CGFloat
     var badge: Color?
 
+    /// The tile's corner as a share of its size.
+    static let corner: CGFloat = 0.28
+
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.28).fill(tokens.tileBackground)
+        RoundedRectangle(cornerRadius: size * Self.corner).fill(tokens.tileBackground)
             .frame(width: size, height: size)
             .overlay(Image(systemName: "asterisk").font(.system(size: size * 0.5, weight: .bold)).foregroundStyle(tokens.tileMark))
             .overlay(alignment: .bottomTrailing) {
-                if let badge { Circle().fill(badge).frame(width: size * 0.34, height: size * 0.34).offset(x: 2, y: 2) }
+                if let badge { Self.dot(badge, tile: size) }
             }
+    }
+
+    /// The status dot at the corner of a tile `size` wide, for a scene that draws it by itself (fading, growing).
+    static func dot(_ color: Color, tile size: CGFloat) -> some View {
+        Circle().fill(color).frame(width: size * 0.34, height: size * 0.34).offset(x: 2, y: 2)
     }
 }

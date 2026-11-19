@@ -15,6 +15,8 @@ struct TokenRowView: View {
     let origin: TokenOrigin
     /// The theme it was copied from, for what a base value's tip says.
     var baseFrom = ""
+    /// For a pair, the chip that says which appearances the value is for; a click moves it.
+    var reach: ReachChip?
     let selection: Namespace.ID
     let select: () -> Void
     @Environment(\.tokens) private var tokens
@@ -27,6 +29,7 @@ struct TokenRowView: View {
                 if isLow { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(tokens.statusWarning).font(TextRole.caption.font) }
                 if isChanged { ChangedDot() }
                 Spacer(minLength: Space._2)
+                if let reach { reach }
                 Text(originWord)
                     .font(TextRole.caption.font).foregroundStyle(muted)
                     .help(originTip)

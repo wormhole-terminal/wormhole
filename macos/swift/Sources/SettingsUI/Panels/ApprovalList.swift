@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct ApprovalList: View {
     let records: [ApprovalRecord]
@@ -25,10 +26,15 @@ struct ApprovalList: View {
                                 Text(approval.location).textRole(.caption, design: .monospaced)
                                     .foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                             }
-                            if !approval.allowed.isEmpty {
-                                Text(approval.allowed.joined(separator: " · ")).textRole(.caption)
-                                    .foregroundStyle(tokens.textFaint)
+                            // What it may do, a tick each, changed at once and kept with the approval; closing always asks.
+                            HStack(spacing: Space._3) {
+                                ForEach(ApprovalCapability.allCases, id: \.self) { capability in
+                                    SettingToggle(label: Self.word(capability), isOn: approval.capabilities.contains(capability), isCheckbox: true) {
+                                        host.setCapability(capability, on: $0, of: approval)
+                                    }
+                                }
                             }
+                            .padding(.top, Space._1)
                         }
                         Spacer(minLength: Space._3)
                         ActionButton(title: SettingsText.revoke, symbol: nil, frameId: "approval.\(approval.id)") { host.revoke(approval) }
@@ -39,6 +45,15 @@ struct ApprovalList: View {
                 }
                 PanelNote(text: SettingsText.approvalsNote)
             }
+        }
+    }
+
+    private static func word(_ capability: ApprovalCapability) -> String {
+        switch capability {
+        case .read: Words.text("settings-agents-access-cap-read", fallback: "Read")
+        case .type: Words.text("settings-agents-access-cap-type", fallback: "Type")
+        case .run: Words.text("settings-agents-access-cap-run", fallback: "Run")
+        case .open: Words.text("settings-agents-access-cap-open", fallback: "Open")
         }
     }
 }

@@ -10,11 +10,12 @@ struct PrimerStep: View {
     @Environment(\.tokens) private var tokens
 
     /// What to try first and its keys (the menus' glyphs, from core's key table).
-    static var things: [(String, [String])] {
+    static func things(notesOn: Bool) -> [(String, [String])] {
         [
             (AuxText.tryJump, ["\u{21E7}\u{2318}P"]), (AuxText.tryShortcuts, ["\u{2325}\u{2318}/"]),
-            (AuxText.tryChanges, ["\u{2318}9"]), (AuxText.tryPanels, ["\u{2318}B", "\u{2325}\u{2318}B"]),
-        ]
+            (AuxText.tryChanges, ["\u{2318}9"]),
+        ] + (notesOn ? [(AuxText.tryNote, ["\u{2325}\u{2318}N"])] : [])
+            + [(AuxText.tryPanels, ["\u{2318}B", "\u{2325}\u{2318}B"])]
     }
 
     var body: some View {
@@ -24,7 +25,7 @@ struct PrimerStep: View {
                 Image(systemName: "terminal").frame(width: Metric.lead)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(AuxText.useAsTerminal).font(TextRole.body.font.weight(.medium))
-                    Text(AuxText.useAsTerminalDetail).font(TextRole.caption.font).foregroundStyle(tokens.listSelectedMuted)
+                    Text(session.backend.notesOn ? AuxText.useAsTerminalDetailNotes : AuxText.useAsTerminalDetail).font(TextRole.caption.font).foregroundStyle(tokens.listSelectedMuted)
                 }
             }
             .foregroundStyle(tokens.listSelectedText)
@@ -32,7 +33,7 @@ struct PrimerStep: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(tokens.listSelected)
             SectionLabel(AuxText.thingsToTry).padding(.horizontal, Space._6).padding(.top, Space._4)
-            ForEach(Array(Self.things.enumerated()), id: \.offset) { _, thing in
+            ForEach(Array(Self.things(notesOn: session.backend.notesOn).enumerated()), id: \.offset) { _, thing in
                 Rule()
                 HStack {
                     Text(thing.0).font(TextRole.body.font)

@@ -55,8 +55,12 @@ public protocol SettingsHost: AnyObject {
     func panelRecords() -> PanelRecords
     /// Installs, repairs or removes the status hooks of the agent with this id (a row's button).
     func perform(_ hooks: AgentRecord.HookAction, agent id: String)
+    /// The same for a profile's login of an agent: the hooks in its folder.
+    func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord)
     /// Takes an approval back (a row's Revoke): the program is asked again, and what it started is closed.
     func revoke(_ approval: ApprovalRecord)
+    /// Switches one capability of an approved program on or off, kept with the approval (the ticks of its row).
+    func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord)
     /// Makes a profile, as a copy of `copyOf`'s settings or with the defaults, and deletes one (never Default). The
     /// reason it was refused, or nil.
     func makeProfile(name: String, copyOf: String?) -> String?
@@ -107,8 +111,17 @@ public protocol SettingsHost: AnyObject {
     func importTheme(path: String) -> String?
     /// What the question before moving the user theme `value` to the Trash says (nil: it has no file), and the move itself
     /// (the picks that name it go back to the defaults first and come back if it fails): whether it was done.
+    /// Whether the picker leaves a theme out and the switch of it, by core's rule over the card's value (a built-in's name, a
+    /// file's path); nil / false where there is no core, and the caller works it out by name.
+    func themeHidden(_ value: String) -> Bool?
+    func setThemeHidden(_ value: String, hidden: Bool) -> Bool
+    /// Shows or hides a title row part by core's rule (`Settings::show_title_part`); false where there is no core: the page then
+    /// works the place out itself.
+    func showTitlePart(_ part: String, shown: Bool) -> Bool
     func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
     func trashTheme(_ value: String) -> Bool
+    /// Whether the desktop would show sharp behind the text at this opacity without the blur (core's `Translucency::unsafe_without_blur`).
+    func blurIsUnsafe(opacity: Double, blur: Bool) -> Bool
     /// The header an update check carries (what "What an update check sends" shows): nil without the core.
     func updateUserAgent(version: String) -> String?
 }
@@ -117,8 +130,10 @@ extension SettingsHost {
     public var fontRules: any FontRules { LocalFontRules() }
     /// A host that has no agents to set up (the mock) ignores the button.
     public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
+    public func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord) {}
     /// A host that holds no approvals (the mock) has none to take back.
     public func revoke(_ approval: ApprovalRecord) {}
+    public func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord) {}
     public func makeProfile(name: String, copyOf: String?) -> String? { Self.noProfiles }
     public func windowOpened() {}
     public var probes: (any ProbesBackend)? { nil }
@@ -158,10 +173,14 @@ extension SettingsHost {
             fallback: "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept.")
     }
     public func updateUserAgent(version: String) -> String? { nil }
+    public func blurIsUnsafe(opacity: Double, blur: Bool) -> Bool { !blur && opacity < 0.95 }
     public func importTheme(path: String) -> String? {
         Words.text("settings-import-theme-unavailable", fallback: "Themes can't be imported in this build.")
     }
     public func themeTrashPlan(_ value: String) -> ThemeTrashQuestion? { nil }
+    public func themeHidden(_ value: String) -> Bool? { nil }
+    public func showTitlePart(_ part: String, shown: Bool) -> Bool { false }
+    public func setThemeHidden(_ value: String, hidden: Bool) -> Bool { false }
     public func trashTheme(_ value: String) -> Bool { false }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
     public func importReview(_ id: String) async -> ImportReview? { nil }

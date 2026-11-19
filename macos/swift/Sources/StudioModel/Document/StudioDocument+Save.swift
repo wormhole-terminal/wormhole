@@ -48,6 +48,9 @@ extension StudioDocument {
     private func writeOwn(_ url: URL, check: Bool) throws -> URL {
         var draft = file
         var converted = false
+        // A theme with no id stored keeps the one it answered to (core's `save_id` keeps the file's own), so a rename
+        // does not leave its earlier saves under an id it no longer has.
+        if draft.isV1, draft.id == nil, let files = environment.files { draft.id = files.newID(name: name, itself: url) }
         if !draft.isV1, let files = environment.files {
             // The first save of a theme in the older format writes the new one: nothing on screen may change.
             let id = files.newID(name: name, itself: url)

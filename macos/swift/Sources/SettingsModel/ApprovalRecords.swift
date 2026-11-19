@@ -14,11 +14,18 @@ public struct ApprovalRecord: Sendable, Equatable, Identifiable {
     public let allowed: [String]
     /// The registry agent it is (`claude`), for its tile; nil for any other program.
     public let agent: String?
+    /// What it may do, as the ticks of its row (closing is never one: it always asks).
+    public let capabilities: Set<ApprovalCapability>
 
     public var id: String { "\(isStored ? "stored" : "held")-\(number)" } // text: an id
 
-    public init(number: UInt64, isStored: Bool, label: String, detail: String, location: String = "", allowed: [String] = [], agent: String? = nil) {
-        (self.number, self.isStored, self.label, self.detail, self.location, self.allowed, self.agent) =
-            (number, isStored, label, detail, location, allowed, agent)
+    public init(number: UInt64, isStored: Bool, label: String, detail: String, location: String = "", allowed: [String] = [], agent: String? = nil, capabilities: Set<ApprovalCapability> = []) {
+        (self.number, self.isStored, self.label, self.detail, self.location, self.allowed, self.agent, self.capabilities) =
+            (number, isStored, label, detail, location, allowed, agent, capabilities)
     }
+}
+
+/// One tick of an approved program's row.
+public enum ApprovalCapability: String, Sendable, CaseIterable {
+    case read, type, run, open
 }

@@ -56,13 +56,13 @@ extension StudioDocument {
 
     public var undoLabel: String? { history.undoLabel }
     public var redoLabel: String? { history.redoLabel }
+    public var undoDepth: Int { history.undoDepth }
+    public var redoDepth: Int { history.redoDepth }
 
     public func undo() { history.undo().map(load) }
     public func redo() { history.redo().map(load) }
 
     public func revertToSaved() { _ = try? take(StudioText.undoRevert) { $0 = saved } }
-
-    public func groupName(of token: String) -> String? { group(of: token) }
 
     func group(of token: String) -> String? { TokenGroup.group(of: token, in: groups) }
 

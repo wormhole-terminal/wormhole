@@ -54,7 +54,7 @@ struct TitleBar: View {
     /// is from a newer Wormhole, and that what every window shows is a preview of a theme that is not in use (`title_chips.rs`).
     @ViewBuilder private func marks(_ document: StudioDocument) -> some View {
         if document.update.state == .changed {
-            IconButton(symbol: "arrow.triangle.2.circlepath", label: LocalizedStringKey(StudioWords.updateFrom(document.update.from))) { session.askUpdate() }
+            IconButton(symbol: "arrow.triangle.2.circlepath", label: StudioWords.updateFrom(document.update.from)) { session.askUpdate() }
                 .frame(width: Metric.controlSmall, height: Metric.controlSmall).help(StudioWords.updateFrom(document.update.from))
         }
         if document.isNewer {

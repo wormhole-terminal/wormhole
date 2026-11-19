@@ -12,7 +12,7 @@ enum KeySpecText {
         103: "f11", 111: "f12",
     ]
     private static let keyGlyphs = [
-        "enter": "↩", "escape": "⎋", "space": "Space", "tab": "⇥", "backspace": "⌫", "delete": "⌦", "up": "↑",
+        "enter": "↩", "escape": "⎋", "space": "Space", "tab": "⇥", "backspace": "⌫", "delete": "⌦", "up": "↑", // text: the key's name as a key cap reads
         "down": "↓", "left": "←", "right": "→", "home": "↖", "end": "↘", "pageup": "⇞", "pagedown": "⇟",
     ]
 

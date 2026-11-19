@@ -31,6 +31,7 @@ struct ProbeRowView: View {
                     ActionButton(title: ExtensionsText.approveAgain, symbol: nil) { Task { await probes.openSheet(row.id) } }
                 }
                 SettingToggle(label: row.title, isOn: row.state == .on) { on in Task { await probes.switched(row, on: on) } }
+                    .disabled(probes.pending.contains(row.id))
                     .disabled(!(row.canApprove || row.state == .on))
             }
             if let note = row.note {

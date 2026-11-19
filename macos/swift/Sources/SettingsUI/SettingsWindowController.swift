@@ -9,12 +9,15 @@ import SettingsModel
 import SwiftUI
 
 @MainActor
-public final class SettingsWindowController: NSWindowController {
+public final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     public let model: SettingsModel
+    /// The updater the Updates page draws from; nil in a build without one.
+    public let updates: UpdateViewModel?
     private var observation: SettingsObservation?
 
     public init(model: SettingsModel, updates: UpdateViewModel? = nil, themeStore: ThemeStore = .shared) {
         self.model = model
+        self.updates = updates
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: SettingsMetric.windowSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -28,7 +31,7 @@ public final class SettingsWindowController: NSWindowController {
         // The Settings window is never full screen (`forbid_fullscreen`).
         window.collectionBehavior.insert(.fullScreenNone)
         window.isReleasedWhenClosed = false
-        window.setFrameAutosaveName("WormholeSettings")
+        window.setFrameAutosaveName("WormholeSettings") // text: an autosave name
         super.init(window: window)
         window.contentView = NSHostingView(
             rootView: SettingsView(model: model) { [weak window] in window?.performClose(nil) }.environment(\.settingsUpdates, updates).themed(themeStore))
@@ -36,13 +39,18 @@ public final class SettingsWindowController: NSWindowController {
         observation = model.backend.observe { [weak model] in
             if let model { ThemeSync.apply(model.values, to: themeStore) }
         }
+        window.delegate = self
     }
+
+    /// Closed, the window is kept: what its pages watch ends now, and starts again in `show`.
+    public func windowWillClose(_ notification: Notification) { model.windowShown = false }
 
     @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     /// Opens the window (or brings it forward) on `section` when given.
     public func show(section: String? = nil) {
         if let section { model.show(section) }
+        model.windowShown = true
         model.host.windowOpened()
         model.profile.reload()
         TestInstance.bring(window)

@@ -9,24 +9,18 @@ import SwiftUI
 import WordsModel
 
 struct SettingsNav: View {
+    @Environment(\.tokens) private var tokens
     let model: SettingsModel
     var focus: FocusState<SettingsFocus?>.Binding
 
     var body: some View {
-        List(selection: Binding(get: { model.isSearching ? nil : model.selection }, set: { open($0) })) {
-            Label {
-                Text(model.profile.form?.name ?? SettingsText.profileDefault)
-            } icon: {
-                ProfileChip(letter: model.profile.form?.letter ?? "D", color: model.profile.form?.color ?? "blue")
-            }
-            .tag("profile")
-            .accessibilityLabel(Words.text("settings-section-profile", fallback: "Profile"))
-            .accessibilityValue(model.profile.form?.name ?? SettingsText.profileDefault)
-            row(id: SettingsModel.changedID, title: SettingsText.changedTitle, badge: model.isSearching || model.changedCount == 0 ? nil : "\(model.changedCount)")
-            ForEach(groups, id: \.title) { group in
-                Section(group.title) {
-                    ForEach(group.sections) { section in row(id: section.id, title: section.title, badge: badge(section), dim: dims(section)) }
-                }
+        List(selection: Binding(get: { model.showsResults ? nil : model.selection }, set: { open($0) })) {
+            profileRow
+            row(id: SettingsModel.changedID, title: SettingsText.changedTitle, badge: changedBadge)
+            groupRows
+            // The developer page of every control, behind the `components` flag.
+            if model.showsComponents {
+                Section { row(id: SettingsModel.componentsID, title: Words.text("settings-section-components", fallback: "Components"), badge: nil) }
             }
         }
         .listStyle(.sidebar)
@@ -37,24 +31,68 @@ struct SettingsNav: View {
         .accessibilityLabel(SettingsText.settings)
     }
 
+    // The list's parts as properties of their own: as one expression the body is more than the type checker gets through.
+    private var profileName: String { model.profile.form?.name ?? SettingsText.profileDefault }
+
+    private var changedBadge: String? { model.isSearching || model.changedCount == 0 ? nil : "\(model.changedCount)" }
+
+    private var profileRow: some View {
+        Label {
+            Text(profileName)
+        } icon: {
+            ProfileChip(letter: model.profile.form?.letter ?? "D", color: model.profile.form?.color ?? "blue")
+        }
+        .tag("profile")
+        .accessibilityLabel(Words.text("settings-section-profile", fallback: "Profile"))
+        .accessibilityValue(profileName)
+    }
+
+    private var groupRows: some View {
+        ForEach(groups, id: \.title) { group in
+            Section(group.title) {
+                ForEach(group.sections) { section in
+                    row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section))
+                }
+            }
+        }
+    }
+
     private func open(_ id: String?) {
         guard let id else { return }
-        model.query = ""
         model.show(id)
     }
 
-    private func row(id: String, title: String, badge: String?, dim: Bool = false) -> some View {
-        Label(title, systemImage: Icon(section: id).rawValue)
-            .symbolVariant(!model.isSearching && model.selection == id ? .fill : .none)
+    private func row(id: String, title: String, badge: String?, dim: Bool = false, attention: Bool = false) -> some View {
+        Label {
+            HStack(spacing: Space._2) {
+                Text(title)
+                if attention { Circle().fill(tokens.statusWarning).frame(width: SettingsMetric.markDot, height: SettingsMetric.markDot).accessibilityHidden(true) }
+            }
+        } icon: {
+            Image(systemName: Icon(section: id).rawValue)
+        }
+            .symbolVariant(!model.showsResults && model.selection == id ? .fill : .none)
             .badge(badge.map { Text($0) })
             .opacity(dim ? 0.5 : 1)
             .tag(id)
     }
 
     /// The Preview tag, or while a search runs the page's result count.
-    private func badge(_ section: SettingsSchema.Section) -> String? {
+    private func badge(_ section: SettingsSchema.Section) -> String? { Self.badge(section, model) }
+
+    static func badge(_ section: SettingsSchema.Section, _ model: SettingsModel) -> String? {
         if model.isSearching { return model.hitCounts[section.id].map(String.init) }
         return section.preview ? SettingsText.previewTag : nil
+    }
+
+    /// Coding agents wears a mark while an installed agent's hooks (or a profile's login of it) are only partly there.
+    private func attention(_ section: SettingsSchema.Section) -> Bool { Self.attention(section, model) }
+
+    /// The same, for the control folder's `settings-page`.
+    static func attention(_ section: SettingsSchema.Section, _ model: SettingsModel) -> Bool {
+        guard !model.showsResults, section.id == "agents" else { return false }
+        let records = model.host.panelRecords()
+        return records.agents.contains { $0.state == .needsRepair } || records.logins.contains { $0.state == .needsRepair }
     }
 
     private func dims(_ section: SettingsSchema.Section) -> Bool { model.isSearching && model.hitCounts[section.id] == nil }

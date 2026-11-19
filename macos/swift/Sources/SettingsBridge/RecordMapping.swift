@@ -21,6 +21,17 @@ enum RecordMapping {
         }
     }
 
+    static func login(_ row: SettingsAgentLogin) -> AgentLoginRecord {
+        let (state, hooks): (AgentRecord.State, AgentRecord.HookAction?) =
+            switch row.hooks {
+            case .installed: (.ready, .remove)
+            case .partial: (.needsRepair, .repair)
+            case .notInstalled, .noHooks: (.statusFromOutput, .install)
+            case .unreadable: (.needsRepair, nil)
+            }
+        return AgentLoginRecord(agent: row.agent, dir: row.dir, shown: row.shown, line: row.line, state: state, hooks: hooks)
+    }
+
     static func imported(_ row: SettingsImportRow) -> ImportRecord {
         ImportRecord(id: row.id, app: row.app, summary: row.summary)
     }
@@ -34,7 +45,7 @@ enum RecordMapping {
     }
 
     static func option(_ row: SettingsOptionRow) -> SettingOption {
-        SettingOption(value: .string(row.value), label: row.label)
+        SettingOption(value: .string(row.value), label: row.label, detail: row.detail)
     }
 }
 
@@ -65,7 +76,26 @@ extension RecordMapping {
     static func approval(_ row: AccessApprovalRecord) -> ApprovalRecord {
         ApprovalRecord(
             number: row.id, isStored: row.stored, label: row.label, detail: row.detail, location: row.location,
-            allowed: row.allowed, agent: row.agent)
+            allowed: row.allowed, agent: row.agent, capabilities: Set(row.capabilities.compactMap(capability)))
+    }
+
+    private static func capability(_ row: AccessCapability) -> ApprovalCapability? {
+        switch row {
+        case .read: .read
+        case .type: .type
+        case .run: .run
+        case .open: .open
+        case .close: nil
+        }
+    }
+
+    static func record(_ capability: ApprovalCapability) -> AccessCapability {
+        switch capability {
+        case .read: .read
+        case .type: .type
+        case .run: .run
+        case .open: .open
+        }
     }
 
     static func choice(_ row: SettingsProfileRow) -> ProfileChoice {

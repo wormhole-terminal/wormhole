@@ -57,7 +57,8 @@ struct HostCardView: View {
     private var head: some View {
         VStack(alignment: .leading, spacing: Space._1) {
             HStack(spacing: Space._3) {
-                Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(tokens.textMuted).accessibilityHidden(true)
+                Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).motionTurn(Motion.layout, value: open)
+                    .foregroundStyle(tokens.textMuted).accessibilityHidden(true)
                 StatusBadge(text: card.standing.label, color: color)
                 Text(card.note).font(TextRole.body.font.weight(.medium)).lineLimit(1)
             }

@@ -33,7 +33,7 @@ struct AgentsStep: View {
                     .fixedSize(horizontal: false, vertical: true).padding(.horizontal, Space._6).padding(.vertical, Space._3)
                 NotifyToggle(label: AuxText.notifyBackground, isOn: Bindable(session.preferences).notifications)
                 if let card = session.trustCard {
-                    TrustCardView(card: card, trust: { session.send(.trust(session.flow.folder ?? URL(fileURLWithPath: "/"))) }, later: session.laterOnTrust)
+                    TrustCardView(card: card, trust: { if let root = card.root { session.send(.trust(root)) } }, later: session.laterOnTrust)
                 }
             } else {
                 Text(AuxText.lookingForAgents).font(TextRole.body.font).foregroundStyle(tokens.textMuted)

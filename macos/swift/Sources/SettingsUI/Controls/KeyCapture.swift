@@ -2,6 +2,7 @@
 // also takes ⌘-keys (`performKeyEquivalent`), which would otherwise run the menu.
 
 import AppKit
+import DesignSystem
 import SwiftUI
 
 enum RecordedKey: Equatable {
@@ -22,7 +23,8 @@ struct KeyCapture: NSViewRepresentable {
 
     func updateNSView(_ view: CaptureView, context: Context) { view.onKey = onKey }
 
-    final class CaptureView: NSView {
+    /// A recorder (`RecordsKeys`): the app's key monitors leave its presses alone.
+    final class CaptureView: NSView, RecordsKeys {
         var onKey: (RecordedKey) -> Void = { _ in }
         override var acceptsFirstResponder: Bool { true }
 

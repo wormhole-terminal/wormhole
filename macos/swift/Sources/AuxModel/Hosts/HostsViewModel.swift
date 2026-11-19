@@ -15,6 +15,8 @@ public final class HostsViewModel {
     public private(set) var copied: Copied?
     /// The hosts whose cards are opened, by id: a card starts folded.
     public private(set) var open: Set<String> = []
+    /// The list is to scroll to this offset (points from the top): the control folder's `hosts-scroll`; `serial` makes a repeat count.
+    public private(set) var scrollRequest: (offset: Double, serial: Int)?
     @ObservationIgnored public let backend: any HostsBackend
     @ObservationIgnored private let write: (String) -> Void
     @ObservationIgnored private let slowLook: Duration
@@ -51,6 +53,8 @@ public final class HostsViewModel {
         let next = await backend.report()
         if next != report { report = next }
     }
+
+    public func scroll(to offset: Double) { scrollRequest = (offset, (scrollRequest?.serial ?? 0) + 1) }
 
     /// Opens a host's card, or folds it.
     public func toggle(_ id: String) {

@@ -3,12 +3,13 @@ import WordsModel
 // The strip holds nothing to operate: no focus stop, and one labelled group for VoiceOver.
 
 enum PreviewScene: Equatable {
-    case window, fonts, sidebar, agents, notifications, menuBar, hotkey, git
+    case window, fonts, motion, sidebar, agents, notifications, menuBar, hotkey, git
 
     init?(section: String) {
         switch section {
         case "appearance": self = .window
         case "fonts": self = .fonts
+        case "motion": self = .motion
         case "sessions": self = .sidebar
         case "agents": self = .agents
         case "notifications": self = .notifications
@@ -23,6 +24,7 @@ enum PreviewScene: Equatable {
         switch self {
         case .window: Words.text("settings-window-window", fallback: "Window")
         case .fonts: Words.text("settings-window-fonts", fallback: "Fonts")
+        case .motion: Words.text("settings-section-motion", fallback: "Motion")
         case .sidebar, .agents: Words.text("settings-window-terminals-list", fallback: "Terminals list")
         case .notifications: Words.text("settings-window-notifications", fallback: "Notifications")
         case .menuBar: Words.text("settings-window-menu-bar", fallback: "Menu bar")
@@ -36,6 +38,7 @@ enum PreviewScene: Equatable {
         switch self {
         case .window: Words.text("settings-appearance-stage-caption", fallback: "Live preview of a window. Its blur isn't drawn here")
         case .fonts: Words.text("settings-fonts-hover-a-font-in-a-list", fallback: "Your fonts in a sample of terminal text")
+        case .motion: Words.text("settings-motion-preview-caption", fallback: "Loops while you look. Under Reduce Motion it holds still.")
         case .agents: Words.text("settings-agents-preview-caption", fallback: "The Terminals list with agents at work")
         case .notifications: Words.text("settings-notifications-preview-caption", fallback: "How a notification looks")
         default: nil

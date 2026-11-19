@@ -6,9 +6,13 @@ import StudioModel
 import WormholeBindings
 
 public struct FfiStudioFiles: StudioFiles {
-    let directory: String
+    /// The themes folder, asked at each call: an open Studio follows a profile switch.
+    let folder: @Sendable () -> URL
+    var directory: String { folder().path }
 
-    public init(directory: URL) { self.directory = directory.path }
+    public init(directory: URL) { folder = { directory } }
+
+    public init(folder: @escaping @Sendable () -> URL) { self.folder = folder }
 
     public func read(_ text: String) throws -> StudioFileRead {
         let read = try studioRead(text: text)
@@ -21,7 +25,10 @@ public struct FfiStudioFiles: StudioFiles {
 
     public func copyTheme(from: String, name: String) -> String? { studioCopyTheme(themesDir: directory, from: from, name: name) }
 
-    public func newID(name: String, itself: URL?) -> String { studioNewId(themesDir: directory, name: name, itself: itself?.path) }
+    /// A file of the person's keeps its own id, looked up in the folder that holds it (a draft open across a profile switch).
+    public func newID(name: String, itself: URL?) -> String {
+        studioNewId(themesDir: itself?.deletingLastPathComponent().path ?? directory, name: name, itself: itself?.path)
+    }
 
     public func convert(_ text: String, id: String) throws -> String { try studioConvert(themesDir: directory, text: text, id: id) }
 
@@ -53,5 +60,25 @@ public struct FfiStudioFiles: StudioFiles {
         return ThemeList(
             own: choices(list.own),
             builtins: list.builtins.map { ThemeFamily(name: $0.name, wormhole: $0.wormhole, choices: choices($0.choices)) })
+    }
+
+    public func completions(_ text: String, caret: Int, target: String) -> FieldCompletions? {
+        guard let found = studioCompletions(text: text, caret: UInt32(clamping: caret), target: target) else { return nil }
+        return FieldCompletions(
+            range: Int(found.start)..<Int(found.end),
+            items: found.items.map { FieldCompletion(label: $0.label, insert: $0.insert, function: $0.function) })
+    }
+
+    public func contrast(_ text: String, shown: String?, increaseContrast: Bool) throws -> ContrastReport {
+        let found = try studioContrast(themesDir: directory, text: text, shown: shown, increaseContrast: increaseContrast)
+        return ContrastReport(
+            checks: found.checks.map {
+                ContrastCheck(fg: $0.fg, bg: $0.bg, underlay: $0.underlay, min: Double($0.min), ratio: Double($0.ratio))
+            },
+            issues: found.issues.map { issue in
+                ContrastIssue(
+                    check: ContrastCheck(fg: issue.fg, bg: issue.bg, underlay: issue.underlay, min: Double(issue.min), ratio: Double(issue.ratio)),
+                    fix: issue.fix.map { ContrastFix(token: $0.token, expression: $0.expression, label: $0.label) }, follows: issue.follows)
+            })
     }
 }

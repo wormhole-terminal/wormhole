@@ -7,16 +7,27 @@ import SwiftUI
 
 @MainActor
 public enum Licenses {
+    /// The open window's browser, for the control folder's `licenses-search` and `licenses-select` (nil while it is closed).
+    public private(set) static weak var browser: LicenseBrowser?
+
     public static func show(source: any LicenseSource) {
         AuxWindowController.show(
             key: "licenses", title: AuxText.licensesTitle, size: LicensesMetrics.size, minSize: LicensesMetrics.minSize
         ) {
             if let list = try? source.load() {
-                LicensesView(browser: LicenseBrowser(list: list))
+                page(list: list)
             } else {
                 LicensesUnreadable()
             }
         }
+    }
+}
+
+extension Licenses {
+    private static func page(list: LicenseList) -> LicensesView {
+        let browser = LicenseBrowser(list: list)
+        Self.browser = browser
+        return LicensesView(browser: browser)
     }
 }
 

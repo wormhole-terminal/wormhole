@@ -14,6 +14,8 @@ public struct SettingsView: View {
     let onClose: () -> Void
     @FocusState private var focus: SettingsFocus?
     @State private var fonts: FontLibrary
+    @State private var optionHeld = false
+    @Environment(\.appearsActive) private var appearsActive
     @Environment(\.tokens) private var tokens
     private static let f6 = KeyEquivalent(Character(UnicodeScalar(UInt32(NSF6FunctionKey)) ?? " "))
 
@@ -40,12 +42,16 @@ public struct SettingsView: View {
         .foregroundStyle(tokens.textPrimary)
         .environment(\.fontLibrary, fonts)
         .environment(\.textScale, SettingsMetric.textScale(model.value("settings_text_size").string))
+        // ⌥ shows every row's config key; only in the window in front, so a key let go elsewhere cannot leave them shown.
+        .environment(\.optionHeld, optionHeld && appearsActive)
+        .onModifierKeysChanged(mask: .option) { _, held in optionHeld = held.contains(.option) }
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
         .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }
         // Locking the feature flags while their page is open takes the page away with its row.
         .onChange(of: model.navSections.map(\.id)) { _, ids in
-            if !ids.contains(model.selection), model.selection != "profile", model.selection != SettingsModel.changedID, let first = ids.first {
+            if !ids.contains(model.selection), model.selection != "profile", model.selection != SettingsModel.changedID,
+                !(model.selection == SettingsModel.componentsID && model.showsComponents), let first = ids.first {
                 model.show(first)
             }
         }
@@ -56,10 +62,12 @@ public struct SettingsView: View {
     }
 
     @ViewBuilder private var page: some View {
-        if model.isSearching {
+        if model.showsResults {
             ResultsPage(model: model)
         } else if model.selection == SettingsModel.changedID {
             ChangedPage(model: model)
+        } else if model.selection == SettingsModel.componentsID, model.showsComponents {
+            ComponentsPage()
         } else if let section = model.schema.section(model.selection) {
             SettingsPage(model: model, section: section)
         }

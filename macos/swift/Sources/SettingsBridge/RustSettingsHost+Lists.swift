@@ -42,6 +42,11 @@ extension RustSettingsHost {
         refreshApprovals()
     }
 
+    public func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord) {
+        platform.setApprovalCapability(approval.number, approval.isStored, RecordMapping.record(capability), on)
+        refreshApprovals()
+    }
+
     /// The project of the terminal in front sets these (`nil`: none, or its settings are off or not trusted): layered
     /// over the person's, with the rows it sets marked, until another terminal comes to the front.
     public func follow(project: ProjectSettingsRecord?) {

@@ -1,6 +1,6 @@
 // What the token list and the editor read from the document: the bands the filter keeps, each row's chip and
 // value, where a value comes from, the contrast pairs and what follows a token. Worked out from the resolved
-// tokens, so they are Rust's answers and the same ones the preview draws.
+// tokens and core's contrast report, so they are Rust's answers and the same ones the preview draws.
 
 import DesignSystem
 import Foundation
@@ -17,7 +17,8 @@ extension StudioDocument {
     /// Edited since the last save.
     public func isChanged(_ token: String) -> Bool { file.own(token, in: shown) != saved.own(token, in: shown) }
 
-    public var lowContrastTokens: Set<String> { ContrastCheck.lowTokens(in: tokens) }
+    /// The tokens whose text falls short somewhere, by core's check (the card's own pairs).
+    public var lowContrastTokens: Set<String> { contrast.lowTokens }
 
     public var visibleGroups: [TokenGroup] {
         let low = lowContrastTokens
@@ -58,13 +59,15 @@ extension StudioDocument {
         environment.library.catalog.first { $0.name == token }?.description
     }
 
+    /// What draws with `token` as core lists it (`uses_of`): "Used by" and a metric's count.
     public func uses(of token: String) -> [TokenUse] { environment.knowledge.uses.filter { $0.draws(with: token) } }
 
-    public var contrastIssues: [ContrastIssue] {
-        ContrastCheck.issues(in: tokens) { [self] in file.own($0, in: shown) ?? rule(for: $0) }
-    }
+    /// The gallery's components whose views really draw with `token`: what the gallery outlines.
+    public func drawn(with token: String) -> [TokenUse] { environment.knowledge.drawn.filter { $0.draws(with: token) } }
 
-    public func checks(of token: String) -> [ContrastCheck] { ContrastCheck.checks(of: token, in: tokens) }
+    public var contrastIssues: [ContrastIssue] { contrast.issues }
+
+    public func checks(of token: String) -> [ContrastCheck] { contrast.checks(of: token) }
 
     /// Where a value of the shown version lives, for the chip of a pair.
     public func place(of token: String) -> ThemeFile.Place {
@@ -73,6 +76,15 @@ extension StudioDocument {
 }
 
 extension StudioDocument {
+    /// What core offers at UTF-8 offset `caret` of `text` typed for `token`: nothing for a metric (a number) or without the core.
+    public func completions(_ text: String, caret: Int, for token: String) -> FieldCompletions? {
+        guard !token.hasPrefix("metrics.") else { return nil }
+        return environment.files?.completions(text, caret: caret, target: token)
+    }
+
+    /// The faint word beside a name in the list: its group in the token list.
+    public func groupName(of name: String) -> String? { group(of: name) }
+
     /// Every name an expression may refer to: for completion.
     public var expressionNames: [String] {
         groups.flatMap(\.tokens).filter { !$0.hasPrefix("metrics.") }
