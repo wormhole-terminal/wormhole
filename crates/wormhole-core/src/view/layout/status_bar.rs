@@ -125,6 +125,9 @@ pub fn rest_line(rest: &[Counted]) -> String {
 /// The terminals each agent item counts, as indices into the entries: working, done and failed in
 /// the order given (each item opens the first), needing you the longest waiting first (that item
 /// opens the one that has waited longest).
+/// How many of those who need input the needs-you tooltip names; the rest it counts.
+pub const NEEDS_YOU_NAMED: usize = 3;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Summary {
     pub working: Vec<usize>,
@@ -181,18 +184,25 @@ impl Summary {
         .collect()
     }
 
+    /// How many of those who need input the tooltip names (the longest waiting first), and how
+    /// many it only counts ("and 2 more").
+    pub fn needs_you_named(&self) -> (usize, usize) {
+        let named = self.needs_you.len().min(NEEDS_YOU_NAMED);
+        (named, self.needs_you.len() - named)
+    }
+
     /// Who needs input, longest waiting first, and what a click does ("diff perf, then prod · go
     /// to the first").
     pub fn needs_you_tooltip(&self, entries: &[Entry]) -> Option<String> {
-        const NAMED: usize = 3;
-        let names: Vec<&str> = self.needs_you.iter().take(NAMED).map(|&ix| entries[ix].name).collect();
+        let (named, more) = self.needs_you_named();
+        let names: Vec<&str> = self.needs_you.iter().take(named).map(|&ix| entries[ix].name).collect();
         let (first, rest) = names.split_first()?;
         let mut text = (*first).to_string();
         if !rest.is_empty() {
             text.push_str(", then ");
             text.push_str(&rest.join(", "));
         }
-        if let Some(more) = self.needs_you.len().checked_sub(NAMED).filter(|&n| n > 0) {
+        if more > 0 {
             text.push_str(&format!(" and {more} more"));
         }
         text.push_str(if rest.is_empty() { " · go there" } else { " · go to the first" });

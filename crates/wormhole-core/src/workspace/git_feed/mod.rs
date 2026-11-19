@@ -62,6 +62,8 @@ pub struct GitFacts {
     /// Files changed in the repository, and the ones this terminal changed.
     pub files: Option<usize>,
     pub changes: Option<usize>,
+    /// For a submodule, whose it is ("in terminal").
+    pub superproject: Option<String>,
 }
 
 impl GitFacts {
@@ -74,6 +76,7 @@ impl GitFacts {
         facts.behind = self.behind;
         facts.repo_files = self.files;
         facts.changes = self.changes;
+        facts.superproject.clone_from(&self.superproject);
     }
 }
 
@@ -316,6 +319,7 @@ impl GitFeed {
             behind: repo.map_or(0, |repo| repo.behind),
             files: repo.map(|repo| repo.files),
             changes: self.attribution.changes_of(id, self.rules.shared),
+            superproject: repo.and_then(|repo| repo.superproject.clone()),
         }
     }
 

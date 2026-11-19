@@ -5,6 +5,7 @@ use super::event::Event;
 use super::facts::Millis;
 use super::model::WorkspaceModel;
 use super::status::{Ask, Context, StatusEvent, StatusMachine};
+use crate::view::sidebar::Status;
 
 impl WorkspaceModel {
     /// Something happened to terminal `id` at `at` (the shell's clock): the status machine decides
@@ -44,6 +45,23 @@ impl WorkspaceModel {
             return Vec::new();
         }
         self.feed(id, StatusEvent::DoneUnseen, at)
+    }
+
+    /// Terminal `id` runs a new program in place of one that ended (Restart on the bar over it): its status
+    /// starts over, as a new terminal's does. Nothing a program does brings an ended shell back, but this is
+    /// another program; the GPUI app makes a new terminal view for it, whose status is new. A terminal whose
+    /// program has not ended is left as it is (a host attached again keeps what it was doing).
+    pub fn started_again(&mut self, id: i64, at: Millis) -> Vec<Event> {
+        let Some(ix) = self.index_of(id) else { return Vec::new() };
+        if self.sessions[ix].facts.status != Status::Exited {
+            return Vec::new();
+        }
+        self.status.machines.insert(id, StatusMachine::new(at));
+        let facts = &mut self.sessions[ix].facts;
+        facts.status = Status::Idle;
+        facts.since = at;
+        self.emit(Event::Listing);
+        self.out.take()
     }
 
     /// The name of the program that reports terminal `id`'s status (`StatusMachine::program_name`).

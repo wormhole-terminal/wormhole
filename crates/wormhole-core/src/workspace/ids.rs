@@ -25,4 +25,9 @@ impl IdCounter {
     pub fn keep_above(&self, taken: i64) {
         self.0.fetch_max(taken.saturating_add(1), Ordering::Relaxed);
     }
+
+    /// The id `next` would hand out now: every id below it may be taken, none from it on is yet.
+    pub fn peek(&self) -> i64 {
+        self.0.load(Ordering::Relaxed)
+    }
 }
