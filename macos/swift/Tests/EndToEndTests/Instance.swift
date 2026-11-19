@@ -92,7 +92,7 @@ final class Instance {
     /// itself, so the two are not given together.
     static func with(
         shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], updater: Bool = false,
-        feed: String? = nil, hostFrom: URL? = nil, label: String = #function,
+        feed: String? = nil, hostFrom: URL? = nil, flags: [String] = [], label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
@@ -100,6 +100,7 @@ final class Instance {
         app.agents = agents
         // `feed`: an updater that asks that address (a `FeedServer`'s, on this machine) instead of the dead one.
         if let feed = feed ?? (updater ? deadFeed : nil) { app.launchFlags = ["--update-feed", feed] }
+        app.launchFlags += flags
         // The default profile's files are the data folder's own.
         if let config {
             guard !hosts else {
