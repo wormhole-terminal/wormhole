@@ -45,14 +45,14 @@ extension EndToEnd {
         }
     }
 
-    // Disabled: the app does not say it. With `profiles/<id>` unreadable (before the launch, or while it runs) `profile-switch`
-    // answers `now=<id>` and opens a window in the profile with no chip, no line in the log and no word on stderr, so that
-    // profile saves nothing and nobody is told. The GPUI app records it where the profile's data is opened
-    // (`app_state/profiles.rs`, `data_folder::record`) and its first window says it. Not fixed here: it is the saved windows'
-    // and terminals' store. The scenario asserts GPUI's behaviour and fails at its first wait.
+    // GPUI records a profile whose database cannot be opened where its data is opened (`app_state/profiles.rs`, `ProfileData::open`,
+    // `data_folder::record`: the log, standard error, and the first window's chip at a launch) and then runs that profile
+    // with no store, so it saves nothing. The Swift app does not enter a profile it cannot save: `profile-switch` fails in
+    // `Windows.beside`, before any window of it opens and before anything of its is written, says so on the chip and stays.
+    // The fixture is a file where the profile's folder should be: a folder the owner loses every permission on is made
+    // private again by core's `ensure_private_dir`, in both apps, and then opens.
     @Test(
-        "a profile whose data folder cannot be opened: Wormhole stays where it is and a warning that stays names the profile, the folder and why",
-        .disabled("an unreadable profile folder is not reported by the Swift app: see the comment"))
+        "a profile whose data folder cannot be opened: Wormhole stays where it is and a warning that stays names the profile, the folder and why")
     @MainActor func unopenableProfileFolderWarns() async throws {
         try await Instance.with { app in
             // A second profile, then back to Default: its folder is the one that will not open.
@@ -65,11 +65,10 @@ extension EndToEnd {
             await app.until("profiles") { $0.split(separator: "\n").contains { $0.hasPrefix("* default ") } }
             let folder = app.scratch.data.appendingPathComponent("profiles/\(id)")
             app.expect(FileManager.default.fileExists(atPath: folder.path), "the profile has a folder of its own: \(folder.path)")
-            // Quit, and its folder loses every permission (the scratch's own folder; given back below, whatever happens, so it
-            // can be removed): the next launch finds a profile it cannot open.
+            // Quit, and a file stands where its folder was: the next launch finds a profile it cannot open.
             await app.quit(command: "quit")
-            try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: folder.path)
-            defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path) }
+            try FileManager.default.removeItem(at: folder)
+            try Data("not a folder".utf8).write(to: folder)
             try await app.start()
             await app.until("profiles") { $0.split(separator: "\n").contains { $0.hasPrefix("* default ") } }
 
@@ -81,6 +80,7 @@ extension EndToEnd {
             // Nothing else changed: Wormhole is still in Default, with its window and terminal.
             app.expect((await app.reply("profiles")).split(separator: "\n").contains { $0.hasPrefix("* default ") }, "Wormhole stays in Default")
             app.expect((await app.rows()).live.count == 1, "the window keeps its terminal")
+            app.expect(FileManager.default.contents(atPath: folder.path) == Data("not a folder".utf8), "nothing was written where the profile's folder was")
             await app.send(["notice-click close"])
             await app.until("notice chip") { $0.contains("shown=none") }
         }
