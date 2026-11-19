@@ -26,6 +26,8 @@ extension EndToEnd {
             // The core's words for the head name its colour (core view/sidebar/spoken.rs:121).
             let said = await app.until("rows") { Self.groupLine($0, group.id).contains("coloured red") }
             app.expect(Self.groupLine(said, group.id), contains: "coloured red")
+            // Opened again, it is a popover of its own that marks the colour, not the closed one's record still standing.
+            await app.until("popover") { $0 == "no popover" }
             await app.send(["group-popover \(group.id)"])
             let again = await app.until("popover") { $0.contains("colours:") }
             app.expect(again.split(separator: "\n").first { $0.hasPrefix("colours:") }?.contains("Red [x]") == true, "the popover marks the colour:\n\(again)")
