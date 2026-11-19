@@ -37,6 +37,11 @@ ignore = true
 [advisories]
 # Unmaintained crates deep in GPUI's tree are warnings, not failures.
 unmaintained = "workspace"
+ignore = [
+    # chrono is unmaintained (no known hole). Core formats dates with it and gpui-base links it whatever
+    # core does; look again when GPUI moves off it, or when core's nine uses go to `time` or `jiff`.
+    { id = "RUSTSEC-2026-0543", reason = "unmaintained, no vulnerability; GPUI links it too (2026-11-19)" },
+]
 
 [bans]
 # GPUI pulls several versions of some crates; don't fail on that.
