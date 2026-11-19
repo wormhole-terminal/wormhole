@@ -9,7 +9,8 @@ extension EndToEnd {
     /// Presses `id` once the page shows it and it stands still: a page lays out and scrolls a moment after it is asked for,
     /// and a press at the frame recorded before that lands beside the control (it did, about once in five passes).
     @MainActor static func press(_ app: Instance, _ id: String) async -> String {
-        _ = await app.settledRow(id)
+        // A control the page has not built yet (a lazy grid's card in a short window) is found by `settings-press`, which scrolls.
+        if (await app.reply("settings-rows")).contains("\(id) | ") { _ = await app.settledRow(id) }
         return await app.until("settings-press \(id)") { !$0.hasPrefix("error") }
     }
 

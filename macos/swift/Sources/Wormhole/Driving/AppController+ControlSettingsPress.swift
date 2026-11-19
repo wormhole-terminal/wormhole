@@ -47,10 +47,20 @@ extension AppController {
     /// Where the Settings control recorded under `id` is, in the window's points from its top left, once it is in sight: a
     /// control below or above what the page shows is scrolled to first, by the wheel, as a person does before pressing it.
     /// On a small display the window is shorter than a page, and a press at the recorded frame landed outside the window.
-    /// Nil for an id that is not on the page.
+    /// A control the page has not built yet (a lazy grid builds only the cards near what shows: the theme cards in a short window)
+    /// is looked for by scrolling down the page, then back up, as a person looks for it. Nil for an id that is not on the page.
     func settingsFrame(_ id: String, in window: NSWindow) async -> CGRect? {
         func recorded() -> CGRect? { RowFrames.all.first { $0.id == id }?.frame }
         guard let content = window.contentView else { return recorded() }
+        let centre = injector.location(Double(content.bounds.width) / 2, Double(content.bounds.height) / 2, in: window)
+        if recorded() == nil {
+            for dy in [120.0, -120.0] {
+                for _ in 0..<40 where recorded() == nil {
+                    _ = injector.scroll(centre, in: window, dy: dy)
+                    await pause(16)
+                }
+            }
+        }
         // The title bar's strip at the top and a row's height at the bottom are left clear.
         let sight = 60...(Double(content.bounds.height) - 30)
         for _ in 0..<80 {
