@@ -109,9 +109,15 @@ extension EndToEnd {
     // from the old layout to the new one, so the terminal was resized at each step of the motion, from 2 columns up (30 sizes in half a
     // second), and zsh redrew its prompt over the rows it believed were its own at each. GPUI lays the panes out at the new size at once.
     //
-    // The window is one a small screen can hold as it is (no panel, 1200 x 640: 100 columns, room for a 62-character host name's prompt
-    // and the command), and the relaunch does not resize it: a harness that widened a window the screen had narrowed was the runner's
-    // own cause of the loss (`RestartedShellTests`' sibling `widenedWhileThePromptWraps`, which is about that).
+    // The window is one a small screen can hold as it is: the runner's usable area is 1024 x 674, and a window saved wider is clamped to it
+    // at the relaunch. So 1000 x 600, with the panel and the sidebar hidden, which leaves the terminal the whole width (over 110
+    // columns, room for a 62-character host name's prompt and the command: 84). The relaunch does not resize it: a harness that
+    // widened a window the screen had narrowed was the runner's own cause of the loss (`PromptWidenedTests`, which is about that).
+    /// The columns of a `geometry` reply's grid.
+    private static func columns(_ geometry: String) -> Int {
+        Instance.value("grid", in: geometry)?.split(separator: "x").first.flatMap { Int($0) } ?? 0
+    }
+
     @Test(
         "a restarted hosted shell's last line is still there after a quit that keeps the hosts",
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
@@ -120,12 +126,12 @@ extension EndToEnd {
             await app.flags(["persistent_terminals": true])
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             guard let id = await app.live(1)?.first else { return }
-            // A window the screen can hold unchanged, wide enough that the prompt does not wrap.
-            if (await app.reply("state")).contains("panel=true") { await app.send(["panel"]) }
-            await app.send(["size 1200x640", "frames 2"])
-            let before = await app.until("geometry") { $0.contains("content=(1200.0, 640.0)") }
-            let columns = Instance.value("grid", in: before)?.split(separator: "x").first.flatMap { Int($0) } ?? 0
-            app.expect(columns >= 90, "the pane is wide enough that the prompt does not wrap: \(before)")
+            // A window the smallest screen of the runners can hold unchanged (1024 x 674 usable), the columns hidden so that the prompt
+            // does not wrap.
+            for column in ["panel", "sidebar"] where (await app.reply("state")).contains("\(column)=true") { await app.send([column]) }
+            await app.send(["size 1000x600", "frames 2"])
+            let before = await app.until("geometry") { $0.contains("content=(1000.0, 600.0)") && Self.columns($0) >= 90 }
+            app.expect(Self.columns(before) >= 90, "the pane is wide enough that the prompt does not wrap: \(before)")
             await Self.endShell(app, id)
             await Self.restart(app, id)
             await app.until("keys") { $0.contains("focus=terminal") }
@@ -138,7 +144,7 @@ extension EndToEnd {
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             // The window came back as it was: its size is what the screen allows it (said here, so a run says what the screen was).
             let back = await app.until("geometry") { $0.contains("content=") }
-            app.expect(back.contains("content=(1200.0, 640.0)"), "the window came back as it was (1200 x 640); the screens' usable areas are \(NSScreen.screens.map(\.visibleFrame)):\n\(back)")
+            app.expect(back.contains("content=(1000.0, 600.0)") && Self.columns(back) >= 90, "the window came back as it was (1000 x 600, 90 columns or more); the screens' usable areas are \(NSScreen.screens.map(\.visibleFrame)):\n\(back)")
             // On the screen, or just above it where the shell's redraw after the attach pushed it.
             var text = ""
             let start = Date()
