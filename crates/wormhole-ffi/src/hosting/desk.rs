@@ -23,6 +23,7 @@ use wormhole_term::client::AttachError;
 use wormhole_term::client::{HostCommand, socket_of};
 
 use super::checkpoints::{self, Checkpoints};
+use super::quit::{Fate, QuitGate};
 use super::registry::Registry;
 use super::{HostSlot, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal, program};
 use crate::aux_backends::{AuxError, resolve_data_dir};
@@ -43,8 +44,9 @@ pub struct HostedStart {
     /// The shell it was opened with (`Workspace::launch_facts`: a `terminal::shells` key); `None` lets the project,
     /// `default_shell` and the login shell decide (`launch`).
     pub shell: Option<String>,
-    /// A program to run instead of what the terminal would (`--shell`, the welcome's tour, tests), with its arguments,
-    /// unless `shell` names one; `None`: the shell `launch` decides.
+    /// A program to run instead of what the terminal would (the welcome's tour, tests), with its arguments, whatever
+    /// `shell` names; `None`: the shell `launch` decides. A forced shell (`WORMHOLE_SHELL`, the Swift app's `--shell`)
+    /// is core's and replaces either.
     pub program: Option<String>,
     pub args: Vec<String>,
     pub cwd: Option<String>,
@@ -93,6 +95,8 @@ pub struct HostedTerminals {
     pub(super) made: Mutex<Vec<(i64, Weak<Terminal>)>>,
     /// The ids saved this run: what `finish_restore` keeps of the rows the last run left.
     saved_now: Mutex<HashSet<i64>>,
+    /// Whether the app quit, and the starts and attaches still under way then.
+    pub(super) quit: QuitGate,
 }
 
 #[uniffi::export]
@@ -126,6 +130,7 @@ impl HostedTerminals {
             orphans: Mutex::default(),
             made: Mutex::default(),
             saved_now: Mutex::default(),
+            quit: QuitGate::default(),
         }))
     }
 
@@ -217,6 +222,7 @@ impl HostedTerminals {
         what: HostedStart,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Terminal>, HostingError> {
+        let _under_way = self.quit.begin();
         let HostProgram::Found(binary) = &self.program else {
             return Err(HostingError::NoProgram { reason: format!("{:?}", self.program()) });
         };
@@ -241,6 +247,7 @@ impl HostedTerminals {
         visible: bool,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Terminal>, HostingError> {
+        let _under_way = self.quit.begin();
         let socket = match locked(&self.launch).restore(Some(&host_id)) {
             Restore::Attach(socket) => socket,
             // Not in the plan (a retry, or a host that came after): its own meta says where it listens.
@@ -258,23 +265,36 @@ impl HostedTerminals {
     }
 
     /// After the saved terminals were attached or started again: the rows the last run left under other
-    /// ids are forgotten (this run's terminals have their own).
-    pub fn finish_restore(&self) -> Result<(), HostingError> {
+    /// ids are forgotten (this run's terminals have their own). `listed`: the terminals the window lists now, whose
+    /// rows stay whatever their start came to (a failed attach, a program that fell back to the app's process).
+    pub fn finish_restore(&self, listed: Vec<i64>) -> Result<(), HostingError> {
         let mut keep: Vec<i64> = locked(&self.saved_now).iter().copied().collect();
         keep.extend(self.registry.unhosted_ids()?);
+        keep.extend(listed);
         self.registry.keep_only(&keep)
     }
 
-    /// The app is quitting. `end_hosts` (Quit and End All Terminals, or the box left ticked): every terminal
-    /// ends with its host and no row names a host. Otherwise each is let go of and its program runs on.
+    /// The app is about to quit and `finish` comes later, off the main thread (Quit and End All waits there for the
+    /// hosts still starting): from now on what a start or an attach makes is let go of, or ended with `end_hosts`.
+    /// Returns at once.
+    pub fn quitting(&self, end_hosts: bool) {
+        self.quit.mark(end_hosts);
+    }
+
+    /// The app is quitting. `end_hosts` (Quit and End All Terminals, or the box left ticked): every host ends and the
+    /// terminals stay, each row kept with its notes, tasks and text and naming no host, so the next launch starts them
+    /// again above their text (the GPUI app's `finish_quit`); ending waits a few seconds at most for the starts under
+    /// way: not on the main thread. Otherwise each is let go of and its program runs on.
     pub fn finish(&self, end_hosts: bool) {
+        // First: a start or an attach that ends after this lets go of its host, or ends it; ending waits for them.
+        self.quit.quit(end_hosts);
         let alive: Vec<Arc<Terminal>> =
             locked(&self.made).iter().filter_map(|(_, weak)| weak.upgrade()).collect();
         if end_hosts {
-            if let Err(err) = self.registry.forget_all() {
-                tracing::warn!("couldn't forget the saved terminals: {err}");
+            alive.iter().for_each(|terminal| terminal.end_keeping_row());
+            if let Err(err) = self.registry.unname_hosts(None) {
+                tracing::warn!("couldn't save that the terminals' hosts ended: {err}");
             }
-            alive.iter().for_each(|terminal| terminal.close());
             // Every live host of the data folder, not only the ones this run made: another profile's that
             // was never opened, an orphan not adopted, one left running behind a closed terminal.
             hosts::end_all_live(&self.hosts_dir, END_WAIT);
@@ -334,18 +354,21 @@ impl HostedTerminals {
     }
 
     /// A terminal started again above what it showed: the checkpoint of the host it ran in when that reads (after a
-    /// restart of the Mac), else its saved text. The host it was restored from, when a checkpoint was drawn.
+    /// restart of the Mac), else its saved text (a host that is gone, or none named). The host it was restored from,
+    /// when a checkpoint was drawn.
     fn seed(
         &self,
         what: &HostedStart,
         options: &mut wormhole_core::terminal::SpawnOptions,
     ) -> Option<String> {
-        let old = what.old_host.as_deref()?;
-        if let Some(key) = self.checkpoint_key(what.tab, old)
+        if let Some(old) = what.old_host.as_deref()
+            && let Some(key) = self.checkpoint_key(what.tab, old)
             && self.checkpoints.seed(old, &key, options)
         {
             return Some(old.to_owned());
         }
+        // A terminal whose row named no host (the hosts were ended at the last quit) starts above its text too, as one
+        // in the app's own process does.
         if let Some(text) = what.saved_text.as_deref() {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -403,15 +426,38 @@ impl HostedTerminals {
             }
             checkpoints.forget_later(closing_hosts.clone());
         });
-        let terminal = Terminal::from_parts(pty, events, options, listener, Some(slot))
-            .map_err(|e| HostingError::Start { reason: e.to_string() })?;
+        let terminal = Terminal::from_parts(
+            pty,
+            events,
+            options,
+            &self.profile().id().to_string(),
+            listener,
+            Some(slot),
+        )
+        .map_err(|e| HostingError::Start { reason: e.to_string() })?;
         self.remember(what, &id);
         if let Some(key) = self.checkpoint_key(tab, &id) {
             self.checkpoints.start(&terminal, &id, key, restored_from);
         }
-        let mut made = locked(&self.made);
-        made.retain(|(_, weak)| weak.strong_count() > 0);
-        made.push((tab, Arc::downgrade(&terminal)));
+        {
+            let mut made = locked(&self.made);
+            made.retain(|(_, weak)| weak.strong_count() > 0);
+            made.push((tab, Arc::downgrade(&terminal)));
+        }
+        // Made after the app quit (counted in `made` first, so `finish` sees it when it quit after this): nobody takes it.
+        match self.quit.fate() {
+            Fate::Runs => {}
+            Fate::LetGo => {
+                terminal.detach();
+            }
+            // Ended as Quit and End All ends the others: the terminal's row stays, naming no host.
+            Fate::Ends => {
+                terminal.end_keeping_row();
+                if let Err(err) = self.registry.unname_hosts(Some(tab)) {
+                    tracing::warn!("couldn't save that terminal {tab}'s host ended: {err}");
+                }
+            }
+        }
         Ok(terminal)
     }
 }

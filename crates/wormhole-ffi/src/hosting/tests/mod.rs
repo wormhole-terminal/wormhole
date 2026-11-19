@@ -3,6 +3,7 @@
 
 mod support;
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use wormhole_core::ipc::hosts;
@@ -44,7 +45,7 @@ fn a_terminal_outlives_the_app_and_comes_back_with_its_screen() {
     wait_for("the repaint", || again.screen_text().contains("remember-me"));
     again.write(b"and-more\n".to_vec());
     wait_for("the new echo", || again.screen_text().contains("and-more"));
-    second.finish_restore().expect("prunes");
+    second.finish_restore(vec![7]).expect("prunes");
 
     // The rows were renumbered: the old id (1) is gone, the new one (7) names the host, nothing is doubled.
     let third = first.desk();
@@ -56,6 +57,64 @@ fn a_terminal_outlives_the_app_and_comes_back_with_its_screen() {
     second.finish(true);
     wait_for("the host to end", || first.live_hosts().is_empty());
     assert!(first.desk().plan_at_launch().expect("plans").saved.is_empty());
+}
+
+/// Quit and End All ends the hosts, not the terminals (the GPUI app's `persisted_host` with `ending_hosts`): each row stays
+/// with its name, notes, tasks and saved text and names no host, and the next launch starts the terminal again above its
+/// text with all of them. The views that close after the quit forget nothing.
+#[test]
+fn ending_at_quit_keeps_each_terminal_with_its_notes_tasks_and_text() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let terminal = desk.start(fixture.request(1), support::listener()).expect("starts");
+    assert!(terminal.host_id().is_some(), "hosted");
+    // What the window and the Notes tab saved for it, as the app writes them.
+    fixture.name_row(1, "build");
+    fixture.save_notes(1, "remember the milk", "write the tests");
+    terminal.write(b"kept-on-screen\n".to_vec());
+    wait_for("the echo", || terminal.screen_text().contains("kept-on-screen"));
+    assert_eq!(desk.save_texts(), 1, "the screen is kept for the next launch");
+
+    desk.finish(true);
+    terminal.close();
+    wait_for("the host to end", || fixture.live_hosts().is_empty());
+    let row = fixture.row(1).expect("the terminal's row is kept");
+    assert_eq!(row.host_id, None, "no row names a host that ended");
+    assert_eq!(row.name.as_deref(), Some("build"));
+    assert_eq!(row.notes.iter().map(|n| n.body.as_str()).collect::<Vec<_>>(), ["remember the milk"]);
+    assert_eq!(row.tasks.iter().map(|t| t.text.as_str()).collect::<Vec<_>>(), ["write the tests"]);
+    let text =
+        row.scrollback.clone().filter(|text| text.contains("kept-on-screen")).expect("its text is kept");
+    drop((terminal, desk));
+
+    // The next launch: nothing to attach; the terminal starts again where it was, in a new host, above its text.
+    let next = fixture.desk();
+    assert!(next.plan_at_launch().expect("plans").saved.is_empty(), "no host is named");
+    let again = next
+        .start(HostedStart { saved_text: Some(text), ..fixture.request(1) }, support::listener())
+        .expect("starts again");
+    wait_for("its text above the new shell", || again.screen_text().contains("kept-on-screen"));
+    next.finish_restore(vec![1]).expect("prunes");
+    let row = fixture.row(1).expect("still there");
+    assert_eq!(row.host_id, again.host_id(), "the row names its new host");
+    assert_eq!(row.name.as_deref(), Some("build"), "a start keeps the rest of the row");
+    assert_eq!(row.notes.len(), 1, "a start keeps the notes: {row:?}");
+    assert_eq!(row.tasks.len(), 1, "a start keeps the tasks: {row:?}");
+    next.finish(true);
+}
+
+/// Restart (and a start that came too late) ends the old program and keeps the terminal: its row and notes stay.
+#[test]
+fn ending_a_terminal_that_stays_keeps_its_row() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let terminal = desk.start(fixture.request(2), support::listener()).expect("starts");
+    fixture.save_notes(2, "a note", "a task");
+    terminal.end_keeping_row();
+    wait_for("the host to end", || fixture.live_hosts().is_empty());
+    let row = fixture.row(2).expect("kept");
+    assert_eq!(row.notes.len(), 1);
+    assert_eq!(row.tasks.len(), 1);
 }
 
 /// Closing an attached terminal on purpose ends its program, so nothing is left to attach to.
@@ -81,7 +140,11 @@ fn a_window_that_moved_keeps_its_terminals_rows_in_its_new_profile() {
 
     desk.follow_profile("work".into()).expect("follows");
     let after = desk.start(fixture.request(2), support::listener()).expect("starts");
-    assert_eq!(fixture.hosted_rows_in("work"), vec![2], "the new terminal's row is in the profile the window moved to");
+    assert_eq!(
+        fixture.hosted_rows_in("work"),
+        vec![2],
+        "the new terminal's row is in the profile the window moved to"
+    );
     assert_eq!(fixture.hosted_rows_in("default"), vec![1], "nothing new in the profile it left");
 
     after.close();
@@ -133,6 +196,33 @@ fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {
     desk.finish(true);
     drop(adopted);
     wait_for("the host to end", || fixture.live_hosts().is_empty());
+}
+
+/// Quit and End All while a host is still starting: that host ends too, and none is let go of and left running
+/// (`terminal_view/hosted.rs` `kept_past_quit`, with the end the person asked for). The quit is this desk's alone: a desk
+/// made after it in the same process starts and keeps its hosts as any does.
+#[test]
+fn ending_at_quit_ends_a_host_still_starting() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let starting = std::thread::spawn({
+        let (desk, request) = (Arc::clone(&desk), fixture.request(1));
+        move || desk.start(request, support::listener())
+    });
+    wait_for("the start to be under way", || desk.quit.under_way() > 0);
+    desk.finish(true);
+    let made = starting.join().expect("joins").expect("starts");
+    assert!(made.host_id().is_some(), "it started in a host");
+    wait_for("no host left", || fixture.live_hosts().is_empty());
+    assert!(fixture.desk().plan_at_launch().expect("plans").saved.is_empty(), "no row names it");
+    drop((made, desk));
+
+    let next = fixture.desk();
+    let terminal = next.start(fixture.request(2), support::listener()).expect("starts");
+    let host_id = terminal.host_id().expect("hosted");
+    assert_eq!(terminal.hosting(), TerminalHosting::Persistent { host_id: host_id.clone() });
+    next.finish(true);
+    wait_for("its host to end", || fixture.live_hosts().is_empty());
 }
 
 #[test]

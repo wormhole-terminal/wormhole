@@ -11,7 +11,7 @@ use crate::files_panel::{
 };
 
 fn service() -> FilesService {
-    FilesService
+    FilesService::default()
 }
 
 fn root() -> TempDir {

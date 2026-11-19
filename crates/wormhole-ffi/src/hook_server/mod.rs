@@ -18,6 +18,7 @@
 //! [`HookEvent`] behind one coalesced `wake()`, as the workspace's own events are.
 
 mod control;
+mod control_line;
 mod core;
 mod dispatch;
 mod drive;
@@ -131,6 +132,11 @@ impl HookServer {
         self.socket.to_string_lossy().into_owned()
     }
 
+    /// The window in front is `window` now: `new-terminal` without `--window` opens there and `list` marks it.
+    pub fn set_front_window(&self, window: i64) {
+        self.core.set_front_window(window);
+    }
+
     /// What the server asks Swift to do, since the last drain; re-arms the wake.
     pub fn drain_events(&self) -> Vec<HookEvent> {
         self.core.ui.drain()
@@ -139,6 +145,17 @@ impl HookServer {
     /// The question a `HookEvent::CloseAsked` put to the person was answered (yes or no): another may be asked.
     pub fn close_question_over(&self) {
         self.core.close_question.store(false, Ordering::Release);
+    }
+
+    /// The new-worktree sheet of `window` came up (`up`) or went away, however it was opened: while it is up a command line's
+    /// `--worktree` request is answered Failed (the GPUI app's "a worktree dialog is already up").
+    pub fn worktree_sheet(&self, window: i64, up: bool) {
+        let mut windows = self.core.worktree_question.lock().unwrap_or_else(PoisonError::into_inner);
+        if up {
+            windows.insert(window);
+        } else {
+            windows.remove(&window);
+        }
     }
 
     /// Another profile's desk (a profile's windows were opened beside the first's): what its windows' requests are judged
@@ -167,6 +184,25 @@ impl HookServer {
             self.core.bus.revoke_holder(seat.holder(true, id));
         }
         revoked
+    }
+
+    /// Switch one capability of approval `id` of profile `profile`'s desk (`stored`: a database row of
+    /// `AccessDesk::approvals`) on or off, as the ticks of its row in Settings do. Taking one away ends the streams
+    /// that were started under the approval, which it may have let in. Whether the approval changed.
+    pub fn set_approval_capability(
+        &self,
+        profile: String,
+        id: u64,
+        stored: bool,
+        capability: crate::aux_backends::AccessCapability,
+        on: bool,
+    ) -> bool {
+        let Some(seat) = self.core.seat_of_profile(&profile) else { return false };
+        let changed = seat.desk.set_capability(id, stored, capability, on);
+        if changed && !on {
+            self.core.bus.revoke_holder(seat.holder(stored, id));
+        }
+        changed
     }
 
     /// Profile `profile`'s settings changed: read them again, and end the streams that only the mode "Allowed
@@ -231,4 +267,13 @@ pub fn cli_exit_code(arguments: Vec<String>) -> Option<i32> {
         }
         ipc::Command::App => None,
     }
+}
+
+/// Whether the command line is one the core answers itself (`ipc::command`: `hook`, `statusline`, `welcome`, a
+/// control verb, a leading `--help` or `-h` among them), which [`cli_exit_code`] then runs. The Swift app's
+/// `main` asks for a first word that starts with a dash, where its own launch options (`--shell`,
+/// `--background`) are: the core does not know those, and they start the app.
+#[uniffi::export]
+pub fn cli_is_command(arguments: Vec<String>) -> bool {
+    !matches!(ipc::command(&arguments), ipc::Command::App | ipc::Command::Unknown(_))
 }

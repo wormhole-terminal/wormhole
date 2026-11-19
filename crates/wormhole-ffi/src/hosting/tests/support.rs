@@ -80,7 +80,42 @@ impl Fixture {
         let paths = DataRoot::new(self.dir.path()).profile(&ProfileId::parse(profile).expect("id"));
         let store = wormhole_core::storage::store::Store::open_at(paths.dir()).expect("store");
         let windows = store.load().expect("loads");
-        windows.iter().filter(|w| w.id == 1).flat_map(|w| &w.sessions).filter(|s| s.host_id.is_some()).map(|s| s.id).collect()
+        windows
+            .iter()
+            .filter(|w| w.id == 1)
+            .flat_map(|w| &w.sessions)
+            .filter(|s| s.host_id.is_some())
+            .map(|s| s.id)
+            .collect()
+    }
+
+    /// The default profile's database, as the app's other parts open it.
+    fn store(&self) -> wormhole_core::storage::store::Store {
+        wormhole_core::storage::store::Store::open_at(self.dir.path()).expect("store")
+    }
+
+    /// Terminal `tab`'s row in window 1, as the next launch loads it (with its notes, tasks and saved text).
+    pub(super) fn row(&self, tab: i64) -> Option<wormhole_core::storage::store::SessionRecord> {
+        let windows = self.store().load().expect("loads");
+        windows.into_iter().filter(|w| w.id == 1).flat_map(|w| w.sessions).find(|s| s.id == tab)
+    }
+
+    /// The window saved a name for terminal `tab` (its row as it is, with the name).
+    pub(super) fn name_row(&self, tab: i64, name: &str) {
+        let row = self.row(tab).expect("a row to name");
+        let named = wormhole_core::storage::store::SessionRecord { name: Some(name.into()), ..row };
+        self.store().save_session(1, &named).expect("saves");
+    }
+
+    /// The Notes tab saved a note and a task for terminal `tab` (`SessionNotesStore.save`).
+    pub(super) fn save_notes(&self, tab: i64, note: &str, task: &str) {
+        use wormhole_core::storage::store::{NoteRecord, SessionNotes, TaskRecord};
+        let notes = SessionNotes {
+            notes: vec![NoteRecord { body: note.into(), collapsed: false }],
+            tasks: vec![TaskRecord { text: task.into(), done: false }],
+            ..SessionNotes::default()
+        };
+        self.store().save_session_notes(tab, &notes).expect("saves the notes");
     }
 
     /// The database forgets every saved terminal (a lost database, another profile's).

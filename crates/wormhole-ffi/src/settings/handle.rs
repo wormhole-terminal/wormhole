@@ -5,7 +5,7 @@
 //!
 //! Threads: every call locks the state for the length of a `stat` or an atomic write (about a
 //! millisecond) and may come from any thread. The lock is never held across `wake()`. The watcher
-//! thread (`watch`) is the only caller of `wake()`.
+//! thread (`watch`) calls `wake()`, and so does a change Wormhole makes through `live` (on its caller's thread).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -40,7 +40,8 @@ impl Shared {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    fn wake(&self) {
+    /// Tells Swift once until it drains. Called with the state's lock let go.
+    pub(super) fn wake(&self) {
         if !self.woken.swap(true, Ordering::AcqRel) {
             self.listener.wake();
         }
@@ -87,6 +88,8 @@ impl SettingsHandle {
             listener,
             fonts: FontsFolder::new(paths.fonts_dir()),
         });
+        // What Wormhole itself changes in this profile's settings goes through these (`live`).
+        super::live::register(paths.dir(), &shared);
         let watched = Arc::downgrade(&shared);
         let follower = Follower::start(&paths, move || {
             let Some(shared) = watched.upgrade() else { return false };

@@ -4,7 +4,8 @@
 //! Copy rules for a new profile (`StartFrom::Copy`) and every check on a name or a folder are core's.
 
 use wormhole_core::config::profile::{NewProfile, Profile, ProfileList, StartFrom};
-use wormhole_core::storage::paths::{DataRoot, ProfileId};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
+use wormhole_core::storage::store::Store;
 
 use super::error::SettingsError;
 use crate::isolation;
@@ -74,8 +75,24 @@ pub(crate) fn create_in(root: &DataRoot, name: &str, copy_of: Option<&str>) -> R
 }
 
 pub(crate) fn delete_in(root: &DataRoot, id: &str) -> Result<(), SettingsError> {
+    delete_with(root, id, Store::forget_text_key_for)
+}
+
+/// Deletes profile `id`. The key its saved terminal text is sealed with is thrown away first, while its
+/// database can still say which key that is, so a copy of the old file left anywhere (a snapshot, a backup)
+/// can't be opened any more (`AppState::delete_profile` in the GPUI app's `app_state/profiles.rs`). Only for
+/// a profile that is about to go: never Default's key, nor anything for an id nobody lists.
+fn delete_with(
+    root: &DataRoot,
+    id: &str,
+    forget_text_key: impl FnOnce(&ProfilePaths),
+) -> Result<(), SettingsError> {
+    let id = id_of(id)?;
     let mut list = ProfileList::load(root).map_err(failed)?;
-    list.delete(root, &id_of(id)?).map_err(failed)?;
+    if !id.is_default() && list.get(&id).is_some() {
+        forget_text_key(&root.profile(&id));
+    }
+    list.delete(root, &id).map_err(failed)?;
     list.save(root).map_err(failed)
 }
 
@@ -112,7 +129,7 @@ pub fn settings_delete_profile(id: String) -> Result<(), SettingsError> {
 mod tests {
     use wormhole_core::storage::paths::DataRoot;
 
-    use super::{create_in, delete_in, list_in, switch_in};
+    use super::{create_in, delete_in, delete_with, list_in, switch_in};
 
     #[test]
     fn a_profile_is_made_switched_to_and_deleted() {
@@ -133,5 +150,26 @@ mod tests {
         delete_in(&root, &id).expect("deleted");
         assert_eq!(list_in(&root).len(), 1);
         assert!(switch_in(&root, "nope").is_err());
+    }
+
+    #[test]
+    fn deleting_a_profile_forgets_its_saved_text_key_before_its_folder_goes() {
+        let dir = tempfile::tempdir().expect("temp data dir");
+        let root = DataRoot::new(dir.path());
+        let id = create_in(&root, "Work", None).expect("made");
+
+        // Default cannot go and an unknown profile is nobody's: no key is thrown away for either.
+        let mut asked = Vec::new();
+        assert!(delete_with(&root, "default", |paths| asked.push(paths.id().to_string())).is_err());
+        assert!(delete_with(&root, "nope", |paths| asked.push(paths.id().to_string())).is_err());
+        assert_eq!(asked, Vec::<String>::new());
+
+        // The profile's own key, once, while its folder (and so its database) is still there to name it.
+        let mut forgotten = Vec::new();
+        delete_with(&root, &id, |paths| forgotten.push((paths.id().to_string(), paths.dir().is_dir())))
+            .expect("deleted");
+        assert_eq!(forgotten, [(id.clone(), true)]);
+        assert!(!root.profile(&super::id_of(&id).expect("an id")).dir().exists(), "the folder went after");
+        assert_eq!(list_in(&root).len(), 1);
     }
 }

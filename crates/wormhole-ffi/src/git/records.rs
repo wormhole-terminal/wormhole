@@ -7,7 +7,9 @@ use wormhole_core::git::{
     RefKind, Submodule, lines_in_new_file,
 };
 
+use super::colors::DiffColors;
 use super::notes::GitDiffNotes;
+use crate::syntax::SyntaxRun;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum GitChangeKind {
@@ -78,6 +80,9 @@ pub struct GitStatus {
     pub behind: u32,
     /// The compared branch no longer exists: the files are against HEAD and the panel says so.
     pub compare_missing: Option<String>,
+    /// The commit the list is against: HEAD, or the merge-base with the compared revision. An open diff is
+    /// read again when it moves.
+    pub base_rev: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -181,10 +186,13 @@ pub struct GitDiffLine {
     /// The line of the new file the line's open icon opens the editor at: its own, or for a removed line the nearest one
     /// (`git::lines_in_new_file`); none when the hunk leaves no line.
     pub open_line: Option<u32>,
+    /// The syntax colours of `text`, read from the whole file the line is in (`syntax`): empty for a file without a
+    /// grammar, a diff too long to colour and a line the file no longer has.
+    pub spans: Vec<SyntaxRun>,
 }
 
 impl GitDiffLine {
-    fn of(line: &DiffLine, open_line: Option<u32>) -> Self {
+    fn of(line: &DiffLine, open_line: Option<u32>, spans: Vec<SyntaxRun>) -> Self {
         let kind = match line.kind {
             LineKind::Context => GitLineKind::Context,
             LineKind::Added => GitLineKind::Added,
@@ -197,6 +205,7 @@ impl GitDiffLine {
             text: line.text.clone(),
             no_newline: line.no_newline,
             open_line,
+            spans,
         }
     }
 }
@@ -208,10 +217,15 @@ pub struct GitHunk {
     pub lines: Vec<GitDiffLine>,
 }
 
-impl From<&Hunk> for GitHunk {
-    fn from(hunk: &Hunk) -> Self {
+impl GitHunk {
+    fn of(hunk: &Hunk, colors: &DiffColors<'_>) -> Self {
         let open = lines_in_new_file(&hunk.lines);
-        let lines = hunk.lines.iter().zip(open).map(|(line, open)| GitDiffLine::of(line, open)).collect();
+        let lines = hunk
+            .lines
+            .iter()
+            .zip(open)
+            .map(|(line, open)| GitDiffLine::of(line, open, colors.line(line)))
+            .collect();
         Self { header: hunk.header.clone(), lines }
     }
 }
@@ -225,7 +239,7 @@ pub struct GitDiffFile {
     pub hunks: Vec<GitHunk>,
     /// "Mode 100644 → 100755" when the file's mode changed.
     pub mode_change: Option<String>,
-    /// More lines than core colours (`DIFF_HIGHLIGHT_MAX_LINES`): the badge "No highlighting", and Swift colours none.
+    /// More lines than core colours (`DIFF_HIGHLIGHT_MAX_LINES`): the badge "No highlighting", and no line has spans.
     pub highlight_skipped: bool,
     /// What the card says over a diff with no hunks (empty when it has some).
     pub notes: GitDiffNotes,
@@ -236,10 +250,11 @@ impl GitDiffFile {
     /// parsed them.
     pub(crate) fn of(file: &FileChange, diff: &FileDiff, units: SizeUnits) -> Self {
         let old = diff.renamed_from.as_deref().or(file.original_path.as_deref()).unwrap_or(&file.path);
+        let colors = DiffColors::of(diff, &file.path);
         Self {
             old_path: (!diff.new_file).then(|| old.to_string()),
             new_path: (!diff.deleted_file).then(|| file.path.clone()),
-            hunks: diff.hunks.iter().map(GitHunk::from).collect(),
+            hunks: diff.hunks.iter().map(|hunk| GitHunk::of(hunk, &colors)).collect(),
             mode_change: diff.mode_change.as_ref().map(|(old, new)| format!("Mode {old} \u{2192} {new}")),
             highlight_skipped: diff.hunks.iter().map(|hunk| hunk.lines.len()).sum::<usize>()
                 > DIFF_HIGHLIGHT_MAX_LINES,
@@ -260,5 +275,22 @@ pub enum GitDiff {
     /// More than core loads unasked: its two lines of wording and the size. Ask again with `load_anyway`.
     TooLarge { bytes: Option<u64>, title: String, detail: String },
     /// A submodule: what moved, and the commits between (its own repository's, newest first).
-    Submodule { label: String, note: Option<String>, ahead: Vec<GitLogCommit>, behind: Vec<GitLogCommit> },
+    Submodule { label: String, card: GitSubmoduleCard },
+}
+
+/// What the diff card shows for a submodule in place of lines (GPUI's `diff/submodule.rs`): the two commits
+/// the pointer moved between, the commits on each side with how many there are in all, and core's sentences
+/// for why there is nothing to list or what is inside the folder.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct GitSubmoduleCard {
+    /// The short hashes the pointer was at and is at, when both are known and differ.
+    pub old: Option<String>,
+    pub new: Option<String>,
+    pub nothing: Option<String>,
+    pub inside: Option<String>,
+    /// Newest first, at most `COMMITS_SHOWN`; the totals say how many there are.
+    pub ahead: Vec<GitLogCommit>,
+    pub behind: Vec<GitLogCommit>,
+    pub ahead_total: u32,
+    pub behind_total: u32,
 }

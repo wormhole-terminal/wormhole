@@ -14,8 +14,11 @@ use wormhole_core::git::{
 };
 
 use super::error::GitBackendError;
-use super::records::{GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus};
+use super::records::{
+    GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus, GitSubmoduleCard,
+};
 use super::shown::{GitCommitDetails, GitCompact, Message};
+use crate::files_panel::names;
 
 /// Recent commits the revision picker offers to compare with.
 const RECENT_COMMITS: usize = 10;
@@ -47,6 +50,8 @@ pub struct Git {
     kept: Mutex<Kept>,
     /// Sizes read as git writes them (KiB) rather than as Finder does (KB).
     binary_units: AtomicBool,
+    /// Whether the window this reader serves can be seen, and the watches it started.
+    pub(super) sight: super::sight::Sight,
 }
 
 #[uniffi::export]
@@ -55,7 +60,11 @@ impl Git {
     #[uniffi::constructor]
     pub fn new() -> Result<Arc<Self>, GitBackendError> {
         crate::isolation::require()?;
-        Ok(Arc::new(Self { kept: Mutex::default(), binary_units: AtomicBool::new(false) }))
+        Ok(Arc::new(Self {
+            kept: Mutex::default(),
+            binary_units: AtomicBool::new(false),
+            sight: super::sight::Sight::default(),
+        }))
     }
 
     /// `size_units` of the settings: sizes in a diff's words are KiB when true.
@@ -65,13 +74,13 @@ impl Git {
 
     /// Whether `folder` is in a repository: a look for `.git`, no process, so it costs nothing to ask first.
     pub fn is_repository(&self, folder: String) -> bool {
-        find_root(Path::new(&folder)).is_some()
+        find_root(&names::folder(&folder)).is_some()
     }
 
     /// The repository root of `folder` (the band's folder: what the Files tree and the project's colour are of),
     /// `None` outside a repository. A look for `.git`, no process.
     pub fn repository_root(&self, folder: String) -> Option<String> {
-        find_root(Path::new(&folder)).map(|root| root.to_string_lossy().into_owned())
+        find_root(&names::folder(&folder)).map(|root| names::path_key(&root))
     }
 
     /// The status of the working tree, or what changed since the merge-base with `compare` (any branch, tag
@@ -79,7 +88,7 @@ impl Git {
     pub fn status(&self, folder: String, compare: Option<String>) -> Result<GitStatus, GitBackendError> {
         // Kept under the root `diff` finds the same way (`find_root`), not the real path git prints.
         let root = root_of(&folder)?;
-        let mut status = git::status(Path::new(&folder), compare.as_deref())
+        let mut status = git::status(&names::folder(&folder), compare.as_deref())
             .map_err(|err| GitBackendError::of(&err))?
             .ok_or(GitBackendError::NotARepository)?;
         git::annotate(&mut status);
@@ -91,6 +100,7 @@ impl Git {
             ahead: status.upstream.as_ref().map_or(0, |up| up.ahead),
             behind: status.upstream.as_ref().map_or(0, |up| up.behind),
             compare_missing: status.compare_missing.clone(),
+            base_rev: status.base_rev.clone(),
         };
         self.kept()
             .listings
@@ -265,12 +275,11 @@ impl Git {
         if let Some(sub) = &file.submodule {
             return submodule_diff(root, file, sub);
         }
-        // Rows are not coloured here (Swift's lexer does that from the text), so core is told to leave the
-        // whole files unread: no highlighting source, one `git show` less per side.
+        // Core's own limits: the whole files are read as the source of the rows' colours (`records::GitDiffFile::of`),
+        // unless the diff is too long to colour or a side is too big.
         let limits = DiffLimits {
             max_patch_bytes: if load_anyway { u64::MAX } else { DIFF_ASK_BYTES },
-            max_highlight_lines: 0,
-            max_text_bytes: 0,
+            ..DiffLimits::LOAD_ANYWAY
         };
         let diff =
             git::diff_with_limits(root, file, &spec, &limits).map_err(|err| GitBackendError::of(&err))?;
@@ -283,7 +292,10 @@ impl Git {
                 detail: git::too_large_detail(lines),
             }
         } else if let Some(change) = &diff.lfs {
-            GitDiff::Lfs { file: GitDiffFile::of(file, &diff, units), summary: git::lfs_summary(change, units) }
+            GitDiff::Lfs {
+                file: GitDiffFile::of(file, &diff, units),
+                summary: git::lfs_summary(change, units),
+            }
         } else if diff.binary {
             GitDiff::Binary {
                 file: GitDiffFile::of(file, &diff, units),
@@ -297,18 +309,35 @@ impl Git {
 
 fn submodule_diff(root: &Path, file: &FileChange, sub: &git::Submodule) -> Result<GitDiff, GitBackendError> {
     let log = git::submodule_log(root, &file.path, sub).map_err(|err| GitBackendError::of(&err))?;
-    let (ahead, behind) = match &log.range {
-        Range::Commits { ahead, behind, .. } => {
-            (ahead.iter().map(GitLogCommit::from).collect(), behind.iter().map(GitLogCommit::from).collect())
-        }
-        _ => (Vec::new(), Vec::new()),
+    let count = |total: usize| u32::try_from(total).unwrap_or(u32::MAX);
+    let (ahead, behind, ahead_total, behind_total) = match &log.range {
+        Range::Commits { ahead, behind, ahead_total, behind_total } => (
+            ahead.iter().map(GitLogCommit::from).collect(),
+            behind.iter().map(GitLogCommit::from).collect(),
+            count(*ahead_total),
+            count(*behind_total),
+        ),
+        _ => (Vec::new(), Vec::new(), 0, 0),
     };
-    let note = [log.nothing_to_list(), sub.inside_note()].into_iter().flatten().collect::<Vec<_>>().join(" ");
+    // Which commit to which, only when the pointer moved.
+    let (old, new) = match (&log.old, &log.new) {
+        (Some(old), Some(new)) if old != new => {
+            (Some(git::short(old).to_string()), Some(git::short(new).to_string()))
+        }
+        _ => (None, None),
+    };
     Ok(GitDiff::Submodule {
         label: sub.label(file.kind),
-        note: (!note.is_empty()).then_some(note),
-        ahead,
-        behind,
+        card: GitSubmoduleCard {
+            old,
+            new,
+            nothing: log.nothing_to_list(),
+            inside: sub.inside_note(),
+            ahead,
+            behind,
+            ahead_total,
+            behind_total,
+        },
     })
 }
 
@@ -331,6 +360,6 @@ fn now() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
-fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {
-    find_root(Path::new(folder)).ok_or(GitBackendError::NotARepository)
+pub(super) fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {
+    find_root(&names::folder(folder)).ok_or(GitBackendError::NotARepository)
 }

@@ -1,9 +1,11 @@
 //! What the server's threads share: the workspace and the terminals it holds, the desk that asks the
 //! person, the bus the streams listen on, the budgets and the queue of what Swift is to do.
 
+use std::collections::HashSet;
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::thread::ThreadId;
 use std::time::{Duration, Instant};
 
 use wormhole_core::config::features::FeatureFlag;
@@ -24,13 +26,51 @@ use crate::workspace::{Shared, Workspace};
 /// switch the person turns off must take effect within a moment.
 const SETTINGS_TTL: Duration = Duration::from_secs(1);
 
+/// How many times a look at the mode is made again from a fresh read before the mode already in force is taken as it
+/// stands: a look is refused only while the mode moves under it, which an answer or an edit does once.
+const LOOKS: usize = 3;
+
 /// What a profile's requests are judged by: its settings and the approvals its desk holds. A profile is a trust
 /// domain (`agent-permissions.md`, section 9), so a request is judged by the profile of the window it reaches,
 /// never by the one that happens to be shown.
 pub(crate) struct Seat {
     pub profile: ProfilePaths,
     pub desk: Arc<AccessDesk>,
-    settings: Mutex<Option<(Instant, Arc<Settings>)>>,
+    /// The settings last read, when, and the desk's stamp from before that read (`AccessDesk::stamp`).
+    settings: Mutex<Option<(Instant, u64, Arc<Settings>)>>,
+    /// The mode last settled (`None` inside: Automation off), to act on a change of it once (`Core::settings_changed`).
+    applied: Mutex<Option<Option<AgentAccess>>>,
+    /// Looks at the mode whenever the profile's `config.json` changes, held for its drop (the GPUI app looks on every
+    /// tick): a widening is asked about when it is written, not at the next request, and not only when the Settings
+    /// store sees a value it did not have.
+    _follower: crate::settings::watch::Follower,
+}
+
+/// The profile's settings as its file holds them now, with the desk's stamp from before the read.
+fn read(desk: &AccessDesk) -> (u64, Arc<Settings>) {
+    let stamp = desk.stamp();
+    (stamp, Arc::new(Config::load_for(desk.profile()).settings))
+}
+
+/// Looks at the mode with `settings`, read at `stamp`, reading the file again for as long as the desk says that read
+/// is too old (`AccessDesk::mode_in_force`): the settings the look was made from, their stamp, and the mode in force.
+/// While the Automation flag is off the look only follows the mode (what the person sets, what is narrowed) and asks
+/// nothing, so nothing done meanwhile counts for a widening made when the flag goes on.
+fn look(
+    desk: &AccessDesk,
+    mut stamp: u64,
+    mut settings: Arc<Settings>,
+) -> (u64, Arc<Settings>, AgentAccess) {
+    for _ in 0..LOOKS {
+        let asks = settings.feature_enabled(FeatureFlag::Automation);
+        if let Some(mode) = desk.mode_in_force(settings.agent_access, stamp, asks) {
+            return (stamp, settings, mode);
+        }
+        (stamp, settings) = read(desk);
+    }
+    // The mode kept moving: what is in force stands, and nothing is in force before a first look.
+    let mode = desk.mode_held().unwrap_or(AgentAccess::Off);
+    (stamp, settings, mode)
 }
 
 impl Seat {
@@ -38,30 +78,44 @@ impl Seat {
         // The mode at launch is what a later edit of `config.json` is measured against: looked at now, not at the
         // first request, and also while the Automation flag is off, so a widening made together with turning the
         // flag on is still asked about.
-        desk.mode_in_force(Config::load_for(desk.profile()).settings.agent_access);
-        Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None) }
+        let (stamp, settings) = read(&desk);
+        look(&desk, stamp, settings);
+        let watched = Arc::downgrade(&desk);
+        let follower = crate::settings::watch::Follower::start(desk.profile(), move || {
+            let Some(desk) = watched.upgrade() else { return false };
+            let (stamp, settings) = read(&desk);
+            look(&desk, stamp, settings);
+            true
+        });
+        Self {
+            profile: desk.profile().clone(),
+            desk,
+            settings: Mutex::new(None),
+            applied: Mutex::new(None),
+            _follower: follower,
+        }
     }
 
-    /// The profile's settings, as they were a moment ago at most.
+    /// The profile's settings, as they were a moment ago at most, with the mode in force in place of the file's.
     pub(crate) fn settings(&self) -> Arc<Settings> {
-        let mut held = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
-        let read = match held.as_ref() {
-            Some((read, settings)) if read.elapsed() < SETTINGS_TTL => settings.clone(),
-            _ => {
-                let settings = Arc::new(Config::load_for(&self.profile).settings);
-                *held = Some((Instant::now(), settings.clone()));
-                settings
-            }
-        };
-        drop(held);
-        // The mode in force, not the file's: a widening nobody in Wormhole made waits for the person's answer.
-        if !read.feature_enabled(FeatureFlag::Automation) {
-            return read;
+        let held = self.settings.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let kept = held
+            .filter(|(at, ..)| at.elapsed() < SETTINGS_TTL)
+            .map(|(_, stamp, settings)| (stamp, settings));
+        let (stamp, first) = kept.clone().unwrap_or_else(|| read(&self.desk));
+        // A read from before the mode last moved (Don't Keep put the earlier mode back, a hand edit narrowed it) is
+        // made again there, so the question about a widening never comes from what the file no longer holds.
+        let (stamp, settings, mode) = look(&self.desk, stamp, first);
+        if !kept.is_some_and(|(_, kept)| Arc::ptr_eq(&kept, &settings)) {
+            let fresh = Some((Instant::now(), stamp, settings.clone()));
+            *self.settings.lock().unwrap_or_else(PoisonError::into_inner) = fresh;
         }
-        match self.desk.mode_in_force(read.agent_access) {
-            mode if mode == read.agent_access => read,
-            mode => Arc::new(Settings { agent_access: mode, ..(*read).clone() }),
+        // The mode in force, not the file's: a widening nobody in Wormhole made waits for the person's answer. With the
+        // Automation flag off nobody is let in, whatever the mode.
+        if mode == settings.agent_access || !settings.feature_enabled(FeatureFlag::Automation) {
+            return settings;
         }
+        Arc::new(Settings { agent_access: mode, ..(*settings).clone() })
     }
 
     /// What names an approval for the bus: whether it is stored, the profile (30 bits of its name's hash) and
@@ -81,13 +135,18 @@ pub(crate) struct Core {
     pub usage: Arc<UsageService>,
     /// One per profile that has a desk; the first is the one the server started with (the fallback).
     seats: Mutex<Vec<Arc<Seat>>>,
-    /// The seat of the request being answered: the dispatch thread answers one at a time, in order.
-    reached: Mutex<Option<Arc<Seat>>>,
+    /// The seat of the request each thread is answering. The dispatch thread answers one at a time, in order, and a test
+    /// instance's control line is answered on the main thread meanwhile: kept by thread, neither is judged by the seat the
+    /// other reached, and a thread that answers nothing reads the shown profile's.
+    reached: Mutex<Vec<(ThreadId, Arc<Seat>)>>,
     pub bus: Arc<Bus>,
     /// One publisher per window (the first is the one the server started over); `attach` adds the rest.
     publishers: Mutex<Vec<Arc<Publisher>>>,
     /// The id of the window the server was started over, as `list` tells it.
     pub window: i64,
+    /// The window that is in front, as Swift last said (`HookServer::set_front_window`): what a request without a window
+    /// acts on and what `list` marks, as the GPUI app's front window. Starts as the first.
+    front: AtomicI64,
     pub ui: Ui,
     budgets: Mutex<RateLimits>,
     /// The data folder the server serves: where the Probes are.
@@ -97,6 +156,10 @@ pub(crate) struct Core {
     pub(super) signatures: Mutex<Signatures>,
     /// A close question is up (`close`): one at a time, until Swift says it is over.
     pub(super) close_question: AtomicBool,
+    /// The windows with a new-worktree sheet up (`new-terminal --worktree`, or the menu): a second request for one of them
+    /// is answered Failed instead of resetting its sheet, until Swift says the sheet is gone. One window's sheet does not
+    /// refuse another window's request.
+    pub(super) worktree_question: Mutex<HashSet<i64>>,
     /// The Probes that are on and the feed their hooks hear (`probes`).
     pub(crate) probes: crate::probes::Probes,
     /// The terminal welcomes that run (`welcome`).
@@ -120,16 +183,18 @@ impl Core {
             shared,
             usage,
             seats: Mutex::new(vec![Arc::new(Seat::new(desk))]),
-            reached: Mutex::new(None),
+            reached: Mutex::new(Vec::new()),
             bus,
             publishers: Mutex::new(vec![publisher]),
             window,
+            front: AtomicI64::new(window),
             ui: Ui::new(listener),
             budgets: Mutex::default(),
             root,
             identities: Mutex::default(),
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
+            worktree_question: Mutex::default(),
             probes: crate::probes::Probes::default(),
             welcome: Mutex::default(),
         })
@@ -177,8 +242,26 @@ impl Core {
         let windows =
             self.publishers().iter().flat_map(|publisher| read(publisher).windows).collect::<Vec<_>>();
         Listing {
-            windows: windows.into_iter().map(|w| WindowInfo { front: w.id == self.window, ..w }).collect(),
+            windows: windows
+                .into_iter()
+                .map(|w| WindowInfo { front: w.id == self.front_window(), ..w })
+                .collect(),
         }
+    }
+
+    /// The id of the window in front.
+    pub(crate) fn front_window(&self) -> i64 {
+        self.front.load(Ordering::Relaxed)
+    }
+
+    /// Swift says which window is in front now.
+    pub(crate) fn set_front_window(&self, id: i64) {
+        self.front.store(id, Ordering::Relaxed);
+    }
+
+    /// The window in front, else the first (while it is still being made or already gone).
+    pub(crate) fn front_share(&self) -> Arc<Shared> {
+        self.share_of_window(self.front_window()).unwrap_or_else(|| self.shared.clone())
     }
 
     /// Look at every window again soon (`Publisher::kick`).
@@ -224,18 +307,26 @@ impl Core {
         self.seats.lock().unwrap_or_else(PoisonError::into_inner)[0].clone()
     }
 
-    /// Judge what comes next by `seat` until [`Self::done`]: the seat of the window the request reaches.
+    /// Judge what this thread does next by `seat` until [`Self::done`]: the seat of the window the request reaches.
     pub(crate) fn reaches(&self, seat: Arc<Seat>) {
-        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(seat);
+        let thread = std::thread::current().id();
+        let mut reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner);
+        reached.retain(|(of, _)| *of != thread);
+        reached.push((thread, seat));
     }
 
     pub(crate) fn done(&self) {
-        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        let thread = std::thread::current().id();
+        self.reached.lock().unwrap_or_else(PoisonError::into_inner).retain(|(of, _)| *of != thread);
     }
 
-    /// The seat in force: the request's while one is answered, else the shown profile's.
+    /// The seat in force on this thread: the request's while it answers one, else the shown profile's.
     pub(crate) fn seat(&self) -> Arc<Seat> {
-        let reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let thread = std::thread::current().id();
+        let reached = {
+            let reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner);
+            reached.iter().find(|(of, _)| *of == thread).map(|(_, seat)| seat.clone())
+        };
         reached.unwrap_or_else(|| {
             let shown = crate::profile::active_in(&self.root);
             self.seat_of_profile(shown.id().as_str()).unwrap_or_else(|| self.first_seat())
@@ -262,6 +353,25 @@ impl Core {
             settings.feature_enabled(FeatureFlag::Automation) && settings.agent_access == AgentAccess::Open;
         if !reads_all {
             self.bus.revoke_reads();
+        }
+        // What the mode means for what waits and what is open (`agent_access/ask.rs` `settle_mode`), once per change.
+        let mode = settings.feature_enabled(FeatureFlag::Automation).then_some(settings.agent_access);
+        if seat.applied.lock().unwrap_or_else(PoisonError::into_inner).replace(mode) == Some(mode) {
+            return;
+        }
+        match mode {
+            Some(AgentAccess::Ask) => {}
+            Some(AgentAccess::Open) => seat.desk.settle_questions(mode),
+            Some(AgentAccess::Off) | None => {
+                let (held, stored) = seat.desk.approval_ids();
+                for id in held {
+                    self.bus.revoke_holder(seat.holder(false, id));
+                }
+                for id in stored {
+                    self.bus.revoke_holder(seat.holder(true, id));
+                }
+                seat.desk.settle_questions(mode);
+            }
         }
     }
 

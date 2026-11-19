@@ -1,7 +1,7 @@
 //! The pointer, the wheel, paste and focus, for a program that asked for them and for the view.
 
 use wormhole_term::input::{self, mouse};
-use wormhole_term::types::{Modes, Scroll};
+use wormhole_term::types::Modes;
 
 use crate::events::Touch;
 use crate::terminal::Terminal;
@@ -194,7 +194,7 @@ impl Terminal {
                 };
                 pty.write(key.repeat(lines.unsigned_abs() as usize));
             } else if lines != 0 {
-                pty.scroll(Scroll::Delta(lines));
+                pty.scroll_rows(lines);
             }
         });
     }

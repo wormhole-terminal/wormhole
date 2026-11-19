@@ -2,6 +2,8 @@
 
 use serde_json::json;
 
+use wormhole_core::config::AgentAccess;
+
 use super::support::{eventually, fixture};
 use crate::AccessAnswer;
 
@@ -79,11 +81,23 @@ fn a_request_that_waits_is_let_in_when_the_person_allows_it() {
 
 /// Rewrites the profile's `config.json` as an editor would: nothing in Wormhole made the change.
 fn edit_mode_outside(f: &super::support::Fixture, mode: &str) {
+    edit_file_outside(f, mode, true);
+}
+
+/// [`edit_mode_outside`], with the Automation flag as `automation` says.
+fn edit_file_outside(f: &super::support::Fixture, mode: &str, automation: bool) {
     let file = f.desk.profile().config_file();
     let config =
-        json!({ "agent_access": mode, "control_write": true, "feature_flags": { "automation": true } });
+        json!({ "agent_access": mode, "control_write": true, "feature_flags": { "automation": automation } });
     std::fs::write(file, config.to_string()).expect("config.json");
     f.server.settings_changed(f.desk.profile().id().as_str().to_string());
+}
+
+/// Sets the mode as the Settings page does, through the profile's settings. The server is not told: whatever looks
+/// next finds the person's change.
+fn set_mode_in_settings(f: &super::support::Fixture, mode: AgentAccess) {
+    let mut settings = crate::settings::State::load(f.desk.profile());
+    assert!(settings.update(|s| s.agent_access = mode), "the mode changed in Settings");
 }
 
 fn mode_in_file(f: &super::support::Fixture) -> String {
@@ -136,10 +150,165 @@ fn narrowing_and_an_edit_made_in_settings_apply_at_once_and_ask_nothing() {
     edit_mode_outside(&f, "off");
     assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "narrowing applies at once");
     assert!(f.desk.next_mode_question().is_none());
-    // Settings counts its own edits: what it writes is the person's.
-    crate::settings::edits::note(f.desk.profile().dir());
-    edit_mode_outside(&f, "open");
+    // Settings tells the mode it sets: what it writes is the person's.
+    set_mode_in_settings(&f, AgentAccess::Open);
     assert_eq!(type_into(&f, id)["ok"], true, "widened in Settings: in force at once");
+    assert!(f.desk.next_mode_question().is_none());
+}
+
+/// Order: the person changes the mode in Settings (narrowing Open to Ask, or widening Off to Ask); before anything
+/// has looked, a program writes Open into the file. That the person changed the mode says nothing for the program's
+/// value: theirs is in force, and Open is asked about.
+#[test]
+fn a_program_writing_after_the_persons_own_change_does_not_get_its_mode_in_force() {
+    for from in ["open", "off"] {
+        let f = fixture(from);
+        let id = f.terminal();
+        set_mode_in_settings(&f, AgentAccess::Ask);
+        edit_mode_outside(&f, "open");
+        assert_eq!(
+            type_into(&f, id)["error"]["reason"],
+            "approval_needed",
+            "the person's Ask is in force, from {from}"
+        );
+        let question = f.desk.next_mode_question().expect("the person is asked about Open");
+        assert!(f.desk.is_waiting_mode(question.token));
+    }
+}
+
+/// Order: the Automation flag is off; the person changes the mode in Settings, with no request to look at it; later
+/// a program writes Open and turns the flag on in one write. The change made meanwhile is no credit for the program.
+#[test]
+fn a_change_made_while_automation_is_off_lets_no_later_widening_through() {
+    let f = fixture("off");
+    let id = f.terminal();
+    edit_file_outside(&f, "off", false);
+    set_mode_in_settings(&f, AgentAccess::Ask);
+    f.server.settings_changed(f.desk.profile().id().as_str().to_string());
+    edit_file_outside(&f, "open", true);
+    assert_eq!(type_into(&f, id)["error"]["reason"], "approval_needed", "the person's Ask is in force");
+    assert!(f.desk.next_mode_question().is_some(), "the person is asked about Open");
+}
+
+/// Order: the Automation flag is off; the person sets Open in Settings and then narrows the file to Ask by hand;
+/// later a program writes Open back and turns the flag on. What they set in Settings before does not pass it.
+#[test]
+fn a_mode_narrowed_by_hand_while_automation_is_off_is_not_widened_back_unasked() {
+    let f = fixture("off");
+    let id = f.terminal();
+    edit_file_outside(&f, "off", false);
+    set_mode_in_settings(&f, AgentAccess::Open);
+    f.server.settings_changed(f.desk.profile().id().as_str().to_string());
+    edit_file_outside(&f, "ask", false);
+    edit_file_outside(&f, "open", true);
+    assert_eq!(type_into(&f, id)["error"]["reason"], "approval_needed", "Ask, narrowed by hand, is in force");
+    assert!(f.desk.next_mode_question().is_some(), "the person is asked about Open");
+}
+
+/// Order: the file is widened Ask to Open outside; a program asks, and its question queues behind the one about the
+/// mode; the person clicks Keep. Allowed while open leaves nothing to ask: the program is let in.
+#[test]
+fn keeping_allowed_while_open_lets_in_what_waited() {
+    let f = fixture("ask");
+    let id = f.terminal();
+    edit_mode_outside(&f, "open");
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    let mut client = f.client();
+    client.send(&json!({
+        "kind": "control", "version": 1, "ask": true,
+        "action": "send_text", "target": {"kind": "terminal", "id": id}, "text": "kept"
+    }));
+    eventually("the program's question", || f.desk.waiting() == 1);
+    f.desk.answer_mode(change.token, true);
+    let reply = client.line().expect("the answer");
+    assert_eq!(reply["ok"], true, "{reply}");
+    assert_eq!(f.desk.waiting(), 0, "nothing is left to ask");
+}
+
+/// Order: a program writes Open and asks, so the seat has read the file a moment ago; the person says Don't Keep,
+/// which puts the earlier mode back; the program asks again within that moment. The question does not come back.
+#[test]
+fn a_request_right_after_dont_keep_does_not_raise_the_question_again() {
+    let f = fixture("off");
+    let id = f.terminal();
+    edit_mode_outside(&f, "open");
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "held back");
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    f.desk.answer_mode(change.token, false);
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off");
+    assert!(f.desk.next_mode_question().is_none(), "the file holds Off: nothing was widened");
+}
+
+/// Order: a request reads the file while it holds Open, and the seat keeps that read for a moment; the person narrows
+/// the file to Ask by hand, and the profile's follower looks (here: the same look, made by hand); a request then comes
+/// within that moment, with the read from before. Open in that old read is no widening: nothing is asked. (The test
+/// above passes without the look's stamp, since Don't Keep is also an edit of the person's; this one needs it.)
+#[test]
+fn a_request_with_a_read_from_before_a_narrowing_by_hand_raises_no_question() {
+    let f = fixture("open");
+    let id = f.terminal();
+    assert_eq!(type_into(&f, id)["ok"], true, "Open: let in, and the seat holds its read of the file");
+    let file = f.desk.profile().config_file();
+    let narrowed =
+        json!({ "agent_access": "ask", "control_write": true, "feature_flags": { "automation": true } });
+    std::fs::write(file, narrowed.to_string()).expect("config.json");
+    assert_eq!(f.desk.mode_in_force(AgentAccess::Ask, f.desk.stamp(), true), Some(AgentAccess::Ask));
+    assert_eq!(type_into(&f, id)["error"]["reason"], "approval_needed", "Ask is in force");
+    assert!(f.desk.next_mode_question().is_none(), "the read from before the narrowing asked nothing");
+}
+
+/// Order: the Settings window has read the widened file; the person says Don't Keep; before that window has read
+/// the file again they change another setting in it. Both stand: the earlier mode and the other setting.
+#[test]
+fn dont_keep_goes_through_the_settings_the_app_holds() {
+    let f = fixture("off");
+    let root = wormhole_core::storage::paths::DataRoot::new(&f.dir);
+    let profile = wormhole_core::storage::paths::ProfileId::default_profile();
+    let handle = crate::settings::SettingsHandle::open_at(&root, &profile, f.wakes.clone());
+    edit_mode_outside(&f, "open");
+    eventually("Settings read the widened file", || {
+        let mut state = handle.shared.lock();
+        state.poll();
+        state.effective().agent_access == AgentAccess::Open
+    });
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    f.desk.answer_mode(change.token, false);
+    handle.set("diff_wrap".into(), "true".into()).expect("sets");
+    assert_eq!(mode_in_file(&f), "off", "the next write of Settings kept the earlier mode");
+    assert!(handle.shared.lock().effective().diff_wrap, "and the other setting was written");
+    assert_eq!(type_into(&f, f.terminal())["error"]["reason"], "agent_access_off");
+    assert!(f.desk.next_mode_question().is_none());
+}
+
+/// The person changes another setting in Settings; later something outside writes Open into `config.json`. The
+/// widening is not theirs: the earlier mode stays in force and the person is asked.
+#[test]
+fn an_edit_of_another_setting_does_not_let_a_widening_from_outside_through() {
+    let f = fixture("off");
+    let id = f.terminal();
+    assert_eq!(
+        type_into(&f, id)["error"]["reason"],
+        "agent_access_off",
+        "the first look is the mode in force"
+    );
+    let mut settings = crate::settings::State::load(f.desk.profile());
+    assert!(settings.update(|s| s.font_size += 1.0), "the font size changed in Settings");
+    edit_mode_outside(&f, "open");
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "Off is still in force");
+    let question = f.desk.next_mode_question().expect("the person is asked about the widening");
+    assert!(f.desk.is_waiting_mode(question.token));
+}
+
+/// The mode widened in Settings itself is the person's: in force at once, nothing asked.
+#[test]
+fn a_widening_made_in_settings_applies_at_once() {
+    let f = fixture("off");
+    let id = f.terminal();
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off");
+    let mut settings = crate::settings::State::load(f.desk.profile());
+    assert!(settings.update(|s| s.agent_access = wormhole_core::config::AgentAccess::Open));
+    f.server.settings_changed(f.desk.profile().id().as_str().to_string());
+    assert_eq!(type_into(&f, id)["ok"], true, "Open, set in Settings, is in force");
     assert!(f.desk.next_mode_question().is_none());
 }
 

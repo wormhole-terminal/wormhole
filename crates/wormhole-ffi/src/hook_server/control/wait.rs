@@ -146,6 +146,7 @@ fn try_run(
         .ok_or_else(|| Error::new(ErrorCode::Failed, format!("tab {tab} could not be reached")))?;
     terminal.write(vec![KILL_LINE]);
     terminal.paste(plan.command.clone());
+    terminal.control_typed();
     let submit = terminal.clone();
     let spawned = std::thread::Builder::new().name("wormhole-hook-submit".into()).spawn(move || {
         std::thread::sleep(SUBMIT_DELAY);

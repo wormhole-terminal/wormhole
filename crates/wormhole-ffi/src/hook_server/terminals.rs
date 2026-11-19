@@ -64,6 +64,14 @@ impl Terminal {
         .unwrap_or(0)
     }
 
+    /// The control line typed into this terminal: typing as far as the terminal goes (GPUI's `write_input` and
+    /// `send_strokes`). What the program drew as its own selection is forgotten (a paste no longer replaces it), and the
+    /// view hears it (`TermEvent::ControlTyped`). A pointer event is not typing and does neither.
+    pub(crate) fn control_typed(&self) {
+        self.interaction.app_selection().forget();
+        self.events.push_event(crate::events::TermEvent::ControlTyped);
+    }
+
     /// Send `op` to a program that asked for the mouse, at a row and column of the grid.
     pub(crate) fn send_mouse(&self, op: &MouseOp) -> MouseSent {
         self.with_pty(|pty| {

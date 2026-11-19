@@ -18,6 +18,7 @@ mod cell;
 mod cli_tool;
 mod clipboard;
 mod contents;
+mod drop_part;
 mod engine_look;
 mod error;
 mod events;
@@ -40,21 +41,33 @@ pub mod keymap;
 mod launch;
 mod legacy;
 mod live_resize;
+mod logging;
 mod minimap;
+mod motion_scenes;
 mod notes_text;
 pub mod notify;
 mod open_file;
 pub mod palette_search;
+mod panel_spoken;
+mod perf_counters;
 mod probes;
 mod profile;
+mod recent_projects;
 mod row_motion;
 mod settings;
 pub mod settings_dump;
+mod split_opening;
 mod terminal;
 pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
+mod studio_edit;
 mod studio_files;
+mod studio_folder;
+
+mod status_counts;
+mod syntax;
+mod tab_sets;
 mod themes;
 mod title_fit;
 mod visible;
@@ -62,11 +75,16 @@ mod window_ops;
 mod windows;
 pub mod words;
 mod workspace;
+mod workspace_access;
+mod workspace_cwd;
 mod workspace_extras;
 mod workspace_feed;
 mod workspace_git;
 mod workspace_notices;
 mod workspace_pump;
+mod workspace_reply;
+mod workspace_spoken;
+mod workspace_tabs;
 mod workspace_texts;
 mod workspace_types;
 mod workspace_waited;
@@ -88,6 +106,7 @@ pub use cli_tool::{
     cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,
 };
 pub use contents::ContentsScope;
+pub use drop_part::drop_part_at;
 pub use engine_look::set_terminal_colors;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
@@ -117,10 +136,12 @@ pub use git::{
     GitRef, GitRefKind, GitRev, GitRevKind, GitSpan, GitStatus, GitTone, GitWatch, GitWorktree,
     GitWorktreePlan, WorktreeService,
 };
-pub use git::{GitDiffNotes, GitProblemWords, GitSideNote, git_problem};
+pub use git::{
+    GitDiffNotes, GitProblemWords, GitSideNote, GitSubmoduleCard, git_next_age_change, git_problem,
+};
 pub use hook_server::{
     HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomeDock,
-    WelcomePlan, cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,
+    WelcomePlan, cli_exit_code, cli_is_command, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,
     welcome_demo_title, welcome_dock,
 };
 pub use hosting::{
@@ -139,6 +160,8 @@ pub use live_resize::{
 };
 pub use minimap::{MinimapFoldRecord, MinimapGeometryRecord, MinimapRunRecord};
 pub use open_file::{open_file_record_to, open_file_run, open_file_tooltip, repo_file_resolve};
+pub use panel_spoken::panel_tab_spoken;
+pub use perf_counters::{PerfCounters, PerfLockUse, perf_counters_start, perf_counters_stop};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use row_motion::{
@@ -151,6 +174,8 @@ pub use settings::{
     settings_import_selected_line, settings_others_head, settings_preview_note, settings_profile_form,
     settings_profile_save, settings_reset_question, settings_update_user_agent,
 };
+pub use settings::{ProjectListener, ProjectWatch, settings_watch_project};
+
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
@@ -161,6 +186,17 @@ pub use settings::{
     settings_mcp_command, settings_profiles, settings_schema_json, settings_set_agent_hooks,
     settings_set_skill, settings_skill_rows, settings_switch_profile,
 };
+pub use split_opening::{
+    SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
+    split_opening_frame,
+};
+pub use status_counts::{
+    StatusBarDetail, StatusCountKind, StatusCountRecord, StatusCountsRecord, StatusEntryRecord, status_counts,
+    status_detail,
+};
+pub use tab_sets::{
+    TabHitRecord, TabNameRecord, TabSetRecord, tab_sets_current, tab_sets_numbered, tab_sets_search, tab_sets_step,
+};
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use studio_files::{
     StudioKeyRename, StudioRead, StudioThemeChoice, StudioThemeFamily, StudioThemeList, StudioUpdate,
@@ -169,8 +205,17 @@ pub use studio_files::{
     studio_remember_export_dir, studio_theme_list, studio_token_in_both, studio_update_apply,
     studio_update_check,
 };
+pub use studio_folder::{
+    StudioSavedVersion, studio_folder_files, studio_folder_read, studio_folder_read_version,
+    studio_folder_versions, studio_folder_write,
+};
+pub use studio_edit::{
+    StudioCompletion, StudioCompletions, StudioContrast, StudioContrastCheck, StudioContrastFix,
+    StudioContrastIssue, StudioTokenUse, studio_completions, studio_contrast, studio_token_uses,
+};
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
+pub use syntax::{SyntaxRun, syntax_keys, syntax_lines};
 pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use window_ops::{
     ExtentRecord, FullscreenRecord, MaximizeRecord, PaneSizeRecord, ScreenRect, WindowFrameGoal,
@@ -178,8 +223,9 @@ pub use window_ops::{
 };
 pub use windows::{
     Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearGrow,
-    TearLanding, TearPlaced, TearRect, TearWindow, WindowMinSize, Windows, cascade_frame, fit_frame,
-    tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place, window_min_size,
+    TearLanding, TearPlaced, TearRect, TearWindow, WindowAnimationKind, WindowMinSize, Windows, cascade_frame,
+    fit_frame, tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place, window_animation,
+    window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 pub use workspace_notices::NoticeFactsRecord;

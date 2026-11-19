@@ -13,6 +13,10 @@ use wormhole_core::storage::paths::ProfilePaths;
 
 use super::values::{schema_keys, schema_values};
 
+/// The notification kinds' keys: the switches that `Settings::change_notify_kind` keeps in step with `notifications`.
+const NOTIFY_KINDS: [&str; 5] =
+    ["notify_needs_you", "notify_agent_done", "notify_command_done", "notify_command_failed", "notify_bell"];
+
 pub(crate) struct State {
     config: Config,
     /// The profile's folder: what `edits` counts Settings' changes by.
@@ -53,7 +57,16 @@ impl State {
 
     /// Every schema key with its effective value (the project's where it overrides).
     pub(crate) fn values(&self) -> Map<String, Value> {
-        schema_values(&self.effective)
+        let mut values = schema_values(&self.effective);
+        // A kind reads through the master switch (`notify_kind_on`), as the GPUI page does: with `notifications`
+        // off every kind shows off.
+        for key in NOTIFY_KINDS {
+            if let Some(Value::Bool(on)) = values.get(key) {
+                let shown = self.effective.notify_kind_on(*on);
+                values.insert(key.to_string(), Value::Bool(shown));
+            }
+        }
+        values
     }
 
     /// The effective settings, for what needs the typed value (search's visibility, the shell list).
@@ -71,6 +84,10 @@ impl State {
         let mut next = self.config.settings.clone();
         for (key, value) in writes {
             next = settings_index::set(&next, &key, value)?;
+            // Turning a kind on turns the master on, turning the last one off turns it off (core's rule).
+            if NOTIFY_KINDS.contains(&key.as_str()) {
+                next.change_notify_kind(|_| {});
+            }
         }
         Ok(self.replace(next))
     }
@@ -88,7 +105,7 @@ impl State {
         let before = self.config.settings.clone();
         self.config.import_theme(source)?;
         if self.config.settings != before {
-            super::edits::note(&self.dir);
+            // No note for the access guard: an import changes the theme, never `agent_access`.
             self.refresh();
             self.revision += 1;
         }
@@ -107,8 +124,15 @@ impl State {
         if next == self.config.settings {
             return false;
         }
-        self.config.update(|settings| *settings = next);
-        super::edits::note(&self.dir);
+        // Only a change of the mode itself is the person's edit of it, and it is told with the mode they set: a write of
+        // another key, or of another mode, by something outside (a program writing `agent_access` into `config.json`)
+        // never passes as theirs.
+        if next.agent_access == self.config.settings.agent_access {
+            self.config.update(|settings| *settings = next);
+        } else {
+            let (config, mode) = (&mut self.config, next.agent_access);
+            super::edits::write(&self.dir, mode, || config.update(|settings| *settings = next));
+        }
         self.refresh();
         self.revision += 1;
         true

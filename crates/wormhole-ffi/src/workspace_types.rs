@@ -278,6 +278,7 @@ pub enum Action {
     ToggleSidebar,
     TogglePanel,
     ShowPanelTab(TabId),
+    SetPanelTab(TabId),
     Search(String),
     ShowOverlay(Option<Overlay>),
     SetPaneArea { width: f32, height: f32 },
@@ -530,6 +531,7 @@ pub struct ChromeSnapshot {
 pub struct TerminalSummary {
     pub id: i64,
     pub name: String,
+    pub custom_name: Option<String>,
     pub number: Option<u32>,
     pub selected: bool,
     pub pinned: bool,
@@ -590,6 +592,8 @@ pub struct TitleTerminal {
     pub folder: Option<String>,
     pub cwd: Option<String>,
     pub branch: Option<String>,
+    pub detached: bool,
+    pub superproject: Option<String>,
     pub message: Option<String>,
 }
 

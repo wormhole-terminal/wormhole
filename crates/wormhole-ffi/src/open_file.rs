@@ -41,11 +41,12 @@ fn command(bundle: &str, launch: Launch, app: Option<&Path>) -> (OsString, Vec<O
     }
 }
 
-/// Open `path` (absolute, already found inside the repository) in the app with this bundle identifier at `line`, as the GPUI
+/// Open `path` (absolute, already found inside the repository; a key of `files_panel::names` where it is not text) in the app with this bundle identifier at `line`, as the GPUI
 /// app does; `app_folder` is where Launch Services says the app is. Whether a process was started; nobody waits for it.
 #[uniffi::export]
 pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder: Option<String>) -> bool {
-    run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
+    let Some(path) = crate::files_panel::names::path(&path) else { return false };
+    run(&bundle, &path, line, app_folder.as_deref().map(Path::new))
 }
 
 /// Where a test instance's launches are written instead of started (`DesignSystem.ExternalOpen` writes its own there too).
@@ -66,9 +67,13 @@ pub fn open_file_tooltip(bundle: String, app: String, line: Option<u32>) -> Stri
 
 /// Where `relative` is inside the repository at `root`, every link resolved: nil for a file that is gone, a path that
 /// leads out of the repository (a planted link) or one that is not a file. Nothing is opened or revealed that this refuses.
+/// `root` and the answer are keys of `files_panel::names` where a name is not text, so a repository in such a folder opens,
+/// reveals and copies its files (`open_file_run`, `DiskName.url`), and a link resolved to such a name is never cut to text.
 #[uniffi::export]
 pub fn repo_file_resolve(root: String, relative: String) -> Option<String> {
-    files::resolve_within(Path::new(&root), &relative).ok().map(|path| path.to_string_lossy().into_owned())
+    use crate::files_panel::names;
+    let real = files::resolve_within(&names::path(&root)?, &relative).ok()?;
+    Some(names::path_key(&real))
 }
 
 fn run(bundle: &str, path: &Path, line: Option<u32>, app: Option<&Path>) -> bool {
@@ -166,6 +171,24 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&log).expect("log"),
             "run /usr/bin/open -b com.microsoft.VSCode vscode://file/repo/a.rs:7\n"
+        );
+    }
+
+    /// The root comes as a key and the file goes back as one (a name that is text is its own key); a key that does not
+    /// read back names no repository, and a path out of it is refused.
+    #[test]
+    fn a_file_is_resolved_from_the_roots_key_and_a_broken_key_resolves_nothing() {
+        use crate::files_panel::names;
+        let repo = tempfile::tempdir().expect("repository");
+        let root = repo.path().canonicalize().expect("canonical");
+        write_atomic_executable(&root.join("a.sh"), b"#!/bin/sh\n", LinkPolicy::Follow).expect("file");
+        let resolved = repo_file_resolve(names::path_key(&root), "a.sh".into());
+        assert_eq!(resolved.as_deref().and_then(names::path), Some(root.join("a.sh")));
+        assert_eq!(repo_file_resolve("/tmp/caf\0zz".into(), "a.sh".into()), None, "a key cut short");
+        assert_eq!(
+            repo_file_resolve(names::path_key(&root), "../a.sh".into()),
+            None,
+            "out of the repository"
         );
     }
 }

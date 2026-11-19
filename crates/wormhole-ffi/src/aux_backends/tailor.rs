@@ -293,8 +293,9 @@ impl OnboardingTailor {
         let shown = run.walk.shown.clone();
         drop(run);
         if shown != from {
+            // Through the settings the app holds, as the GPUI app's step (`onboarding/tailor_step.rs:104`).
             let profile = DataRoot::new(&self.data_dir).default_profile();
-            Config::load_for(&profile).update(|settings| shown.apply_changes(&from, settings));
+            crate::settings::live::update(&profile, |settings| shown.apply_changes(&from, settings));
         }
         true
     }

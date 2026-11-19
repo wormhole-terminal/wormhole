@@ -3,19 +3,23 @@
 //! meant for a background thread; changes arrive as one coalesced `GitListener.changed()` per debounced
 //! burst of file events (`FFI-CONTRACT.md`, "Git").
 
+mod asked;
+mod colors;
 mod error;
 mod notes;
 mod problem;
 mod records;
 mod service;
 mod shown;
+mod sight;
 mod watch;
 mod worktrees;
 
+pub use asked::git_next_age_change;
 pub use error::GitBackendError;
 pub use records::{
     GitChange, GitChangeKind, GitDiff, GitDiffFile, GitDiffLine, GitHunk, GitLineKind, GitLog, GitLogCommit,
-    GitRef, GitRefKind, GitRev, GitRevKind, GitStatus,
+    GitRef, GitRefKind, GitRev, GitRevKind, GitStatus, GitSubmoduleCard,
 };
 pub use notes::{GitDiffNotes, GitSideNote};
 pub use problem::{GitProblemWords, git_problem};

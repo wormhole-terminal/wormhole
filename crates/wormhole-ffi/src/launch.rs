@@ -6,15 +6,15 @@
 //! colours (`engine_look`); and the saved text a restored terminal starts above. Every start (local, hosted,
 //! attached, the welcome) takes its options from here, so an attach gives the engine what its start did.
 //!
-//! A program named in the request (`--shell`, the welcome's tour, tests) runs instead of the decided shell unless the
-//! terminal was opened with one of its own, and the engine's own `WORMHOLE_SHELL` (test instances) replaces everything
-//! in core `terminal::process`.
+//! A program named in the request (the welcome's tour, a test) runs as it is. A forced shell is never decided here: it
+//! is core's `WORMHOLE_SHELL` (`terminal::process::shell`, test instances), which replaces every choice, a terminal's
+//! own shell too, when the program starts; the Swift app's `--shell` sets that variable and means the same.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::config::{Config, FeatureId, FeatureMask, Settings};
-use wormhole_core::project::{self as proj, Feature, ProjectPrefs, TrustStore};
+use wormhole_core::project::{self as proj, Feature};
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::terminal::shells::{self, ShellCommand};
@@ -24,23 +24,29 @@ use crate::hosting::HostedStart;
 /// The options terminal `what` starts with, in profile `profile` of the data folder `root`.
 pub(crate) fn options(root: &DataRoot, profile: &ProfilePaths, what: &HostedStart) -> SpawnOptions {
     let settings = Config::load_for(profile).settings;
-    let cwd = what.cwd.as_deref().map(PathBuf::from).filter(|dir| dir.is_dir());
+    // The folder crosses the bridge as a key (`files_panel::names`): one whose name is not text starts there, not at home.
+    let cwd = what.cwd.as_deref().and_then(crate::files_panel::names::path).filter(|dir| dir.is_dir());
     let (project_env, project_shell) = project_adds(profile, &settings, cwd.as_deref()).unwrap_or_default();
     // A worktree Wormhole made gives its terminals their own ports (`git::worktree_env`); a trusted project's env goes on top.
-    let mut env: std::collections::BTreeMap<String, String> =
-        cwd.as_deref().map(crate::git::worktree_env).unwrap_or_default().into_iter().collect();
+    let mut env: std::collections::BTreeMap<String, String> = cwd
+        .as_deref()
+        .map(|cwd| crate::git::worktree_env(cwd, profile))
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
     env.extend(project_env);
-    let shell = match (&what.program, what.shell.as_deref()) {
-        // A program asked for by name (`--shell`, the welcome's tour, a test) runs as it is, unless the terminal was
-        // opened with a shell of its own.
-        (Some(program), None) => ShellCommand {
+    let shell = match &what.program {
+        // A program asked for by name (the welcome's tour, a test) runs as it is, whatever shell the terminal was opened
+        // with: no choice of a terminal's may stand in front of a program the app was told to run.
+        Some(program) => ShellCommand {
             name: shells::program_name(program).to_string(),
             program: program.clone(),
             args: what.args.clone(),
         },
-        (_, chosen) => shells::for_terminal(chosen, project_shell.as_deref(), &settings),
+        None => shells::for_terminal(what.shell.as_deref(), project_shell.as_deref(), &settings),
     };
-    let look = crate::engine_look::current();
+    // This profile's colours, as its windows draw them: not the shown profile's (`engine_look`).
+    let look = crate::engine_look::current(&profile.id().to_string());
     let mut options = SpawnOptions {
         cwd,
         tab_id: what.tab.to_string(),
@@ -75,8 +81,8 @@ pub(crate) fn profile_in(root: &DataRoot, id: Option<&str>) -> ProfilePaths {
 }
 
 /// A trusted project's environment and shell for a terminal starting in `cwd` (the app's `detect::spawn_options`):
-/// only with project folders on, its Settings switched on, and its files approved as they are now. Read from disk at
-/// the start, as what runs is decided; a store that does not read approves nothing.
+/// only with project folders on, its Settings switched on, and its files approved as they are now: the project's files read
+/// at the start, as what runs is decided, against the profile's one store of switches and approvals (`files_panel::allows_in`).
 fn project_adds(
     profile: &ProfilePaths,
     settings: &Settings,
@@ -87,11 +93,9 @@ fn project_adds(
     }
     let folder = proj::find_project(cwd?)?;
     let snapshot = folder.snapshot();
-    let prefs = ProjectPrefs::load(profile.dir()).ok()?;
-    let trust = TrustStore::load(profile.dir()).ok()?;
-    let enabled = snapshot.has(Feature::Settings)
-        && prefs.enabled(snapshot.root(), Feature::Settings)
-        && trust.allows_in(&snapshot, Feature::Settings);
+    // The profile's switches and approvals as the process holds them, every window's change in them (a revoke whose save
+    // failed included), never the files read again on their own.
+    let enabled = crate::files_panel::allows_in(profile.dir(), &snapshot, Feature::Settings);
     let config = snapshot.config().filter(|_| enabled)?.clone();
     Some((config.env, config.shell))
 }

@@ -3,7 +3,7 @@
 //! used first, then the ones held in memory. Taking one back is `revoke` for a held one and `revoke_stored`
 //! for a stored one; the server ends the streams either let in (`HookServer::revoke_approval`).
 
-use wormhole_core::ipc::access::{Capability, Kind, Scope};
+use wormhole_core::ipc::access::{CapSet, Capability, Kind, Scope};
 use wormhole_core::storage::store::{AgentGrantRow, Store};
 use wormhole_core::view::sidebar::wording;
 use wormhole_text::keys::{
@@ -14,6 +14,7 @@ use wormhole_text::keys::{
 use wormhole_text::text;
 
 use super::{AccessDesk, locked};
+use crate::aux_backends::access_records::AccessCapability;
 
 /// How long an approval lasts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -42,6 +43,32 @@ pub struct AccessApprovalRecord {
     pub location: String,
     /// What it may do, in the catalog's words, one per capability it has.
     pub allowed: Vec<String>,
+    /// The same as data, for the ticks of its row: Read, Type, Run and Open, the ones it has. Closing always asks.
+    pub capabilities: Vec<AccessCapability>,
+}
+
+fn capabilities(caps: CapSet) -> Vec<AccessCapability> {
+    [
+        (Capability::Read, AccessCapability::Read),
+        (Capability::Type, AccessCapability::Type),
+        (Capability::Run, AccessCapability::Run),
+        (Capability::Open, AccessCapability::Open),
+    ]
+    .into_iter()
+    .filter(|(core, _)| caps.contains(*core))
+    .map(|(_, record)| record)
+    .collect()
+}
+
+/// The core's capability a tick stands for; closing is not a tick, so it is none.
+fn core_capability(capability: AccessCapability) -> Option<Capability> {
+    match capability {
+        AccessCapability::Read => Some(Capability::Read),
+        AccessCapability::Type => Some(Capability::Type),
+        AccessCapability::Run => Some(Capability::Run),
+        AccessCapability::Open => Some(Capability::Open),
+        AccessCapability::Close => None,
+    }
 }
 
 const SHOWN: [Capability; 4] = [Capability::Read, Capability::Type, Capability::Run, Capability::Open];
@@ -92,7 +119,7 @@ fn detail(how: AccessHow, kind: Kind, team: &str, last_used: Option<i64>, now: i
 
 fn stored_record(row: AgentGrantRow, now: i64) -> Option<AccessApprovalRecord> {
     let kind = Kind::from_word(&row.key.kind)?;
-    let caps = wormhole_core::ipc::access::CapSet::from_bits(row.caps);
+    let caps = CapSet::from_bits(row.caps);
     Some(AccessApprovalRecord {
         id: u64::try_from(row.id).unwrap_or(0),
         stored: true,
@@ -108,6 +135,7 @@ fn stored_record(row: AgentGrantRow, now: i64) -> Option<AccessApprovalRecord> {
             .filter(|cap| caps.contains(**cap))
             .map(|cap| capability_word(*cap).to_string())
             .collect(),
+        capabilities: capabilities(caps),
     })
 }
 
@@ -145,6 +173,7 @@ impl AccessDesk {
                     .filter(|cap| held.caps.contains(**cap))
                     .map(|cap| capability_word(*cap).to_string())
                     .collect(),
+                capabilities: capabilities(held.caps),
             }
         }));
         rows
@@ -162,5 +191,38 @@ impl AccessDesk {
             self.waker.notify();
         }
         removed
+    }
+
+    /// Switches one capability of approval `id` (`stored`: a database row; else one held in memory) on or off, as the
+    /// ticks of its row in Settings do. Whether the approval changed (closing is never a tick; neither is an unknown id).
+    pub fn set_capability(&self, id: u64, stored: bool, capability: AccessCapability, on: bool) -> bool {
+        let Some(capability) = core_capability(capability) else { return false };
+        let change = |caps: CapSet| if on { caps.with(capability) } else { caps.without(capability) };
+        if !stored {
+            let mut inner = locked(&self.inner);
+            let Some(caps) = inner.grants.held().iter().find(|held| held.id == id).map(|held| held.caps)
+            else {
+                return false;
+            };
+            return inner.grants.set_caps(id, change(caps));
+        }
+        let Ok(row_id) = i64::try_from(id) else { return false };
+        if !self.profile_dir.join("wormhole.db").is_file() {
+            return false;
+        }
+        let Ok(mut store) = Store::open_at(&self.profile_dir) else { return false };
+        let Some(caps) = store
+            .agent_grants()
+            .ok()
+            .and_then(|rows| rows.into_iter().find(|row| row.id == row_id))
+            .map(|row| CapSet::from_bits(row.caps))
+        else {
+            return false;
+        };
+        let saved = store.set_agent_grant_caps(row_id, change(caps).bits()).is_ok();
+        if saved {
+            self.waker.notify();
+        }
+        saved
     }
 }

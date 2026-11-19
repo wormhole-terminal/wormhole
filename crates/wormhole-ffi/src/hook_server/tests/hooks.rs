@@ -172,3 +172,30 @@ fn the_executable_does_the_command_line_before_it_is_an_app() {
         "an unknown command never launches"
     );
 }
+
+// GPUI: `main.rs:63` asks `ipc::command`, where `--help` and `-h` are control verbs (core `ipc/client.rs:43`,
+// `ipc/control/cli/mod.rs:82`); `wh` is `exec <binary> "$@"`, so `wh --help` reaches the app's `main` as that.
+#[test]
+fn asking_for_the_usage_with_a_dash_is_the_cores_command_line_and_a_launch_option_is_not() {
+    use crate::{cli_exit_code, cli_is_command};
+    let args = |words: &[&str]| words.iter().map(ToString::to_string).collect::<Vec<_>>();
+    for verb in ["--help", "-h", "help", "list", "hook", "statusline", "welcome"] {
+        assert!(cli_is_command(args(&["Wormhole", verb])), "{verb}");
+    }
+    assert_eq!(cli_exit_code(args(&["Wormhole", "--help"])), Some(0), "the usage, printed");
+    assert_eq!(cli_exit_code(args(&["Wormhole", "-h"])), Some(0));
+    // The Swift app's own options, a launch, and what no build knows (`--version` and `--json` first are
+    // unknown commands in GPUI too).
+    for words in [
+        &["Wormhole"][..],
+        &["Wormhole", "-psn_0_12345"],
+        &["Wormhole", "--shell", "/bin/cat"],
+        &["Wormhole", "--background"],
+        &["Wormhole", "--version"],
+        &["Wormhole", "-V"],
+        &["Wormhole", "--json", "list"],
+        &["Wormhole", "bogus-verb"],
+    ] {
+        assert!(!cli_is_command(args(words)), "{words:?}");
+    }
+}

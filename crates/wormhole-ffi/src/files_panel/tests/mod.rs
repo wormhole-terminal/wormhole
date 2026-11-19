@@ -8,8 +8,10 @@ mod files_pins;
 mod notes_store;
 mod project;
 mod project_notes;
+mod project_outside;
 mod project_paint;
 mod project_trust;
+mod project_windows;
 mod usage;
 
 use std::fs;

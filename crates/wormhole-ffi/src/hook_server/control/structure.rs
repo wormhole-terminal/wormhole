@@ -37,7 +37,7 @@ fn found(core: &Core, target: Target, peer: &Peer) -> Result<i64, Reply> {
     core.find(target, peer).ok_or_else(|| not_found(target))
 }
 
-/// `new-window`: a window like the first one (its panels, no groups) with one new terminal in `folder` (the
+/// `new-window`: a window like the front one (its panels, no groups) with one new terminal in `folder` (the
 /// selected terminal's folder without), running `command`. The ids are planned now and the window is opened by
 /// Swift (`HookEvent::NewWindow`); behind the other windows unless `activate`.
 pub(super) fn new_window(core: &Arc<Core>, spec: &NewWindowSpec, from: Option<i64>, access: Access) -> Reply {
@@ -56,7 +56,7 @@ pub(super) fn new_window(core: &Arc<Core>, spec: &NewWindowSpec, from: Option<i6
             "this workspace is not one of several windows: use new-terminal",
         );
     };
-    let planned = windows.plan_like(Some(&core.shared), spec.folder.clone());
+    let planned = windows.plan_like(Some(&core.front_share()), spec.folder.clone());
     let folder = planned.folder.clone();
     core.ui.push(HookEvent::NewWindow {
         window: planned.window,

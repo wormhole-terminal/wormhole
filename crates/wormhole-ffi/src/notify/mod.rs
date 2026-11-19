@@ -6,6 +6,7 @@
 //! Sans-IO: the clock comes in (`now_ms` monotonic, `wall_ms` Unix) and nothing is read or posted from here.
 
 mod records;
+mod simulate;
 mod watch;
 
 use std::collections::HashSet;

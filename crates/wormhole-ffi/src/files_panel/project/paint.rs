@@ -1,16 +1,19 @@
 //! A folder's colour, where it lives and who may change it: in the project's `config.json` as
 //! `project_color` when the project that governs the folder has one (shared with everyone who uses it),
 //! else the person's own in `config.json` (`folder_colors`), which never reaches a repository. A project
-//! that locks its colour, or whose file can't be read, is never edited.
+//! that locks its colour, or whose file can't be read, is never edited. The person's own is in the settings of
+//! the window's own profile (the one whose stores the service holds), as the GPUI app's window reads its own.
 
 use std::path::Path;
 
 use wormhole_core::config::Config;
 use wormhole_core::project::{self as proj, Feature, ProjectColorChoice, ProjectFolder};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 
 use super::records::{FolderPaintRecord, ProjectFailure};
 use super::service::ProjectService;
-use crate::files_panel::settings_edit::update_settings;
+use crate::files_panel::names;
+use crate::files_panel::settings_edit::update_settings_of;
 
 /// Where a folder's colour lives, and what it is now.
 enum Paint {
@@ -54,22 +57,42 @@ impl Paint {
 }
 
 impl ProjectService {
+    /// The files of the profile whose stores the service holds: the window's own. A folder that is no profile's
+    /// (a test's) reads the Default profile's settings.
+    fn own_profile(&self) -> ProfilePaths {
+        let root = DataRoot::current();
+        let hub = self.lock();
+        let named = hub
+            .dir()
+            .strip_prefix(root.profiles_dir())
+            .ok()
+            .and_then(|rest| rest.to_str())
+            .and_then(|name| ProfileId::parse(name).ok())
+            .map(|id| root.profile(&id))
+            .filter(|paths| paths.dir() == hub.dir());
+        named.unwrap_or_else(|| root.default_profile())
+    }
+
     fn paint_of(&self, folder: &Path) -> Paint {
-        if let Some(found) = proj::find_project(folder) {
+        // With project folders off the colour is the person's own: nothing is written into a project.
+        if !self.off()
+            && let Some(found) = proj::find_project(folder)
+        {
             let mut hub = self.lock();
             let snapshot = hub.snapshot(&found);
             if snapshot.has(Feature::Settings) {
                 let config = snapshot.config();
+                let shown = hub.prefs().enabled(snapshot.root(), Feature::Settings);
                 return Paint::Project {
                     root: found.root,
                     chosen: config.and_then(|config| config.color),
                     locked: config.is_some_and(|config| config.color_locked),
-                    shown: hub.prefs.enabled(snapshot.root(), Feature::Settings),
+                    shown,
                     unreadable: snapshot.config_error().is_some(),
                 };
             }
         }
-        Paint::Own(Config::load().settings.folder_color_choice(folder))
+        Paint::Own(Config::load_for(&self.own_profile()).settings.folder_color_choice(folder))
     }
 }
 
@@ -77,7 +100,7 @@ impl ProjectService {
 impl ProjectService {
     /// What `folder`'s colour is, where it is kept and whether it may be changed.
     pub fn folder_paint(&self, folder: String) -> FolderPaintRecord {
-        let paint = self.paint_of(Path::new(&folder));
+        let paint = self.paint_of(&names::folder(&folder));
         let choice = paint.choice();
         FolderPaintRecord {
             chosen: choice.and_then(ProjectColorChoice::named).map(|name| name.key().to_string()),
@@ -99,11 +122,14 @@ impl ProjectService {
     pub fn set_folder_color(&self, folder: String, color: Option<String>) -> Result<(), ProjectFailure> {
         let choice =
             color.map(|text| ProjectColorChoice::parse(&text)).transpose().map_err(ProjectFailure::failed)?;
-        let folder = Path::new(&folder);
+        let folder = names::folder(&folder);
+        let folder = folder.as_path();
         match self.paint_of(folder) {
             Paint::Own(current) => {
                 if current != choice {
-                    update_settings(|settings| settings.set_folder_color_choice(folder, choice));
+                    update_settings_of(&self.own_profile(), |settings| {
+                        settings.set_folder_color_choice(folder, choice)
+                    });
                 }
             }
             Paint::Project { locked: true, .. } => {
