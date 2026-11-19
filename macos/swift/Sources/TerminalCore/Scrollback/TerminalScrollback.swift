@@ -38,6 +38,8 @@ public protocol TerminalBlocks: AnyObject, Sendable {
     func promptLine(from line: Int, direction: PromptDirection) -> Int?
     var displayOffset: Int { get }
     var bottommostLine: Int { get }
+    /// The grid line the view's top row shows (folds make it differ from `-displayOffset`).
+    var topLine: Int { get }
     func scrollLineToTop(_ line: Int)
     func scrollToBottom()
     func selectLines(_ lines: ClosedRange<Int>)

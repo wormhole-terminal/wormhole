@@ -13,6 +13,7 @@ public protocol CommandBlocks: AnyObject {
     /// The shell is at its prompt, which is when a command can be typed there.
     var shellAtPrompt: Bool { get }
     var bottommostLine: Int { get }
+    var topLine: Int { get }
     func block(id: UInt64) -> CommandBlock?
     func block(atLine line: Int) -> CommandBlock?
     /// The newest block whose command ran, anywhere on the grid.

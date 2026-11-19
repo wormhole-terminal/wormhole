@@ -13,6 +13,20 @@ struct CursorDraw {
     var wide: Bool
     /// The window is key: a block is filled; otherwise it is an outline.
     var focused: Bool
+
+    /// What is painted for it, the one place that says so (the builder draws from it, the `cursor` read-out names it): the
+    /// shape while focused, the cell's outline when not (GPUI's `cursor_rect`, `terminal_view/render/cursor.rs:71`).
+    enum Face { case block, beam, underline, outline }
+
+    var face: Face {
+        guard focused else { return .outline }
+        switch shape {
+        case .block: return .block
+        case .beam: return .beam
+        case .underline: return .underline
+        case .hollow: return .outline
+        }
+    }
 }
 
 final class RowBuilder {
@@ -72,7 +86,7 @@ final class RowBuilder {
         let thickness = layout.thickness
         let columns = layout.shown
 
-        let filledBlock = cursor.map { $0.shape == .block && $0.focused } ?? false
+        let filledBlock = cursor?.face == .block
         func covered(_ column: Int) -> Bool {
             guard filledBlock, let cursor else { return false }
             return column == cursor.column || (cursor.wide && column == cursor.column + 1)
@@ -93,8 +107,10 @@ final class RowBuilder {
             // A colour that runs to the last column a sized row shows runs on to the grid's edge, as on a normal row.
             let x = Float(backgroundStart) * cellWidth
             let right = (end >= columns && stretch != Stretch.normal) ? layout.gridRight : Float(end) * cellWidth
+            // The block cursor stays in its cell; any other colour at an edge runs on into the padding in the shader.
+            let style = backgroundColor == PackedColor.cursor ? SolidInstance.fixedBit : 0
             geometry.backgrounds.append(
-                SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: backgroundColor, style: 0))
+                SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: backgroundColor, style: style))
             backgroundStart = -1
         }
         func flushDecoration(_ end: Int) {
@@ -186,6 +202,18 @@ final class RowBuilder {
             let cell = cells[column]
             let flags = CellFlags(rawValue: cell.flags)
             let (fg, bg) = colors(cell, flags, underBlockCursor: covered(column))
+
+            // The cell keeps its own background under the block cursor, so at an edge it still runs on into the
+            // padding beside the cursor (GPUI paints the cursor apart from the cell backgrounds).
+            if covered(column) {
+                let own = colors(cell, flags, underBlockCursor: false).bg
+                if own != PackedColor.background {
+                    let x = Float(column) * cellWidth
+                    let right = (column + 1 >= columns && stretch != Stretch.normal) ? layout.gridRight : x + cellWidth
+                    geometry.backgrounds.append(
+                        SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: own, style: 0))
+                }
+            }
 
             // Background: runs of one colour; the default needs no quad (the pass clears to it).
             if bg != PackedColor.background {
@@ -303,10 +331,10 @@ final class RowBuilder {
         func quad(_ x: Float, _ y: Float, _ w: Float, _ h: Float) {
             geometry.decorations.append(SolidInstance(x: x, y: y, width: w, height: h, color: color, style: 0))
         }
-        switch (cursor.shape, cursor.focused) {
-        case (.beam, true): quad(x, top, bar, cellHeight)
-        case (.underline, true): quad(x, top + cellHeight - bar, width, bar)
-        default:
+        switch cursor.face {
+        case .beam: quad(x, top, bar, cellHeight)
+        case .underline: quad(x, top + cellHeight - bar, width, bar)
+        case .block, .outline:
             quad(x, top, width, thickness)
             quad(x, top + cellHeight - thickness, width, thickness)
             quad(x, top + thickness, thickness, cellHeight - 2 * thickness)

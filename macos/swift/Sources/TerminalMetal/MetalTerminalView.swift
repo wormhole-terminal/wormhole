@@ -50,6 +50,14 @@ public final class MetalTerminalView: NSView {
     public var optionAsMeta = OptionAsMeta.off
     /// Whether a ⌘ key (its name, its modifiers) is one the application's menus own: the terminal never takes those for its own.
     public var isAppKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
+    /// The keymap's action id for a ⌘ key in the Terminal or Edit scope (its name, its modifiers), or nil: which keys the
+    /// terminal takes itself is the table's (`keymap::terminal_action`). Asked only for ⌘ keys, never for typing.
+    public var terminalAction: (String, NSEvent.ModifierFlags) -> String? = { _, _ in nil }
+    /// A key the window takes before the terminal hears it (a project action's own key): asked with the key's name
+    /// (`KeyMap`'s) and its modifiers for a ⌘ key and an F-key only; true when the window took it.
+    public var claimKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
+    /// ⌘↑ / ⌘↓ (and the keys that fall back to them): the window jumps this terminal to the previous or next prompt.
+    public var onPrompt: (PromptDirection) -> Void = { _ in }
     /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
     public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).
@@ -94,6 +102,8 @@ public final class MetalTerminalView: NSView {
     /// Told when the grid the program has changed (the status bar's size reads it).
     public var onGridChange: (() -> Void)?
     private let wake = WakeRelay()
+    /// The pace of the drains made while no display link ticks for the view (`hearUnticked`).
+    private var unticked = DrainPace()
 
     // Input method state (see Keyboard/).
     var composition = MarkedTextModel()
@@ -101,7 +111,10 @@ public final class MetalTerminalView: NSView {
     var handledByInputMethod = false
 
     // Pointer, selection and scroller (see Pointer/, Scroller/).
-    var interaction: (any TerminalInteraction)?
+    /// The pointer's and the selection's way into the engine, asked of the source each time, as `scrollback` and `probes` are:
+    /// a terminal still being started in, or attached to, a session host has none when the view starts and gets one when
+    /// the host answers, and a terminal attached again is another object.
+    var interaction: (any TerminalInteraction)? { source.interaction }
     var pointer = PointerState()
     /// A selection may exist: ask for its spans after each frame until one comes back empty.
     var selectionMayExist = false
@@ -156,9 +169,12 @@ public final class MetalTerminalView: NSView {
     }
     private var metalLayer: CAMetalLayer? { layer as? CAMetalLayer }
 
-    /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background.
+    /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background. The engine hears
+    /// them too, so a program that asks (OSC 4, 10, 11, 12) is answered with the colours this terminal is drawn in,
+    /// whichever profile its window is in (`share_palette` in the GPUI app's terminal view).
     public func setPalette(_ palette: TerminalPalette) {
         renderer.setPalette(palette)
+        source.setEngineColors(palette.engineSlots)
         scroller.adapt(toBackground: palette.background)
         requestRedraw()
     }
@@ -170,6 +186,8 @@ public final class MetalTerminalView: NSView {
         if window == nil {
             invalidateLink()
             source.setOnScreen(false)
+            // What waited for a tick that no longer comes is heard from the run loop, not from inside this move.
+            DispatchQueue.main.async { [weak self] in MainActor.assumeIsolated { self?.hearUnticked() } }
             return
         }
         // `NSView.displayLink` follows the screen the view is on and (unlike CVDisplayLink) needs no setup
@@ -200,7 +218,6 @@ public final class MetalTerminalView: NSView {
         started = true
         let relay = wake
         do {
-            defer { interaction = source.interaction }
             try source.start(size: gridSize) { [weak self] in
                 // Any thread, no lock held: note the wake and hop. One hop per drain, however much output.
                 guard !relay.queued.exchange(true, ordering: .acquiringAndReleasing) else { return }
@@ -246,6 +263,13 @@ public final class MetalTerminalView: NSView {
 
     /// Drawable size and grid size from the view's size. A change of grid goes to the source, which answers
     /// with a full frame of the new size.
+    /// The points the cells have: the bounds less the padding on every side and the scroller's or minimap's strip. What the
+    /// grid is fitted in, and what a window operation's sums take the window's own parts around the text from.
+    public var textArea: CGSize {
+        let padding = MetalRenderer.padding
+        return CGSize(width: bounds.width - scroller.gutterWidth - minimapWidth - 2 * padding, height: bounds.height - 2 * padding)
+    }
+
     func syncSurface() {
         let scale = CGFloat(renderer.scale)
         let pixels = CGSize(width: (bounds.width * scale).rounded(.down), height: (bounds.height * scale).rounded(.down))
@@ -263,8 +287,7 @@ public final class MetalTerminalView: NSView {
         // The padding is on every side, and the right one also keeps the scroller's or minimap's strip clear.
         // The cells the area holds, by the core's rule (the GPUI pane's): a screen pixel short of a whole cell still holds it,
         // as a window whose size AppKit rounds to pixels may be (GPUI's slack while a drag steps by cells, Swift's default).
-        let padding = MetalRenderer.padding
-        let area = (width: bounds.width - scroller.gutterWidth - minimapWidth - 2 * padding, height: bounds.height - 2 * padding)
+        let area = textArea
         let (cols, rows) = fixedGrid ?? renderer.grid(fittingPoints: Double(area.width), Double(area.height), slack: 1 / Double(scale))
         let cell = renderer.cell
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(cell.width), cellHeight: Float(cell.height))
@@ -304,6 +327,27 @@ public final class MetalTerminalView: NSView {
     private func wakeOnMain() {
         statistics.wakes += 1
         link?.isPaused = false
+        hearUnticked()
+    }
+
+    /// A window in the Dock gets no tick from its display link, and a view in no window (a terminal that is not the shown
+    /// one) has no link: what the program says meanwhile (a bell, a title, its exit, the request to come back out, XTWINOPS
+    /// 1) is heard without one, as the GPUI app hears a terminal it does not draw; the frame is drawn when it is back in
+    /// sight. Paced as a frame paces a view in sight (`DrainPace`): a program printing fast is one drain per interval.
+    private func hearUnticked() {
+        guard window == nil || window?.isMiniaturized == true else { return }
+        drainUnticked(unticked.woke())
+    }
+
+    private func drainUnticked(_ now: Bool) {
+        guard now else { return }
+        if handleEvents() { redrawRequested = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + DrainPace.interval) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.drainUnticked(self.unticked.elapsed())
+            }
+        }
     }
 
     public func requestRedraw() {
@@ -350,6 +394,10 @@ public final class MetalTerminalView: NSView {
                 requestRedraw()
                 onExit?(code)
             case .clipboardWrite, .clipboardRead, .clipboardAsk, .clipboardAskClosed: handleClipboard(event)
+            // As a key typed here: the jump between prompts is forgotten and the cursor holds still (GPUI's `send_strokes`).
+            case .controlTyped:
+                onInput?()
+                holdCursor()
             }
         }
         if output { refreshPointerShape() }

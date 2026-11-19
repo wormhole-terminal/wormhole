@@ -19,6 +19,7 @@ public final class CoreBlocks: CommandBlocks {
     public var displayOffset: Int { terminal()?.displayOffset ?? 0 }
     public var shellAtPrompt: Bool { terminal()?.shellAtPrompt ?? false }
     public var bottommostLine: Int { terminal()?.bottommostLine ?? 0 }
+    public var topLine: Int { terminal()?.topLine ?? 0 }
     public func block(id: UInt64) -> CommandBlock? { terminal()?.block(id: id) }
     public func block(atLine line: Int) -> CommandBlock? { terminal()?.block(atLine: line) }
     public func newestRan() -> CommandBlock? { terminal()?.newestRanBlock() }

@@ -35,6 +35,8 @@ public enum TerminalEvent: Sendable, Equatable {
     case clipboardAsk
     /// The question went away unanswered (it timed out).
     case clipboardAskClosed
+    /// The control line typed into the terminal (`send-text`, `send-keys`, `run`): typing, as far as the view goes.
+    case controlTyped
 }
 
 /// A key press in the app's key vocabulary ("enter", "left", "f5", "a"), as `Terminal::send_key` takes it.
@@ -98,6 +100,8 @@ public protocol FrameSource: AnyObject, Sendable {
     func resize(_ size: GridSize)
     /// Scroll the view by `lines` (positive: back into history).
     func scroll(lines: Int)
+    /// Scroll by `rows` rows as shown, a closed fold counting as one (a drag past the edge).
+    func scrollRows(_ rows: Int)
 
     /// The terminal's text for Print and Export Text As: the screen, or with `history` everything the terminal keeps
     /// (soft-wrapped rows joined); `nil` when the source has none.
@@ -120,6 +124,9 @@ public protocol FrameSource: AnyObject, Sendable {
     /// Folds and Probe marks, when the source has them (the real engine).
     var probes: (any TerminalProbes)? { get }
 
+    /// The colours the terminal is drawn with, for the engine to answer programs' colour queries with (OSC 4, 10, 11, 12,
+    /// `CSI ? 996 n`, mode 2031): `0xRRGGBB`, the 256 indexed ones, then foreground, background and cursor.
+    func setEngineColors(_ slots: [UInt32])
     /// What programs may do with the clipboard (OSC 52): Settings' `clipboard_read` and `clipboard_write`.
     func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool)
     /// The terminal is shown where the person can see it: the only state in which a read is asked about.
@@ -139,6 +146,7 @@ extension FrameSource {
         write(Data(text.replacingOccurrences(of: "\r\n", with: "\r").replacingOccurrences(of: "\n", with: "\r").utf8))
     }
     public func scroll(lines: Int) {}
+    public func scrollRows(_ rows: Int) { scroll(lines: rows) }
     public func inlineImage(key: UInt32) -> InlineImage? { nil }
     public func plainText(history: Bool) -> String? { nil }
     public func grabPrompt() -> String? { nil }
@@ -146,6 +154,7 @@ extension FrameSource {
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
     public var probes: (any TerminalProbes)? { nil }
+    public func setEngineColors(_ slots: [UInt32]) {}
     public func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool) {}
     public func setOnScreen(_ onScreen: Bool) {}
     public func giveClipboard(_ text: String) {}

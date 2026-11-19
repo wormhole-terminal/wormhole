@@ -40,8 +40,8 @@ private struct MarkerRow: View {
         Button(action: action) {
             HStack(spacing: Space._2) {
                 Image(systemName: marker.isOpen ? "chevron.down" : "chevron.right")
-                    .font(.system(size: TextRole.caption.size, weight: .semibold))
-                Text(marker.label).font(.system(size: TextRole.caption.size)).lineLimit(1)
+                    .font(.system(size: tokens.size(.caption), weight: .semibold))
+                Text(marker.label).font(.system(size: tokens.size(.caption))).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Space._2)

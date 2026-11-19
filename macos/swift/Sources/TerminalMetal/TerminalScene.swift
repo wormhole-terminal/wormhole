@@ -120,6 +120,13 @@ final class TerminalScene {
         cursor = nil
     }
 
+    /// The cursor as its row is built with (and as the `cursor` read-out reads it): none without one, once the program ended,
+    /// or in a blinking cursor's off phase.
+    var cursorDraw: CursorDraw? {
+        guard let cursor, !cursorHidden, cursorOn || !cursor.blinking else { return nil }
+        return CursorDraw(column: cursor.column, shape: cursor.shape, wide: cursor.wide, focused: focused)
+    }
+
     private func setCursor(_ next: FrameHeader.Cursor?) {
         guard next != cursor else { return }
         if let old = cursor, old.row < rows { dirty[old.row] = true }
@@ -250,10 +257,7 @@ final class TerminalScene {
     private func build(_ row: Int) {
         dirty[row] = false
         let start = grid + row * columns
-        var draw: CursorDraw?
-        if let cursor, cursor.row == row, !cursorHidden, cursorOn || !cursor.blinking {
-            draw = CursorDraw(column: cursor.column, shape: cursor.shape, wide: cursor.wide, focused: focused)
-        }
+        var draw = cursor?.row == row ? cursorDraw : nil
         let composing = marked != nil && cursor?.row == row && marked?.text.isEmpty == false
         // The common row goes to the builder as it is; a row with a selection, a hovered link or composed text
         // is copied and marked first, so the hot loop knows none of it.
