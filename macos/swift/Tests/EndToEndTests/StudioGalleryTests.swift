@@ -20,6 +20,18 @@ extension EndToEnd {
         await app.send(["studio-resize 1344 900", "pointer-window Theme Studio"])
     }
 
+    /// The box `colour-count` reports (`box=x,y,w,h`).
+    @MainActor static func box(_ said: String) -> [Double] {
+        Instance.value("box", in: said).map { $0.split(separator: ",").compactMap { Double($0) } } ?? []
+    }
+
+    /// Whether the pixels of the colour fill their box (a slot's swatch does, a sliver or a few letters do not): a pixel is a
+    /// quarter of a point squared at the Studio's scale of 2.
+    @MainActor static func fills(_ said: String) -> Bool {
+        let box = box(said)
+        return box.count == 4 && box[2] >= 24 && box[3] >= 20 && Double(pixels(said)) >= 0.9 * box[2] * box[3] * 4
+    }
+
     @MainActor static func pixels(_ said: String) -> Int { Instance.value("pixels", in: said).flatMap { Int($0) } ?? 0 }
 
     /// Turns the gallery's wheel a screen at a time until `colour` is drawn in it: the `colour-count` line that saw it.
@@ -98,8 +110,17 @@ extension EndToEnd {
             app.expect(await app.reply("studio-set \(Self.galleryMark)"), contains: "ok=true")
             await app.send(["studio-select"])
             app.expect(await app.reply("state"), contains: "token=-")
-            let found = await Self.scrollGallery(app, until: Self.galleryMark)
-            guard Self.pixels(found) > 0 else { return app.fail("the slot never came into view:\n\(found)") }
+            // The colour is first seen as a sliver at the region's edge, or in text that uses it; the slot is a solid block, so the
+            // wheel goes on in small steps until what is drawn fills the box round it (the same colour is also in text and
+            // lines of other specimens, whose box it fills only in part).
+            var found = "", seen: [String] = []
+            for y in stride(from: 0, through: 9000, by: 100) {
+                await app.send(["studio-scroll \(y)"])
+                found = await app.reply("colour-count \(Self.galleryMark) \(Self.gallery)")
+                if Self.pixels(found) > 0 { seen.append("y=\(y) \(found)") }
+                if Self.fills(found) { break }
+            }
+            guard Self.fills(found) else { return app.fail("the slot never came into full view:\n\(seen.joined(separator: "\n"))") }
             app.expect(await app.reply("colour-count \(Self.galleryMark) \(Self.gallery) click"), contains: "box=")
             await app.until("state") { $0.contains("token=terminal.ansi.5 ") }
         }
