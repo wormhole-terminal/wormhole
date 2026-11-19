@@ -25,11 +25,14 @@ extension EndToEnd {
         Instance.value("box", in: said).map { $0.split(separator: ",").compactMap { Double($0) } } ?? []
     }
 
-    /// Whether the pixels of the colour fill their box (a slot's swatch does, a sliver or a few letters do not): a pixel is a
-    /// quarter of a point squared at the Studio's scale of 2.
+    /// Whether the pixels of the colour fill their box (a slot's swatch does, a sliver or a few letters do not). They are counted
+    /// in device pixels, so a full box holds its area in points squared at 1x and four times that at 2x, a little less where
+    /// the corners round: a share of either, not an equality.
     @MainActor static func fills(_ said: String) -> Bool {
         let box = box(said)
-        return box.count == 4 && box[2] >= 24 && box[3] >= 20 && Double(pixels(said)) >= 0.9 * box[2] * box[3] * 4
+        guard box.count == 4, box[2] >= 24, box[3] >= 20 else { return false }
+        let area = box[2] * box[3]
+        return [1.0, 4.0].contains { (0.9...1.02).contains(Double(pixels(said)) / (area * $0)) }
     }
 
     @MainActor static func pixels(_ said: String) -> Int { Instance.value("pixels", in: said).flatMap { Int($0) } ?? 0 }
