@@ -113,10 +113,19 @@ extension EndToEnd {
             await app.send(["new \(theirs.path)", "tab project"])
             await app.until("recents projects") { $0.contains("recent-work") }
             app.expect(!(await app.reply("recents projects")).contains("recent-default"), "the Work window lists Work's only")
-            // Back in the default profile, its window lists its own.
+            // Back in the default profile, with a Work window open beside it (the odd one): both in sight together, and each
+            // lists its own profile's, whichever profile Wormhole is in.
             await app.send(["profile-switch default"])
             await app.until("sessions") { $0.contains("profile=default visible=true") }
-            let own = await app.until("recents projects") { $0.contains("recent-default") }
+            await app.send(["profile-open \(work)"])
+            await app.until("sessions") { $0.split(separator: "\n").contains { $0.contains("profile=\(work) ") && $0.contains("visible=true") } }
+            guard let odd = await app.window(inProfile: work), let home = await app.window(inProfile: "default"), odd != home else {
+                return app.fail("a Work window and a Default window in sight:\n\(await app.reply("sessions"))")
+            }
+            app.expect(await app.reply("profiles"), contains: "* default")
+            let theirsNow = await app.until("recents projects", window: odd) { $0.contains("recent-work") }
+            app.expect(!theirsNow.contains("recent-default"), "the Work window lists Work's only while Wormhole is in Default:\n\(theirsNow)")
+            let own = await app.until("recents projects", window: home) { $0.contains("recent-default") }
             app.expect(!own.contains("recent-work"), "the Default window lists Default's only:\n\(own)")
         }
     }
