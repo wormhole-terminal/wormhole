@@ -12,7 +12,7 @@ import Foundation
     // `main.rs:63` asks it (`ipc::command`): `wh --help` and `wh -h` are the control line's usage there, not this app's.
     // A word without a dash is always the core's (a verb, or an unknown command it refuses with exit 2); one with a dash
     // that the core does not know is one of this app's own launch options (`--shell`, `--background`), which GPUI does
-    // not have, or a mistake `Options.parse` refuses with exit 2 as well (`--json` or `--version` first: never a launch).
+    // not have, or a word `Options.parse` refuses with exit 2 as GPUI does (`--json` or `--version` first: `unknown command`).
     let isCommandLine = CommandLine.arguments.dropFirst().first.map { !$0.hasPrefix("-") || HookBridge.isCommandLine() } ?? false
     if isCommandLine, let code = HookBridge.exitCodeIfCommandLine() { exit(code) }
 #endif

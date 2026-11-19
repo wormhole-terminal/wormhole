@@ -17,8 +17,13 @@ extension EndToEnd {
                 app.expect(!ran.output.contains("--render-png"), "\(word) does not list the app's launch options:\n\(ran.output)")
             }
             // A dashed word that is neither the core's nor a launch option is refused, never a launch (GPUI: unknown command, 2).
-            let version = try await app.cliRun(["--version"], timeout: 15)
-            app.expect(version.status == 2, "--version: status 2, got \(String(describing: version.status)):\n\(version.output)")
+            for word in ["--version", "--json"] {
+                let ran = try await app.cliRun([word], timeout: 15)
+                app.expect(ran.status == 2, "\(word): status 2, got \(String(describing: ran.status)):\n\(ran.output)")
+                app.expect(
+                    ran.output.contains("unknown command \"\(word)\""), "\(word) is GPUI's unknown command:\n\(ran.output)")
+                app.expect(!ran.output.contains("unknown option"), "\(word) is no launch option:\n\(ran.output)")
+            }
             app.expect(await app.reply("sessions").split(separator: "\n").count == 1, "no second window")
         }
     }
