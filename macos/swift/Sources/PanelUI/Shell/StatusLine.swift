@@ -10,7 +10,7 @@ struct StatusLine: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(danger ? tokens.statusDangerText : tokens.statusWarningText)
+        Text(text).font(tokens.font(.caption)).foregroundStyle(danger ? tokens.statusDangerText : tokens.statusWarningText)
             .lineLimit(1).truncationMode(.tail)
             .padding(.horizontal, Space._4).frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading)
     }

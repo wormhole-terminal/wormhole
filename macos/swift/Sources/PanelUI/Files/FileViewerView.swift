@@ -24,9 +24,14 @@ struct FileViewerView: View {
             .background(tokens.surfaceWindow)
             .onExitCommand(perform: store.closeViewer)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(panelText("files-spoken-viewer", ["name": .text(path.split(separator: "/").last.map(String.init) ?? path)], "\(path.split(separator: "/").last.map(String.init) ?? path), file viewer"))
+            .accessibilityLabel(panelText("files-spoken-viewer", ["name": .text(Self.name(path))], "\(Self.name(path)), file viewer"))
         }
     }
+}
+
+extension FileViewerView {
+    /// The file's name as drawn (a name that is not text is a key, `DiskName`).
+    static func name(_ path: String) -> String { DiskName.shown(path.split(separator: "/").last.map(String.init) ?? path) }
 }
 
 struct FileViewerHeader: View {
@@ -34,22 +39,40 @@ struct FileViewerHeader: View {
     let path: String
     /// In the terminal's title row the row gives the height and the insets.
     var inTitleRow = false
+    @State private var card = PathCardHover()
     @Environment(\.tokens) private var tokens
     @Environment(\.panelHost) private var host
 
     var body: some View {
-        let name = path.split(separator: "/").last.map(String.init) ?? path
-        let folders = path.contains("/") ? String(path[..<path.lastIndex(of: "/")!]) + "/" : ""
+        let name = FileViewerView.name(path)
+        let folders = path.contains("/") ? DiskName.shown(String(path[..<path.lastIndex(of: "/")!])) + "/" : ""
         HStack(spacing: PanelMetrics.gap) {
             FileIcon(kind: .file(name), tint: tokens.textMuted)
-            // The path as the diff's crumb draws it: folders quiet, the name loud, the head elided first.
-            Text("\(Text(folders).foregroundStyle(tokens.textMuted))\(Text(name).foregroundStyle(tokens.textPrimary))")
-                .font(TextRole.body.font).lineLimit(1).truncationMode(.head).layoutPriority(-1)
+            // The path as the diff's crumb draws it: folders quiet, the name loud, the head elided first. A button as the
+            // title row's crumb is (`title/breadcrumb.rs`): a click shows the file in Finder, resting on it opens the
+            // path card, a right-click its menu.
+            Button {
+                card.close()
+                store.revealViewed()
+            } label: {
+                Text("\(Text(folders).foregroundStyle(tokens.textMuted))\(Text(name).foregroundStyle(tokens.textPrimary))")
+                    .font(tokens.font(.body)).lineLimit(1).truncationMode(.head)
+            }
+            .buttonStyle(.plain).layoutPriority(-1)
+            .onHover { card.hover(.path, $0) }
+            .popover(isPresented: $card.shown, arrowEdge: .bottom) {
+                PathCard(path: DiskName.shown(absolute), buttons: cardButtons, hover: card)
+            }
+            .accessibilityLabel(panelText("files-spoken-reveal-file", ["path": .text(DiskName.shown(path))], "Reveal \(DiskName.shown(path)) in Finder"))
+            .contextMenu {
+                Button(panelText("files-row-reveal", "Reveal in Finder"), action: store.revealViewed)
+                Button(panelText("files-row-copy-path", "Copy Path")) { host?.copyPath(absolute) }
+            }
             Spacer(minLength: 0)
-            if let size = store.content.size { Text(ByteSize.text(size)).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize() }
+            if let size = store.content.size { Text(ByteSize.text(size)).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).fixedSize() }
             // Always there: with no editor known it is Finder showing the file (core's words say which).
             if let open = host?.openTooltip(line: nil) {
-                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(absolute, line: nil) }
+                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { store.openViewed() }
             }
             BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true) {
                 store.closeViewer()
@@ -61,4 +84,15 @@ struct FileViewerHeader: View {
     }
 
     private var absolute: String { store.root.map { store.join($0, path) } ?? path }
+
+    /// The card's three buttons, as the folder's card has them (`title/path_card.rs`), for the file. A path that is
+    /// not text is not typed at a prompt, and copying it is refused by the host with the chip's words.
+    private var cardButtons: [PathCardButton] {
+        let absolute = absolute
+        return [
+            PathCardButton(id: "open", symbol: "arrow.up.forward.app", title: panelText("title-row-path-open-in-finder", "Open in Finder")) { [store] in store.revealViewed() },
+            PathCardButton(id: "copy", symbol: "doc.on.doc", title: panelText("title-row-path-copy", "Copy path"), copied: panelText("title-row-path-copied", "Copied")) { [host] in host?.copyPath(absolute) },
+            PathCardButton(id: "insert", symbol: "text.insert", title: panelText("title-row-path-insert", "Insert into terminal"), enabled: host != nil && !DiskName.isKey(absolute)) { [host] in host?.insertPath(absolute) },
+        ]
+    }
 }

@@ -9,8 +9,9 @@ import WormholeBindings
 public struct RealWorktreeBackend: WorktreeBackend {
     /// A reason a worktree may not be made of this folder (an untrusted project), or nil.
     public typealias Allowed = @Sendable (_ folder: String) async -> String?
-    /// A worktree was made: the window opens a terminal in its folder, with these variables (its own ports).
-    public typealias Created = @Sendable (_ made: MadeWorktree, _ environment: [String: String]) async -> Void
+    /// A worktree was made: the window opens a terminal in its folder, with these variables (its own ports), and runs
+    /// `command` (`--command`) in it after the project's setup.
+    public typealias Created = @Sendable (_ made: MadeWorktree, _ environment: [String: String], _ command: String?) async -> Void
 
     private let service: WorktreeService
     private let allowed: Allowed
@@ -25,8 +26,17 @@ public struct RealWorktreeBackend: WorktreeBackend {
         service.setOptions(base: base, cloneBuildFolders: cloneBuildFolders)
     }
 
+    /// The window's profile made the worktrees of this service: they are remembered in its database.
+    public func followProfile(_ id: String) { _ = service.followProfile(profile: id) }
+
+    /// Trust is the repository's (its main working tree, which a terminal in a linked worktree is of too), never the
+    /// terminal's folder: `.wormhole/` is looked for there.
+    private func repository(of folder: String) async -> String {
+        await GitQueue.run { [service] in service.repository(folder: folder) } ?? folder
+    }
+
     public func problem(making folder: String) async -> String? {
-        if let why = await allowed(folder) { return why }
+        if let why = await allowed(await repository(of: folder)) { return why }
         return await GitQueue.run { [service] in service.problem(folder: folder) }
     }
 
@@ -37,12 +47,12 @@ public struct RealWorktreeBackend: WorktreeBackend {
         }
     }
 
-    public func create(branch typed: String, repo folder: String) async -> String? {
-        if let why = await allowed(folder) { return why }
+    public func create(branch typed: String, repo folder: String, command: String?) async -> String? {
+        if let why = await allowed(await repository(of: folder)) { return why }
         do {
             let made = try await GitQueue.run { [service] in try service.create(branch: typed, folder: folder) }
             let environment = Dictionary(made.env.map { ($0.name, $0.value) }, uniquingKeysWith: { $1 })
-            await created(MadeWorktree(made), environment)
+            await created(MadeWorktree(made), environment, command)
             return nil
         } catch {
             return (error as? GitFailure)?.message ?? "\(error)"

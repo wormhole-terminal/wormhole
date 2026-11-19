@@ -10,7 +10,7 @@ struct ReviewBar: View {
 
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
-            Text(review.review.summary).font(TextRole.body.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+            Text(review.review.summary).font(tokens.font(.body)).foregroundStyle(tokens.textMuted).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             NoticeButton(title: panelText("review-clear", "Clear"), action: review.clear)
             NoticeButton(title: panelText("review-paste", "Paste into Terminal"), primary: true, action: review.paste)
@@ -19,6 +19,6 @@ struct ReviewBar: View {
         .padding(.leading, Space._4).padding(.trailing, Space._3)
         .frame(height: 40)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .motionTransition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

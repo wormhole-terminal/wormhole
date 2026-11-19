@@ -33,6 +33,7 @@ struct PanelScroll<Content: View>: View {
                     .padding(.bottom, PanelMetrics.tail - PanelMetrics.cardGap)
             }
             .scrollIndicators(.automatic)
+            .scrollEdge()
             .onChange(of: cursor) { _, now in if let now { proxy.scrollTo(now) } }
         }
     }
@@ -45,7 +46,7 @@ struct EmptyNote: View {
 
     var body: some View {
         Text(text)
-            .font(TextRole.body.font)
+            .font(tokens.font(.body))
             .foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._3)
             .padding(.vertical, Space._2)

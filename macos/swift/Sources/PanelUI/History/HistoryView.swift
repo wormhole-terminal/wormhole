@@ -40,7 +40,7 @@ struct HistoryDiffPane: View {
 
     var body: some View {
         if let file = store.current {
-            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close, showsHeader: !headerInRow)
+            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close, showsHeader: !headerInRow, commit: store.shortOpen)
         }
     }
 }
@@ -56,10 +56,12 @@ struct HistoryListView: View {
             PanelCard {
                 CardBand(
                     title: panelText("history-title", "History"), count: store.model.commits.isEmpty ? nil : CountText.grouped(store.model.commits.count),
-                    spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], "History, \(String(store.model.commits.count)) commits")
+                    spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], store.model.commits.isEmpty ? "History, no commits" : "History, \(store.model.commits.count) \(store.model.commits.count == 1 ? "commit" : "commits")")
                 ) {
                     RevPicker(
-                        selected: store.rev, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.pick) // text: HEAD is git's name for the current commit
+                        selected: store.rev, revs: store.revs, headTitle: "HEAD", // text: HEAD is git's name for the current commit
+                        headOption: panelText("picker-head-history", "HEAD (current branch)"), loading: store.revsLoading,
+                        scope: store.terminal, load: store.loadRevs, pick: store.pick)
                 }
                 if !store.paths.isEmpty { filterChip }
                 switch store.phase {
@@ -70,14 +72,24 @@ struct HistoryListView: View {
                 }
             }
         }
+        // The ages are drawn again when the next one reads differently ("12m" to "13m"), only while the tab shows.
+        .task(id: [store.clock ?? 0, store.model.commits.count, store.model.commits.first?.time ?? 0]) {
+            guard let wait = store.nextAgeChange() else { return }
+            // one-shot: the moment the earliest age in the log changes (core's `next_age_change`)
+            try? await Task.sleep(for: wait)
+            if !Task.isCancelled { store.tick(now: Int(Date().timeIntervalSince1970)) }
+        }
     }
+
+    /// The time the ages are counted from: the tab's, or the last tick's once an age turned over.
+    private var shownNow: Int { store.clock.map { max($0, now) } ?? now }
 
     @ViewBuilder private var commits: some View {
         if store.model.commits.isEmpty {
             EmptyView()
         } else {
             ForEach(store.model.commits) { commit in
-                CommitRowView(commit: commit, now: now, expanded: commit.id == store.expanded) {
+                CommitRowView(commit: commit, now: shownNow, expanded: commit.id == store.expanded) {
                     withAnimation(motion.fold) { store.toggle(commit.id) }
                 }
                 .commitMenu(commit, store: store)
@@ -100,7 +112,8 @@ struct HistoryListView: View {
                         SubmoduleRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
                             .walkRow("file-" + file.id)
                     } else {
-                        FileRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
+                        // The open icon only for a file that is in the working tree now (`present_files`).
+                        FileRowView(file: file, depth: 1, selected: file.id == store.selection, onDisk: store.present.map { $0.contains(file.path) }) { store.open(file.id) }
                             .walkRow("file-" + file.id)
                     }
                 }
@@ -123,14 +136,14 @@ struct HistoryListView: View {
             "history-filter", ["count": .whole(store.paths.count), "name": .text(first)],
             fallback: store.paths.count == 1 ? first : "\(store.paths.count) paths")
         return HStack(spacing: PanelMetrics.gap) {
+            // GPUI's active compact pill (`style::pill(…, true, true)`): `chip.selected` with its text, no hover fill.
             Button { store.filter(by: []) } label: {
-                HStack(spacing: Space._1) {
-                    Text(name).font(TextRole.caption.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                    PanelIcon("xmark", size: 12).foregroundStyle(tokens.textMuted)
+                Chip(fill: nil, text: tokens.textMuted, selected: true, height: Metric.controlSmall) {
+                    HStack(spacing: Space._1) {
+                        Text(name).font(tokens.font(.caption)).lineLimit(1)
+                        PanelIcon("xmark", size: 12)
+                    }
                 }
-                .padding(.horizontal, Space._2).frame(height: Metric.controlSmall)
-                .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
-                .contentShape(Rectangle())
             }
             .buttonStyle(.plain).help(panelText("history-filter-clear", "Show all commits"))
             .accessibilityLabel(panelText("history-filter-clear", "Show all commits"))

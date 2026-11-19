@@ -12,7 +12,9 @@ public final class PanelPreferences {
     public var diffSplit = true { didSet { echo("diff_split", diffSplit, oldValue) } }
     public var diffWrap = false { didSet { echo("diff_wrap", diffWrap, oldValue) } }
     /// Columns a tab stands for in the diff and the file viewer.
-    public var tabWidth = 4
+    public var tabWidth = 4 { didSet { if tabWidth != oldValue { tabObservers.forEach { $0() } } } }
+    /// The open diffs, whose sideways extent depends on the tab width (`BuildKey` in the GPUI app's rows).
+    @ObservationIgnored var tabObservers: [@MainActor () -> Void] = []
     /// Sizes in the viewer are written in KiB and MiB instead of KB and MB.
     public var binarySizes = false { didSet { ByteSize.binary = binarySizes } }
     /// Writes a changed switch back to the settings (the app compares first, so a value that came from there is not echoed).

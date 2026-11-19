@@ -13,24 +13,53 @@ struct RevPicker: View {
     let selected: Rev?
     let revs: [Rev]
     var headTitle = "HEAD" // text: HEAD is git's name for the current commit
+    /// The list's first row in words ("HEAD (current branch)"); the chip keeps the short title.
+    var headOption: String?
+    /// A line under the list saying what picking does; while the list is read it says so instead.
+    var hint: String?
+    var loading = false
+    /// The terminal the picker belongs to: it closes when another is selected.
+    var scope: Int?
     let load: () -> Void
     let pick: (Rev?) -> Void
+    /// Something outside asked for the list (the title row's branch chip); it is open while the request stands, and `answered` clears it when the list closes.
+    var requested = false
+    var answered: () -> Void = {}
     @State private var open = false
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
 
+    /// The list is open while the person opened it or a request for it stands. The request is answered when the list
+    /// closes, not when it opens: the chip is built again as the tab comes up and its changes arrive, and a list opened
+    /// by the first one went with it.
+    private var shown: Binding<Bool> {
+        Binding(
+            get: { open || requested },
+            set: { now in
+                open = now
+                if !now, requested { answered() }
+            })
+    }
+
     var body: some View {
         Button {
-            open.toggle()
+            shown.wrappedValue.toggle()
             if open { load() }
         } label: { chip }
             .buttonStyle(.plain)
             .onHover { hovering = $0 }
-            .popover(isPresented: $open, arrowEdge: .bottom) {
-                RevList(selected: selected, revs: revs, headTitle: headTitle) { rev in
-                    open = false
+            .popover(isPresented: shown, arrowEdge: .bottom) {
+                RevList(
+                    selected: selected, revs: revs, headTitle: headOption ?? headTitle,
+                    hint: loading ? panelText("picker-loading", "Loading branches\u{2026}") : hint
+                ) { rev in
+                    shown.wrappedValue = false
                     pick(rev)
                 }
+            }
+            .onChange(of: scope) { open = false }
+            .onChange(of: requested, initial: true) {
+                if requested { load() }
             }
             .accessibilityLabel("\(prefix) \(selected?.title ?? headTitle)")
             .accessibilityHint(panelText("picker-hint", "Opens the list of branches"))
@@ -43,7 +72,7 @@ struct RevPicker: View {
             Text(selected?.title ?? headTitle).lineLimit(1).truncationMode(.tail).foregroundStyle(tokens.textPrimary)
             PanelIcon("chevron.up.chevron.down", size: 10).foregroundStyle(tokens.textMuted)
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .padding(.leading, Space._2).padding(.trailing, Space._1)
         .frame(height: 24).frame(maxWidth: 160)
         .background(hovering ? tokens.stateHover : .clear, in: shape)
@@ -56,10 +85,13 @@ struct RevPicker: View {
 }
 
 /// The popover's content: the search box and the list under it, grouped by what each ref is.
-private struct RevList: View {
+struct RevList: View {
     let selected: Rev?
     let revs: [Rev]
     let headTitle: String
+    let hint: String?
+    /// The search box takes the keyboard as the list opens; the Studio's specimen leaves it where it is.
+    var takesKeys = true
     let choose: (Rev?) -> Void
     @State private var query = ""
     @FocusState private var focused: Bool
@@ -73,7 +105,7 @@ private struct RevList: View {
     var body: some View {
         VStack(spacing: 0) {
             TextField(panelText("picker-search", "Search branches"), text: $query)
-                .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
+                .textFieldStyle(.plain).font(tokens.font(.body)).focused($focused)
                 .padding(.horizontal, Space._3).frame(height: Metric.control)
                 .onSubmit { if let first = matches.first { choose(first) } else if query.isEmpty { choose(nil) } }
             Rectangle().fill(tokens.divider).frame(height: tokens.metrics.dividerWidth)
@@ -87,10 +119,16 @@ private struct RevList: View {
                 }
                 .padding(Space._1)
             }
+            if let hint {
+                Rectangle().fill(tokens.divider).frame(height: tokens.metrics.dividerWidth)
+                Text(hint).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(2)
+                    .padding(.horizontal, Space._3).frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading)
+            }
         }
-        .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320))
+        .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320) + (hint == nil ? 0 : Metric.row))
         .background(tokens.surfaceOverlay)
-        .onAppear { focused = true }
+        .marked("menu")
+        .onAppear { focused = takesKeys }
         // Esc only closes: picking again would fold the open commit and read the list anew.
         .onExitCommand { dismiss() }
     }
@@ -108,8 +146,8 @@ private struct RevList: View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
                 PanelIcon(symbol, size: 12).foregroundStyle(tokens.textMuted).frame(width: Metric.lead)
-                Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                if !detail.isEmpty { Text(detail).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1) }
+                Text(title).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                if !detail.isEmpty { Text(detail).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1) }
                 Spacer(minLength: 0)
                 if checked { PanelIcon("checkmark", size: 11).foregroundStyle(tokens.primary) }
             }

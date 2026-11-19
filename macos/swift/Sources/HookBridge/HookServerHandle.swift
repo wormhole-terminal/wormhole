@@ -38,6 +38,16 @@ public final class HookServerHandle {
     /// The question a `.closeAsked` put to the person was answered (yes or no): another may be asked.
     public func closeQuestionOver() { server.closeQuestionOver() }
 
+    /// The control folder's `control [--from <tab>] <words…>`: the words as `Wormhole <words…>` would send them, answered at once
+    /// (the reply's one JSON line, or why the words were no request); a read, wait, run or stream is not carried here.
+    public func controlLine(words: [String], from: String?) -> String { server.controlLine(words: words, from: from) }
+
+    /// The new-worktree sheet of `window` came up or went away: while it is up a second `--worktree` request for that window is answered Failed.
+    public func worktreeSheet(window: Int64, up: Bool) { server.worktreeSheet(window: window, up: up) }
+
+    /// `welcome-probe`: a welcome request as the first-run program sends it, from tab `from` (nil: from outside any).
+    public func welcomeLine(from: String?, token: String, op: String) -> String { server.welcomeLine(from: from, token: token, opJson: op) }
+
     /// Take approval `id` back and end the streams it let in (use this, not `AccessDesk.revoke`, so they end).
     @discardableResult
     public func revokeApproval(profile: String, _ id: UInt64) -> Bool { server.revokeApproval(profile: profile, id: id) }
@@ -48,16 +58,28 @@ public final class HookServerHandle {
         server.revokeStoredApproval(profile: profile, id: id)
     }
 
+    /// Switch one capability of approval `id` of profile `profile`'s desk on or off; taking one away ends the streams started under it.
+    @discardableResult
+    public func setApprovalCapability(profile: String, _ id: UInt64, stored: Bool, capability: AccessCapability, on: Bool) -> Bool {
+        server.setApprovalCapability(profile: profile, id: id, stored: stored, capability: capability, on: on)
+    }
+
     /// macOS asked to open these `file://` URLs: a terminal each in window `window`, a script run in its folder (core's
     /// `default_terminal` decides). How many terminals were made.
     @discardableResult
     public func openFromSystem(urls: [String], window: Int64) -> UInt32 { server.openFromSystem(urls: urls, window: window) }
+
+    /// The window in front is `window` (`WindowSession.id`): `new-terminal` without `--window` opens there and `list` marks it.
+    public func setFrontWindow(_ window: Int64) { server.setFrontWindow(window: window) }
 
     /// Another profile's desk: what the requests reaching that profile's windows are judged by.
     public func addDesk(_ desk: AccessDesk) { server.addDesk(desk: desk) }
 
     /// Profile `profile`'s settings changed: the server reads its agent-access mode again.
     public func settingsChanged(profile: String) { server.settingsChanged(profile: profile) }
+
+    /// The Probes that are on are read again (core `probes::reload`): the backstop for edits behind the app's back.
+    public func reloadProbes() { server.reloadProbes() }
 
     /// The status items the Probes' hooks set (`HookAction.probesChanged` says to read them again).
     public func probeStatusItems() -> [ProbeStatusRecord] { server.probeStatusItems() }

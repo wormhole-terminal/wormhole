@@ -12,6 +12,8 @@ public final class ChangesStore {
     public private(set) var files: [ChangedFile] = []
     public private(set) var phase = Phase.loading
     public private(set) var folder: String?
+    /// The repository's root, which the paths of `files` are relative to (the controller sets it).
+    @ObservationIgnored var root: String?
     public var compare: Rev?
     /// The branch the list compared with is gone and the list is against HEAD (an amber line over it).
     public private(set) var compareMissing: String?
@@ -38,8 +40,28 @@ public final class ChangesStore {
     public internal(set) var marked: Set<String> = []
     @ObservationIgnored var anchor: String?
     public var review = Review()
+    /// The comment being written on a diff line: its place, the line quoted, and the text typed so far, which the editor's
+    /// field edits in place. The one state the sheet is shown from (`commentSheet`, on the window). Held here, above the
+    /// diff's rows, a reload of the diff under it (an agent editing that file) neither closes it nor loses the text; the
+    /// comment stays on the line it was opened on, as GPUI's dialog does, even where the reload took that line away. The
+    /// control folder's `comment-at` opens it and `comment` saves it.
+    public var commenting: ReviewComment? {
+        didSet { if commenting == nil { commentingFor = nil } else if oldValue == nil { commentingFor = terminal } }
+    }
+    /// The terminal the comment is for: the one the tab showed when it was opened, whichever it shows when it is saved
+    /// (GPUI's `Commenting::session`).
+    @ObservationIgnored private var commentingFor: Int?
     public let diff: DiffSession
     public private(set) var revs: [Rev] = []
+    /// The picker's list is being read ("Loading branches…").
+    public private(set) var revsLoading = false
+    /// The terminal whose branch chip asked for the "compare with" picker: it opens as soon as that terminal's list is on screen,
+    /// never for the terminal the tab still shows while it follows the selection.
+    public var pickerFor: Int?
+    public var pickerRequested: Bool { pickerFor != nil && pickerFor == terminal }
+    /// The commit the list is against, and the one the open diff was read against: a diff is read again when it moves.
+    @ObservationIgnored private var baseRev: String?
+    @ObservationIgnored private var openBase: String?
     /// The comments could not be pasted (the program would run each line): they went to the clipboard instead.
     public var copiedInstead = false
     @ObservationIgnored private let git: any GitBackend
@@ -66,7 +88,13 @@ public final class ChangesStore {
         var review = Review()
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
-    @ObservationIgnored private var terminal: Int?
+    /// The terminals something is kept for (the control folder's `panel-kept`).
+    var keptTerminals: [Int] { kept.keys.sorted() }
+
+    /// The window's terminals now: what waited for one that is gone (closed, or moved to another window) goes with it.
+    public func keep(terminals: Set<Int>) { kept = kept.filter { terminals.contains($0.key) } }
+    /// The terminal the tab shows: the picker closes when it changes.
+    public private(set) var terminal: Int?
 
     /// The tab follows the terminal: another terminal brings its own compare branch, folds, marks and comments and
     /// takes the open diff down; a new folder starts again.
@@ -78,9 +106,11 @@ public final class ChangesStore {
             let mine = terminal.flatMap { kept.removeValue(forKey: $0) } ?? Kept()
             (compare, arrangement, marked, review) = (mine.compare, mine.arrangement, mine.marked, mine.review)
             (self.terminal, cursor, anchor, copiedInstead) = (terminal, nil, nil, false)
-        } else {
-            compare = nil
+            // A request for another terminal than the one the tab came to is stale.
+            if pickerFor != terminal { pickerFor = nil }
         }
+        // The compare branch is the terminal's and survives a `cd` (only `setCompare` changes it); a branch the new folder
+        // lacks shows as `compareMissing`.
         close()
         // The same folder under another terminal: the list is the same repository's, read for this one's branch.
         guard folder != self.folder else { return refresh() }
@@ -107,7 +137,7 @@ public final class ChangesStore {
                 guard folder == self.folder, rev == compare else { return }
                 files = list
                 marked.formIntersection(list.map(\.path))
-                (compareMissing, refreshError) = (result.compareMissing, nil)
+                (compareMissing, refreshError, baseRev) = (result.compareMissing, nil, result.baseRev)
                 phase = .loaded
                 keepOpenDiffInStep()
             } catch {
@@ -119,7 +149,12 @@ public final class ChangesStore {
         }
     }
 
-    private func setPhase(_ new: Phase, _ folder: String) { if folder == self.folder { phase = new } }
+    private func setPhase(_ new: Phase, _ folder: String) {
+        guard folder == self.folder else { return }
+        phase = new
+        // No list is coming up to show the picker in: the request ends instead of opening it at some later list.
+        if new == .notRepository { pickerFor = nil }
+    }
 
     public var order: [ChangedFile] { layout.order(files) }
     /// The open file: its entry in the list, or as it was last read once the list no longer has it (the diff stays, "No longer changed").
@@ -133,24 +168,28 @@ public final class ChangesStore {
         }
         selection = id
         guard let folder, let file = current else { return diff.close() }
+        openBase = baseRev
         diff.open(file, stamp: stamp(of: file)) { [git, rev = compare] in
             try await git.diff(of: file.path, in: folder, comparedWith: rev, loadAnyway: $0)
         }
     }
 
     /// The status was read again: an open diff follows its file. One the list no longer has stays with its badge; one whose entry
-    /// or file on disk changed is read again in place (`refresh_open_diff`).
+    /// or file on disk changed is read again in place (`refresh_open_diff`), and so is one whose base moved (the merge-base of
+    /// a compared branch, HEAD after a commit).
     private func keepOpenDiffInStep() {
         guard let open = selection else { return }
         guard let now = files.first(where: { $0.id == open }) else { return diff.markGone() }
         let stamp = stamp(of: now)
-        guard diff.gone || now != diff.file || stamp != diff.stamp else { return }
+        guard diff.gone || now != diff.file || stamp != diff.stamp || baseRev != openBase else { return }
+        openBase = baseRev
         diff.reread(now, stamp: stamp)
     }
 
-    /// The file's size and time as the working tree has them now; nil in a comparison (its diff is against a revision, not the disk).
+    /// The file's size and time as the working tree has them now: every diff here has the working tree as its new side, a
+    /// comparison with a branch too.
     private func stamp(of file: ChangedFile) -> String? {
-        guard compare == nil, let folder, let path = RepoFiles.resolve(root: folder, relative: file.path) else { return nil }
+        guard let folder, let path = RepoFiles.resolve(root: root ?? folder, relative: file.path) else { return nil }
         return host?.stamp(of: path)
     }
 
@@ -174,7 +213,41 @@ public final class ChangesStore {
     /// The branches the picker lists, asked for when it opens.
     public func loadRevs() {
         guard let folder else { return }
-        Task { revs = (try? await git.revs(in: folder, forHistory: false)) ?? [] }
+        (revs, revsLoading) = ([], true)
+        Task {
+            let listed = (try? await git.revs(in: folder, forHistory: false)) ?? []
+            guard folder == self.folder else { return }
+            (revs, revsLoading) = (listed, false)
+        }
+    }
+
+    /// Whether the line being commented on has a comment: the editor offers Save and Remove, else Add Comment.
+    public var commentingExisting: Bool {
+        guard let at = commenting else { return false }
+        let owner = commentingFor.flatMap { $0 == terminal ? nil : kept[$0]?.review } ?? review
+        return owner.on(at.path, at.side, at.line) != nil
+    }
+
+    /// The comment being written becomes its line's (an empty text removes the one there), and the editor closes.
+    public func saveComment() {
+        guard let comment = commenting else { return }
+        putComment(comment)
+        commenting = nil
+    }
+
+    /// The line's comment is removed, and the editor closes.
+    public func removeComment() {
+        guard var comment = commenting else { return }
+        (comment.code, comment.text) = ("", "")
+        putComment(comment)
+        commenting = nil
+    }
+
+    /// Into the review of the terminal the comment was opened for: kept aside if another is shown now, gone with it if it
+    /// closed meanwhile.
+    private func putComment(_ comment: ReviewComment) {
+        guard let owner = commentingFor, owner != terminal else { return review.put(comment) }
+        kept[owner]?.review.put(comment)
     }
 
     /// Comments are made only on a diff against the working tree, whose lines are the ones the agent edits.

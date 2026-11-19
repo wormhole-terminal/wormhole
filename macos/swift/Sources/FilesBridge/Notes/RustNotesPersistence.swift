@@ -27,6 +27,9 @@ public final class RustNotesPersistence: @unchecked Sendable {
     /// What was saved for terminal `session`; empty for one never saved.
     public func load(session: Int) -> NotesModel { NotesModel(saved: notes.load(session: Int64(session))) }
 
+    /// What was saved for terminal `session`, or nil when the database could not be read (not the same as nothing saved).
+    public func read(session: Int) -> NotesModel? { notes.read(session: Int64(session)).map(NotesModel.init(saved:)) }
+
     /// Saves terminal `session`'s notes and steps. Rows that did not change are not rewritten, so this can follow
     /// every edit. False when the write failed.
     @discardableResult
@@ -40,6 +43,10 @@ public final class RustNotesPersistence: @unchecked Sendable {
         let outcome = await offMain { project.syncNotes(session: Int64(session), root: root, local: document, editing: editing) }
         return model.applying(outcome)
     }
+
+    /// Project folders are on or off for the window (core's feature mask): off, the service reads no `.wormhole/` for
+    /// effect and writes none (no overrides, actions, worktree setup, notes.md).
+    public func projectFeature(on: Bool) { project.setProjectFeatureOn(on: on) }
 
     /// The terminal was closed: the base it merged against goes with it.
     public func closed(session: Int) { project.notesSessionClosed(session: Int64(session)) }

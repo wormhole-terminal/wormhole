@@ -3,6 +3,7 @@
 // takes 160 ms, a tab's content 140 ms, the segmented control's shape springs (stiffness 400, damping 30). Under
 // Reduce Motion nothing moves: changes cross-fade in a hundred milliseconds or so.
 
+import DesignSystem
 import SwiftUI
 
 struct PanelMotion {
@@ -31,5 +32,6 @@ struct PanelMotion {
 }
 
 extension EnvironmentValues {
-    var panelMotion: PanelMotion { PanelMotion(reduced: accessibilityReduceMotion) }
+    /// The app's Reduce Motion (`\.reduceMotion`: the system's, or devctl's `reduce-motion`), as every other part reads it.
+    var panelMotion: PanelMotion { PanelMotion(reduced: reduceMotion) }
 }

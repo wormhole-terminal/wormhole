@@ -14,6 +14,12 @@ public enum HookBridge {
         cliExitCode(arguments: arguments)
     }
 
+    /// Whether the core answers this command line itself (`hook`, `list`, `help`, a leading `--help` or `-h`): its rule,
+    /// asked, so no list of verbs is kept here. False for a launch and for a word the core does not know.
+    public static func isCommandLine(_ arguments: [String] = CommandLine.arguments) -> Bool {
+        cliIsCommand(arguments: arguments)
+    }
+
     /// Become the running instance of the data folder and serve its socket. Throws `HookError.AlreadyServed` when
     /// another process does (it was asked to come forward: this one should quit), `.NotIsolated` outside an
     /// experiment folder. `dataDir` `nil` is the process's own (`WORMHOLE_DATA_DIR`).

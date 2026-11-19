@@ -67,7 +67,6 @@ struct DiffLineView: View {
     let review: DiffReview?
     var open: LineOpen?
     @State private var hovering = false
-    @State private var editing: LineAt?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -83,22 +82,19 @@ struct DiffLineView: View {
         }
         .overlay(alignment: .trailing) {
             if hovering, let open, let line = cell.openLine {
-                BandButton(symbol: "arrow.up.forward.square", label: open.words(line), inRow: true) { open.action(line) }
+                BandButton(
+                    symbol: "arrow.up.forward.square", label: open.words(line), inRow: true,
+                    spoken: BandButton.openFile(open.words(line), file: (path as NSString).lastPathComponent)
+                ) { open.action(line) }
                     .padding(.trailing, Space._3)
             }
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture { if review != nil { editing = LineAt(cell) } }
-        .popover(item: $editing, arrowEdge: .trailing) { at in
-            CommentEditor(
-                place: ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "").location, at: at, existing: comment,
-                save: { text in
-                    review?.put(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: text))
-                    editing = nil
-                },
-                remove: { review?.put(ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "")); editing = nil },
-                cancel: { editing = nil })
+        // The editor is the window's (`commentSheet`), held by the store: this row is in a lazy list a reload rebuilds.
+        .onTapGesture {
+            guard let review, let at = LineAt(cell) else { return }
+            review.comment(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: comment?.text ?? ""))
         }
     }
 
@@ -144,7 +140,7 @@ struct DiffLineView: View {
                 .lineLimit(style.wrap ? nil : 1)
                 .fixedSize(horizontal: !style.wrap, vertical: style.wrap)
             if cell.noNewline {
-                Text(panelText("diff-no-newline", "no newline at end")).font(TextRole.caption.font).foregroundStyle(tokens.diffLineNumber).fixedSize()
+                Text(panelText("diff-no-newline", "no newline at end")).font(tokens.font(.caption)).foregroundStyle(tokens.diffLineNumber).fixedSize()
             }
         }
         .modifier(SidewaysCode(scrollX: style.wrap ? nil : style.scrollX - shown.start, height: style.rowHeight))

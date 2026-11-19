@@ -10,7 +10,7 @@ extension FilesStore: PanelWalking {
         guard root != nil else { return [] }
         return [WalkRow(id: Self.headID, level: 0, isBand: true, name: pathMenu?.shownName ?? "")]
             + rows.filter(\.isEntry).map { row in
-                WalkRow(id: row.path, level: 1 + row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.name)
+                WalkRow(id: row.path, level: 1 + row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.label)
             }
     }
 
@@ -21,7 +21,14 @@ extension FilesStore: PanelWalking {
 
     public var following: Bool { viewing != nil }
 
+    public func pressesBand(_ row: WalkRow) -> Bool { row.id == Self.headID }
+
     public func press(_ row: WalkRow, space: Bool, following: Bool) {
+        // The path button: ↩ opens its menu (not while the keys only moved onto it with the viewer up).
+        if row.id == Self.headID {
+            if !following { pathMenuRequests += 1 }
+            return
+        }
         guard let entry = rows.first(where: { $0.path == row.id }), !following || entry.kind == .file else { return }
         click(entry)
     }

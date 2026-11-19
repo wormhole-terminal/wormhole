@@ -1,9 +1,12 @@
 // A file's diff as the panel takes it: core's parsed hunks as `DiffFile`. Core decides what a diff is (text, binary,
 // a Git LFS pointer, too large to load unasked, a submodule); the cases that have no lines arrive
-// as a `DiffFile` with no lines and core's own words in `note`, which the card shows over the hatch.
+// as a `DiffFile` with no lines and core's own words (the column notes, the too-large card, a submodule's commits).
 
 import PanelModel
 import WormholeBindings
+
+/// The names of the keys a line's runs count by (`syntax_keys`), asked of the core once.
+private let keyNames: [String] = syntaxKeys()
 
 extension DiffFile {
     init(_ file: GitDiffFile, isBinary: Bool = false) {
@@ -13,6 +16,8 @@ extension DiffFile {
         self.init(oldPath: file.oldPath, newPath: file.newPath, isBinary: isBinary, hunks: hunks)
         modeChange = file.modeChange
         noHighlight = file.highlightSkipped
+        // The lines came with the colours the core read from the whole files: nothing colours them again.
+        coloredByCore = true
         let note = { (note: GitSideNote?) in note.map { SideNote(text: $0.text, detail: $0.detail, oid: $0.oid) } }
         notes = DiffNotes(split: file.notes.split.map(note), unified: note(file.notes.unified))
     }
@@ -27,6 +32,10 @@ extension DiffLine {
             case .removed: .removed
             }
         self.init(kind: kind, oldNumber: line.old.map(Int.init), newNumber: line.new.map(Int.init), text: line.text, noNewline: line.noNewline, openLine: line.openLine.map(Int.init))
+        spans = SyntaxSpan.inCharacters(
+            line.spans.compactMap { run -> (range: Range<Int>, key: String)? in
+                Int(run.key) < keyNames.count ? (range: Int(run.start)..<Int(run.end), key: keyNames[Int(run.key)]) : nil
+            }, of: line.text)
     }
 }
 
@@ -43,9 +52,12 @@ extension GitDiff {
             var large = DiffFile()
             large.tooLarge = TooLarge(title: title, detail: detail)
             return large
-        case let .submodule(label, note, ahead, behind):
-            let commits = (ahead.map { "+ \($0.short) \($0.subject)" } + behind.map { "\u{2212} \($0.short) \($0.subject)" })
-            return DiffFile(note: ([label, note].compactMap { $0 } + commits).joined(separator: "\n"))
+        case let .submodule(_, card):
+            var module = DiffFile()
+            module.submodule = SubmoduleCommits(
+                old: card.old, new: card.new, nothing: card.nothing, inside: card.inside, ahead: card.ahead.map(Commit.init),
+                behind: card.behind.map(Commit.init), aheadTotal: Int(card.aheadTotal), behindTotal: Int(card.behindTotal))
+            return module
         }
     }
 }

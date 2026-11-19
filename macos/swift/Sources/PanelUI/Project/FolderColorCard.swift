@@ -21,19 +21,26 @@ struct FolderColorCard: View {
             CardBand(title: panelText("project-folder-color", "Folder colour"), folded: folded, onToggle: { folded.toggle() })
             if !folded { choices(paint) }
         }
-        .animation(.snappy(duration: 0.16), value: folded)
+        .motion(.snappy(duration: 0.16), value: folded)
     }
 
     @ViewBuilder private func choices(_ paint: FolderPaint) -> some View {
         Group {
             HStack(spacing: 0) {
-                ColorChoice(name: panelText("project-color-none", "None"), color: nil, chosen: paint.chosen == nil && paint.custom == nil, enabled: paint.enabled) { store.setColor(nil) }
-                if let hex = paint.custom {
-                    ColorChoice(name: panelText("project-color-custom", ["hex": .text(hex)], "Custom colour \(hex)"), color: Color(hex: hex), chosen: true, enabled: false) {}
-                        .help(panelText("project-color-custom-help", ["hex": .text(hex)], "Custom colour \(hex), set in config.json"))
+                HStack(spacing: 0) {
+                    ColorChoice(name: noneName, color: nil, chosen: paint.chosen == nil && paint.custom == nil, enabled: paint.enabled) { store.setColor(nil) }
+                    if let hex = paint.custom {
+                        ColorChoice(name: customName(hex), color: Color(hex: hex), chosen: true, enabled: false) {}
+                            .help(panelText("project-color-custom-help", ["hex": .text(hex)], "Custom colour \(hex), set in config.json"))
+                    }
+                    ForEach(FolderColor.allCases, id: \.self) { name in
+                        ColorChoice(name: name.word, color: FolderTint.color(name, in: tokens), chosen: paint.chosen == name, enabled: paint.enabled) { store.setColor(name) }
+                    }
                 }
-                ForEach(FolderColor.allCases, id: \.self) { name in
-                    ColorChoice(name: name.word, color: FolderTint.color(name, in: tokens), chosen: paint.chosen == name, enabled: paint.enabled) { store.setColor(name) }
+                // One radio group of the choices (`color_choice`: a radio button each), the + after it a button of its own.
+                .radioGroupSpeech(panelText("project-folder-color", "Folder colour"), titles: spokenChoices(paint), selected: spokenChosen(paint), enabled: paint.enabled) { index in
+                    let named = index - (paint.custom == nil ? 1 : 2)
+                    if index == 0 { store.setColor(nil) } else if FolderColor.allCases.indices.contains(named) { store.setColor(FolderColor.allCases[named]) }
                 }
                 if paint.enabled { picker }
                 Spacer(minLength: 0)
@@ -41,10 +48,25 @@ struct FolderColorCard: View {
             // The first dot lines up with the panel's inset, inside its hit area.
             .padding(.horizontal, PanelMetrics.inset - (Metric.hitMin - ColorChoice.dot) / 2)
             .marked("folder.color")
-            Text(paint.note).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            Text(paint.note).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, PanelMetrics.inset).padding(.bottom, Space._2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var noneName: String { panelText("project-color-none", "None") }
+    private func customName(_ hex: String) -> String { panelText("project-color-custom", ["hex": .text(hex)], "Custom colour \(hex)") }
+
+    /// The choices in the row's order, as the radio group names them: None, a hand-set colour, the eight.
+    private func spokenChoices(_ paint: FolderPaint) -> [String] {
+        [noneName] + (paint.custom.map { [customName($0)] } ?? []) + FolderColor.allCases.map(\.word)
+    }
+
+    /// Which of `spokenChoices` is chosen: a hand-set colour, else the named one, else None.
+    private func spokenChosen(_ paint: FolderPaint) -> Int {
+        if paint.custom != nil { return 1 }
+        guard let chosen = paint.chosen, let at = FolderColor.allCases.firstIndex(of: chosen) else { return 0 }
+        return 1 + at
     }
 
     /// Any other colour: the system's picker in a popover, which saves a hex colour.

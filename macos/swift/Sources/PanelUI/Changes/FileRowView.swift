@@ -27,31 +27,32 @@ struct FileRowView: View {
     var body: some View {
         PanelRow(selected: selected, marked: marked, action: action) { hovering in
             HStack(spacing: PanelMetrics.gap) {
-                FileIcon(kind: .file(file.path), tint: muted)
+                FileIcon(kind: file.isFolder ? .folder(file.name, open: false) : .file(file.path), tint: muted)
                 if let from = file.renamedFrom { renamed(from) }
                 if file.moved {
                     PanelIcon("folder.badge.plus", size: 12).foregroundStyle(muted)
                 }
                 Text(file.name)
-                    .font(TextRole.body.font.weight(lit ? .semibold : .regular))
+                    .font(tokens.font(.body).weight(lit ? .semibold : .regular))
                     .foregroundStyle(lit ? tokens.sidebarRowSelectedText : tokens.textPrimary)
                     .lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: max(width, 1) * PanelMetrics.fileNameShare, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
                 if !inTree && !file.folder.isEmpty {
-                    Text(file.folder).font(TextRole.caption.font).foregroundStyle(muted)
+                    Text(file.folder).font(tokens.font(.caption)).foregroundStyle(muted)
                         .lineLimit(1).truncationMode(.head)
                 }
                 Spacer(minLength: 0)
                 // The icon that opens the file in the chosen editor, over the row while the pointer is (a deleted file has none).
                 if hovering, onDisk ?? (file.kind != .deleted), let open = host?.openTooltip(line: nil) {
-                    BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) {
-                        host?.open(root.flatMap { RepoFiles.resolve(root: $0, relative: file.path) } ?? file.path, line: nil)
+                    BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true, spoken: BandButton.openFile(open, file: file.name)) {
+                        // A path core refuses (a link out of the repository) is not handed on.
+                        if let path = root.flatMap({ RepoFiles.resolve(root: $0, relative: file.path) }) { host?.open(path, line: nil) }
                     }
                 }
                 FileLinesLabel(lines: file.lines, muted: muted)
                 Text(file.kind.letter)
-                    .font(TextRole.caption.font.weight(.bold))
+                    .font(tokens.font(.caption).weight(.bold))
                     .foregroundStyle(letterColor)
                     .frame(width: PanelMetrics.kindLetter, alignment: .trailing)
             }
@@ -61,6 +62,7 @@ struct FileRowView: View {
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width - PanelMetrics.inset * 2 }) { width = $0 }
         }
         .marked("file.row")
+        .panelRowFrame("file:\(file.path)")
         .help("\(file.path)\n\(file.about)")
         .pathMenu(menu ?? [file.path], onDisk: onDisk)
         .accessibilityLabel("\(file.name), \(file.kind.title)")
@@ -71,7 +73,7 @@ struct FileRowView: View {
 
     private func renamed(_ from: String) -> some View {
         HStack(spacing: Space._1) {
-            Text(from).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1)
+            Text(from).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1)
             PanelIcon("arrow.right", size: 12).foregroundStyle(muted)
         }
     }
@@ -102,7 +104,7 @@ struct FolderRowView: View {
             HStack(spacing: PanelMetrics.gap) {
                 Disclosure(collapsed: collapsed)
                 FileIcon(kind: .folder(label, open: !collapsed), tint: tokens.textMuted)
-                Text(label).font(TextRole.body.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+                Text(label).font(tokens.font(.body)).foregroundStyle(tokens.textMuted).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .padding(.leading, PanelMetrics.inset + CGFloat(depth) * Metric.indent)
