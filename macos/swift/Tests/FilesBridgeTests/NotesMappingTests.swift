@@ -40,6 +40,7 @@ final class NotesMappingTests: XCTestCase {
             noteSlots: [nil, 0, 1])
         let after = try XCTUnwrap(before.applying(outcome))
         XCTAssertEqual(after.tasks.items.map(\.text), ["ship", "new step"])
+        XCTAssertEqual(after.tasks.items[0].id, before.tasks.items[0].id, "a step whose words stay keeps its row, unticked by the file")
         XCTAssertEqual(after.notes.map(\.text), ["from the file", "  keep me  ", "edited, then merged", ""])
         XCTAssertEqual(after.notes[1].id, before.notes[0].id, "the note that stayed keeps its identity")
         XCTAssertTrue(after.notes[1].collapsed, "and its fold")

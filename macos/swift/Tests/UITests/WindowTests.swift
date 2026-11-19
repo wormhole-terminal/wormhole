@@ -97,6 +97,7 @@ import WorkspaceModel
 
     /// The tab bar has no folds (`tab_sets`): a group folded in the sidebar, which lists none of its rows, keeps its tabs.
     @Test func aFoldedGroupKeepsItsTabsWhenTerminalsAreShownAsTabs() {
+        SampleTabSetRules.installed
         let store = WorkspaceStore(backend: MockWorkspaceBackend(items: MockWorkspace.items, selected: 8))
         let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
         #expect(hub.state.sections.first { $0.head?.id == 3 }?.rows.isEmpty == true, "Infra is folded: no rows")
@@ -117,6 +118,7 @@ import WorkspaceModel
 
     /// The tab numbers are the core's ⌘ numbers, not positions: a terminal folded away in its group has none.
     @Test func aTabNumberIsTheCoresNumber() {
+        SampleTabSetRules.installed
         let store = WorkspaceStore(backend: MockWorkspaceBackend(items: MockWorkspace.items, selected: 8))
         let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
         let numbers = hub.tabBar.tabs.map(\.number)

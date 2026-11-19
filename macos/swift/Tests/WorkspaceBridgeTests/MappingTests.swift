@@ -169,7 +169,7 @@ final class MappingTests: XCTestCase {
                 revision: 1,
                 terminal: TitleTerminal(
                     id: 2, name: "claude", agent: nil, glyph: .working, state: .working, folder: "~/app", cwd: "/Users/ref/app",
-                    branch: "main", message: nil),
+                    branch: "main", detached: false, superproject: nil, message: nil),
                 left: [WormholeBindings.TitleSlot(part: .folder, present: true, chevronBefore: false), WormholeBindings.TitleSlot(part: .branchStatus, present: false, chevronBefore: false)],
                 right: [WormholeBindings.TitleSlot(part: .openIn, present: true, chevronBefore: false)], hidden: [.ports],
                 pathSteps: [PathStep(parents: "~/", last: "app")], pathMenu: [PathFolder(path: "/Users/ref", name: "ref")], ports: [3000],
@@ -191,7 +191,7 @@ final class MappingTests: XCTestCase {
                 revision: 4, selected: 2,
                 terminals: [
                     WormholeBindings.TerminalSummary(
-                        id: 2, name: "api", number: nil, selected: false, pinned: false, state: .failed, since: 0, glyph: .failed, agent: nil,
+                        id: 2, name: "api", customName: nil, number: nil, selected: false, pinned: false, state: .failed, since: 0, glyph: .failed, agent: nil,
                         message: nil, branch: nil, folder: "~/api", cwd: nil, command: "claude", asksToClose: true, status: .attention,
                         notes: 2, group: 7, groupName: "Web", split: nil,
                         folded: true, agentHidden: false, forgetText: false, unread: false, bell: false, notice: 0)

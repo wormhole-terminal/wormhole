@@ -48,6 +48,26 @@ final class FontFolderTests: BridgeTestCase {
         eventually("the cleanup") { !self.installed("JetBrains Mono") }
     }
 
+    /// GPUI registers the fonts folder of the profile it is in and no other (`fonts.rs:77`), and on a switch unregisters the
+    /// files of the one left (`fonts.rs:83-99`).
+    func testLeavingAProfileUnregistersItsFontsAndANamedProfilesSettingsRegisterNone() throws {
+        try XCTSkipIf(installed("JetBrains Mono"), "the family is installed here, so registering it shows nothing")
+        let fonts = folder.appendingPathComponent("fonts")
+        try FileManager.default.createDirectory(at: fonts, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: font, to: fonts.appendingPathComponent("Mine.ttf"))
+
+        let backend = try makeKit().backend
+        XCTAssertTrue(installed("JetBrains Mono"), "the profile Wormhole is in has its folder registered")
+        backend.leaveFonts()
+        XCTAssertFalse(installed("JetBrains Mono"), "a profile switch takes the left profile's fonts from CoreText")
+        XCTAssertTrue(backend.fontFolder.families.isEmpty)
+
+        // The same folder through the settings of a profile by name (a window beside the shown ones, a parked one).
+        let beside = try SettingsBridge.make(profile: "default", importHome: folder.appendingPathComponent("import-home").path).backend
+        XCTAssertFalse(installed("JetBrains Mono"), "only the profile Wormhole is in registers fonts")
+        XCTAssertTrue(beside.fontFolder.families.isEmpty)
+    }
+
     func testAFolderWithNoFontsLeavesTheRevisionAtZero() throws {
         let backend = try makeKit().backend
         XCTAssertEqual(backend.fontFolder.revision, 0)

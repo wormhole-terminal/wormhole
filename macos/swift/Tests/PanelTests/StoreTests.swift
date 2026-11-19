@@ -47,6 +47,40 @@ final class StoreTests: XCTestCase {
         XCTAssertTrue(c.changes.review.isEmpty)
     }
 
+    /// The comment being written is the store's, above the diff's rows (`diff/review.rs`'s `Commenting`): a reload, even one
+    /// that closes the diff or takes its line away, leaves it and its text; it is saved into the review of the terminal it
+    /// was opened for, whichever the tab shows by then.
+    func testACommentBeingWrittenOutlivesAReloadAndGoesToItsTerminal() async throws {
+        let c = try await controller()
+        let changes = c.changes
+        changes.follow("/p", terminal: 1)
+        try await settle()
+        changes.open(changes.order[0].id)
+        try await settle()
+        changes.commenting = ReviewComment(path: "gone.rs", side: .new, line: 3, code: "let x = 1;", text: "")
+        changes.commenting?.text = "name it"
+        // The file changed under it: the list and the diff are read again, and the diff closes.
+        changes.refresh()
+        changes.close()
+        try await settle()
+        XCTAssertEqual(changes.commenting?.text, "name it", "nothing a reload does reaches what is being written")
+        XCTAssertFalse(changes.commentingExisting)
+        // Another terminal comes to the tab before it is saved: the comment is still the first one's.
+        changes.follow("/p", terminal: 2)
+        XCTAssertEqual(changes.commenting?.text, "name it")
+        changes.saveComment()
+        XCTAssertNil(changes.commenting)
+        XCTAssertTrue(changes.review.isEmpty, "not the terminal shown now")
+        changes.follow("/p", terminal: 1)
+        XCTAssertEqual(changes.review.on("gone.rs", .new, 3)?.text, "name it", "on the line it was opened on")
+        // Opened again on that line, it is an old comment: Remove takes it away.
+        changes.commenting = ReviewComment(path: "gone.rs", side: .new, line: 3, code: "let x = 1;", text: "name it")
+        XCTAssertTrue(changes.commentingExisting)
+        changes.removeComment()
+        XCTAssertNil(changes.commenting)
+        XCTAssertTrue(changes.review.isEmpty)
+    }
+
     func testHistoryOpenCommitFileDiffAndFilter() async throws {
         let c = try await controller()
         let sha = c.history.model.commits[0].id
