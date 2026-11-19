@@ -103,15 +103,12 @@ extension EndToEnd {
         }
     }
 
-    // Disabled: a line is lost. A hosted shell restarted from its bar prints a line; after a quit that keeps the hosts and a
-    // launch the terminal is attached to the same host, the command's own line and the prompt are there (on the screen or
-    // just above it), and the line the command printed is gone. A hosted shell that was not restarted keeps every line over
-    // the same quit (seen with the same commands). Not fixed here: saved terminals. What differs for the restarted one is
-    // not traced; the shell redraws its prompt when the attach resizes it, and a host whose size was not the view's when
-    // the line was printed would explain a redraw one line too high.
+    // The line the shell printed last survives a quit that keeps the hosts and a launch. It was lost with every hosted zsh, restarted
+    // or not: at a launch (and at any change of the window's size) the pane area animated its frames from the old layout to the new
+    // one, so the terminal was resized at each step of the motion, from 2 columns up (30 sizes in half a second), and zsh redrew its
+    // prompt over the rows it believed were its own at each. GPUI lays the panes out at the new size at once.
     @Test(
         "a restarted hosted shell's last line is still there after a quit that keeps the hosts",
-        .disabled("after Restart in a host and a quit that keeps the hosts the line the shell printed last is gone: see the comment"),
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func restartedHostedShellKeepsItsText() async throws {
         try await Instance.with(shell: .zsh, hosts: true) { app in
