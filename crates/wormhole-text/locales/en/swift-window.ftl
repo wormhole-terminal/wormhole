@@ -25,6 +25,14 @@ sidebar-rename-field = Name
 # The VoiceOver action on a group's head that opens its popover.
 sidebar-group-edit-action = Edit group
 
+# VoiceOver's names for the buttons inside a group's head: the name, which opens the group's popover, and the chevron,
+# which folds the group or opens it (core's `edit_label`, `fold_label`). { $group } is the group's name.
+sidebar-group-edit-spoken = Edit group { $group }
+# { $group } is the group's name.
+sidebar-group-fold-spoken = Fold group { $group }
+# { $group } is the group's name.
+sidebar-group-unfold-spoken = Unfold group { $group }
+
 # A row's tooltips: the mark of a terminal hidden from agents, in two lines.
 sidebar-hidden-from-agents = Hidden from agents
 sidebar-hidden-from-agents-detail = Programs that control Wormhole can't see it
@@ -238,6 +246,10 @@ window-tab-position = { $position } of { $total }
 window-focus-title-row = Title row, { $item }, button { $position } of { $total }
 window-focus-hide-sidebar = Hide sidebar
 window-focus-show-sidebar = Show sidebar
+window-hide-panel = Hide right panel
+window-show-panel = Show right panel
+# { $action } is "Hide right panel" or "Show right panel": the right panel wants room the sidebar can give.
+window-panel-waiting = { $action } · hides the sidebar to make room
 
 # { $title } is the selected terminal's name.
 window-focus-terminal = Terminal, { $title }
@@ -254,9 +266,10 @@ window-focus-status-bar = Status bar, item { $position } of { $total }
 # A terminal's state in words, in the bar and in the title row.
 window-state-working = working
 window-state-needs-input = needs input
-window-state-finished = finished
 window-state-done = done
 window-state-failed = failed
+# { $code } is the failed command's exit code.
+window-state-failed-exit = failed · exit { $code }
 window-state-exited = exited
 
 # The counts. { $count } is a whole number of terminals.
@@ -277,6 +290,8 @@ window-status-size-spoken = { $title }, terminal size { $size }
 
 # The tooltip of the profile tag in a window that is not in the profile Wormhole is in. { $profile } is the profile's name.
 window-status-profile-edge = This window is in { $profile }, not the profile Wormhole is in
+# The profile tag's VoiceOver label. { $profile } is the profile's name.
+window-status-profile-spoken = Window in profile { $profile }
 
 # The tooltip of the button that goes to a terminal waiting for an answer. { $first } is a terminal's name, { $rest } one or two more.
 window-attention-then = { $first }, then { $rest }
@@ -315,3 +330,6 @@ settings-import-theme-unavailable = Themes can't be imported in this build.
 settings-window-preview-density-regular = Regular
 settings-window-preview-density-compact = Compact
 settings-window-preview-density-dense = Dense
+
+# The + of a group head. { $group } is the group's name.
+sidebar-new-in-group = New terminal in { $group }

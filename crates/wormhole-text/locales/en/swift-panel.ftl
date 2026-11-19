@@ -19,10 +19,26 @@ picker-hint = Opens the list of branches
 picker-search = Search branches
 picker-none = Nothing matches.
 
+# Under the picker's list while the repository's branches are being read.
+picker-loading = Loading branches…
+
+# Under the list of the Changes tab's picker: what comparing with a branch shows.
+picker-compare-hint = Changes since this branch split off from it
+
+# The picker's first choice in Changes: no branch, the working tree against HEAD (git's name for the current commit).
+picker-head-compare = HEAD (uncommitted changes)
+
+# The picker's first choice in History: the log of the branch that is checked out.
+picker-head-history = HEAD (current branch)
+
 ## What a band or a row says it is, to VoiceOver
 
 panel-spoken-folded = folded
 panel-spoken-open = open
+
+# The open-in-editor icon on a file row or a diff line, so a list of them is not a list of identical buttons (core's
+# `spoken::open_file`). { $tooltip } is the icon's tooltip ("Open in Zed at line 12"), { $file } the file's name.
+panel-spoken-open-file = { $tooltip }, { $file }
 files-spoken-expanded = expanded
 files-spoken-collapsed = collapsed
 
@@ -47,6 +63,7 @@ changes-group-untracked = Untracked
 
 # A section's head, read out by VoiceOver. { $group } is its name, { $count } how many files it holds.
 changes-group-spoken = { $group }, { $count ->
+    [0] no files
     [one] 1 file
    *[other] { $count } files
 }
@@ -95,7 +112,7 @@ review-copied-instead-detail = The program in this terminal would run each line 
 # Read out by VoiceOver. { $name } is the file's name.
 diff-spoken = Diff of { $name }
 
-diff-reading = Reading the diff…
+diff-reading = Loading diff…
 diff-unreadable = The diff can't be read.
 diff-previous-file = Previous file
 diff-next-file = Next file
@@ -164,6 +181,7 @@ history-title = History
 
 # The head of the list, read out by VoiceOver. { $count } is how many commits.
 history-spoken-list = History, { $count ->
+    [0] no commits
     [one] 1 commit
    *[other] { $count } commits
 }
@@ -180,8 +198,12 @@ notes-list-label = Notes
 notes-title = Notes
 notes-new = New note
 
-# The band's VoiceOver label. { $count } is how many notes are written.
-notes-spoken = Notes, { $count } written
+# The band's VoiceOver label (the core's `section_band`: a zero is said). { $count } is how many notes are written.
+notes-spoken = { $count ->
+    [0] Notes, no notes
+    [one] Notes, 1 note
+   *[other] Notes, { $count } notes
+}
 
 # The editor's hint while it is empty.
 notes-placeholder = Write a note or a prompt draft…  ⌘↩ sends the paragraph under the cursor (or the selection); ⌘⇧↩ also submits.
@@ -192,7 +214,6 @@ notes-show-all = Show all · { $count } lines
 notes-stash-prompt = Stash prompt into a new note
 notes-prompt-stashed = Prompt stashed in a new note
 notes-task-done = done
-notes-task-not-done = not done
 notes-send = Send to terminal
 notes-delete = Delete
 steps-title = Next steps
@@ -200,7 +221,11 @@ steps-add = Add next step
 steps-placeholder = Next step
 
 # The band's VoiceOver label. { $count } is how many steps are open.
-steps-spoken = Next steps, { $count } open
+steps-spoken = { $count ->
+    [0] Next steps, none open
+    [one] Next steps, { $count } open
+   *[other] Next steps, { $count } open
+}
 
 # The fold of finished steps. { $count } is a number, already formatted.
 steps-done = { $count } done
@@ -472,3 +497,15 @@ title-row-context-used = { $percent }% of the context window used
 diff-badge-out-of-date = Out of date
 diff-badge-gone = No longer changed
 project-trust-password = Trust (approve with password)
+
+# A submodule's diff card: the heading over the commits the pointer moved forward over.
+diff-submodule-new-commits = New commits
+
+# The heading over the commits the pointer no longer includes (it went back, or to another line of history).
+diff-submodule-left-behind = Commits left behind
+
+# After the commits listed. { $count } is how many more there are, already written with its separators.
+diff-submodule-more = and { $count } more
+
+# The file's path in the title row while the viewer shows it, for VoiceOver. { $path } is the path below the folder.
+files-spoken-reveal-file = Reveal { $path } in Finder

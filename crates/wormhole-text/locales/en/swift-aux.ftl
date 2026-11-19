@@ -143,11 +143,12 @@ update-no-notes = This release has no notes.
 update-failed = The update failed: { $why }
 
 # Shown by a build that has no update feed to ask.
-update-no-feed = This build has no update feed. Start it with --update-feed <url> to check one.
+update-no-feed = This is a development build; it doesn't update itself.
 
 ## The project trust window
 
 trust-window-title = Project commands
+trust-window-closed = This project is no longer open in a terminal.
 trust-badge-trusted = trusted
 trust-badge-changed = changed
 trust-badge-not = not trusted
@@ -258,10 +259,12 @@ onboarding-primer-title = Ready when you are
 onboarding-primer-intro = { -brand } didn’t find a coding agent on this Mac. Nothing here depends on one.
 onboarding-use-as-terminal = Use { -brand } as a terminal
 onboarding-use-as-terminal-detail = The git panel works in any shell.
+onboarding-use-as-terminal-detail-notes = Notes, next steps and the git panel work in any shell.
 onboarding-things-to-try = Things to try first
 onboarding-try-jump = Jump to anything
 onboarding-try-shortcuts = See every shortcut
 onboarding-try-changes = Show what changed in git
+onboarding-try-note = Jot a note for this folder
 onboarding-try-panels = Hide the side panels
 
 # { $count } is a whole number of other agents.
@@ -277,3 +280,30 @@ intro-style-aurora = Aurora
 intro-style-tentacles = Tentacles
 intro-style-voyage = Voyage
 intro-style-glow = Glow
+
+## The close question's buttons and the worktree lines
+
+close-confirm-session = Close
+close-confirm-group = Close Group
+close-window-title = Close this window?
+close-confirm-window = Close Window
+
+# The open panel's button (File → Open Folder…).
+open-folder-prompt = Open
+
+# { $branch } is the worktree's branch, { $folder } its folder.
+worktree-close-one-dirty = Its worktree { $branch } at { $folder } was made by Wormhole. It has uncommitted changes, so it stays.
+# { $branch } is the worktree's branch, { $folder } its folder.
+worktree-close-one-clean = Its worktree { $branch } at { $folder } was made by Wormhole. Close keeps it; Close and Remove Worktree deletes its folder (the branch stays).
+worktree-close-remove-one = Close and Remove Worktree
+worktree-close-remove-many = Close and Remove Worktrees
+
+# { $names } lists each worktree as "<branch> at <folder>".
+worktree-close-group-lead-one = Wormhole made the worktree { $names }.
+# { $names } lists each worktree as "<branch> at <folder>".
+worktree-close-group-lead-many = Wormhole made the worktrees { $names }.
+worktree-close-group-none = They have changes or other terminals in them, so they stay.
+worktree-close-group-all = Close keeps them; Close and Remove Worktrees deletes their folders (the branches stay).
+worktree-close-group-some = Close keeps them; Close and Remove Worktrees deletes the folders without changes or other terminals (the branches stay).
+# One entry of that list.
+worktree-close-entry = { $branch } at { $folder }
