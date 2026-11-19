@@ -12,6 +12,10 @@ enum Shaders {
             float2 viewport;   // pixels
             float dim;         // the opacity SGR 2 draws text at (the GPUI app's `dim`: alpha, so it fades toward either theme's background)
             float blink;       // 1, or the factor blinking text is faded by in the off half
+            float2 origin;     // pixels added to every position: the padding, when the viewport is the whole pane
+            float2 gridEnd;    // the grid's right and bottom edge in pixels (cells times cell size)
+            float extend;      // 1 for the backgrounds' draw: edge cells run on into the padding (`render/paint.rs` `reach`)
+            float spare;
         };
 
         struct SolidInstance { float x, y, width, height; uint color; uint style; };
@@ -28,7 +32,7 @@ enum Shaders {
 
         static float4 place(float x, float y, float w, float h, uint vid, constant Uniforms& u, thread float2& corner) {
             corner = float2(float(vid & 1u), float(vid >> 1));
-            float2 px = float2(x, y) + corner * float2(w, h);
+            float2 px = float2(x, y) + corner * float2(w, h) + u.origin;
             return float4(px.x / u.viewport.x * 2.0 - 1.0, 1.0 - px.y / u.viewport.y * 2.0, 0.0, 1.0);
         }
 
@@ -51,6 +55,16 @@ enum Shaders {
             SolidInstance q = instances[iid];
             float2 corner;
             SolidOut out;
+            if (u.extend > 0.0 && (q.style & 512u) == 0u) {
+                // The cells at an edge of the grid take the padding beyond it (and the strip left of the last whole
+                // cell): the viewport is the whole pane and `origin` is the padding.
+                float right = q.x + q.width, bottom = q.y + q.height;
+                float x0 = q.x <= 0.5 ? -u.origin.x : q.x;
+                float y0 = q.y <= 0.5 ? -u.origin.y : q.y;
+                float x1 = right >= u.gridEnd.x - 0.5 ? u.viewport.x - u.origin.x : right;
+                float y1 = bottom >= u.gridEnd.y - 0.5 ? u.viewport.y - u.origin.y : bottom;
+                q.x = x0; q.y = y0; q.width = x1 - x0; q.height = y1 - y0;
+            }
             out.position = place(q.x, q.y, q.width, q.height, vid, u, corner);
             out.color = resolve(q.color, palette);
             out.alpha = ((q.style >> 8) & 1u) != 0u ? u.dim : 1.0;

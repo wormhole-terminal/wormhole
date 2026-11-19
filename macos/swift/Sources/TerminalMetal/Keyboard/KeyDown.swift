@@ -11,6 +11,9 @@ import TerminalCore
 
 extension MetalTerminalView {
     public override func keyDown(with event: NSEvent) {
+        // An F-key that is the window's (a project action's) never reaches the program; a ⌘ key was asked about as a
+        // key equivalent already.
+        if !event.modifierFlags.contains(.command), windowClaims(event) { return }
         guard let key = KeyMap.input(from: event, optionAsMeta: optionAsMeta), !key.platform else {
             super.keyDown(with: event)
             return
@@ -71,6 +74,16 @@ extension MetalTerminalView {
         window?.makeFirstResponder(self)
         requestRedraw()
         return true
+    }
+
+    /// Files dropped somewhere else that this terminal is the target of (the title row above it): their paths, as a drop on
+    /// the grid inserts them.
+    public func insertDropped(_ urls: [URL]) {
+        guard !urls.isEmpty, let text = interaction?.droppedText(paths: urls.map(\.path)) else { return }
+        onInput?()
+        source.paste(text)
+        window?.makeFirstResponder(self)
+        requestRedraw()
     }
 
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {

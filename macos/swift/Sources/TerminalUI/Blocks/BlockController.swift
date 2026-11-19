@@ -22,7 +22,7 @@ public final class BlockController {
     /// How far back the view was when the jump landed: a different offset later means the person scrolled or typed.
     @ObservationIgnored private var cursorOffset = 0
 
-    @ObservationIgnored private let source: CommandBlocks
+    @ObservationIgnored let source: CommandBlocks
     @ObservationIgnored private let say: (Notice) -> Void
     @ObservationIgnored private let announce: (String) -> Void
     @ObservationIgnored private let write: (String) -> Void
@@ -102,7 +102,7 @@ public final class BlockController {
         // the top), else the live prompt, else the top of the view (strictly: a prompt on the top row is passed).
         let from: Int? = if let cursor, let block = source.block(id: cursor) { block.start }
             else if atBottom { source.promptLine(from: source.bottommostLine + 1, direction: .up) }
-            else { -source.displayOffset }
+            else { source.topLine }
         guard let from else { return }
         if let line = source.promptLine(from: from, direction: direction) {
             source.scrollLineToTop(line)

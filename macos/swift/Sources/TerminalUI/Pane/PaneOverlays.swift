@@ -37,7 +37,7 @@ public struct PaneOverlays: View {
             if let bar = state.bar {
                 PaneBarView(bar: bar, actions: actions, gridWidth: gridWidth)
                     .padding(.leading, Space._1).padding(.trailing, Space._1 + trailingInset).padding(.bottom, Space._2)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .motionTransition(.move(edge: .bottom).combined(with: .opacity))
             }
             if state.exited {
                 ExitedBar(shell: shell, exitCode: exitCode, hostLost: hostLost, actions: actions)

@@ -19,14 +19,14 @@ struct NoticeInfoView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            Text(L10n.noticeInfoHostHeading).font(.system(size: TextRole.heading.size, weight: .semibold))
+            Text(L10n.noticeInfoHostHeading).font(.system(size: tokens.size(.heading), weight: .semibold))
             line(L10n.noticeInfoHostWhat)
             line(L10n.noticeInfoHostOthers)
             line(L10n.noticeInfoHostTry)
             if let reason {
                 line(L10n.noticeInfoHostReason)
                 Text(reason)
-                    .font(.system(size: TextRole.caption.size, design: .monospaced))
+                    .font(.system(size: tokens.size(.caption), design: .monospaced))
                     .textSelection(.enabled)
                     .padding(Space._2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -45,11 +45,11 @@ struct NoticeInfoView: View {
     }
 
     private func line(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(.system(size: tokens.size(.body))).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
     }
 
     private func button(_ symbol: String, _ title: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Label(title, systemImage: symbol).font(.system(size: TextRole.body.size)) }
+        Button(action: action) { Label(title, systemImage: symbol).font(.system(size: tokens.size(.body))) }
     }
 
     private func copy(_ reason: String) {

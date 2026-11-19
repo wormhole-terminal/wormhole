@@ -30,12 +30,12 @@ public struct ExitedBar: View {
         HStack(spacing: Space._2) {
             Image(systemName: "terminal").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
-            Text(words).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(words).font(.system(size: tokens.size(.caption))).foregroundStyle(tokens.textMuted)
                 .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
             BarButton(title: L10n.restart, symbol: "arrow.clockwise", action: actions.restart)
             Button(action: actions.closeTerminal) {
                 HStack(spacing: Space._1) {
-                    Text(L10n.closeTerminal).font(.system(size: TextRole.caption.size))
+                    Text(L10n.closeTerminal).font(.system(size: tokens.size(.caption)))
                     KeyCap(text: closeKeys)
                 }
                 .foregroundStyle(closeHover ? tokens.textPrimary : tokens.textMuted)
