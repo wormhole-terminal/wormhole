@@ -6,24 +6,28 @@ import Testing
 /// (GPUI lays the panes out at the new size at once), and zsh redrew its prompt over its own text at each (the launch of a hosted
 /// terminal lost its last line to it: `RestartedShellTests/restartedHostedShellKeepsItsText`).
 extension EndToEnd {
-    /// How many times the shell printed its mark: it prints over the prompt's row as well as on rows of its own.
-    private static func marks(_ screen: String) -> Int { screen.components(separatedBy: "WINCHED").count - 1 }
+    /// How many times the shell has been told its window changed: zsh counts them in `n` and says it when asked (`echo CNT=$n`),
+    /// a short line however narrow the terminal is and whatever a prompt's redraw does to the rows above it.
+    @MainActor private static func told(_ app: Instance) async -> Int? {
+        await app.send(["text echo CNT=$n", "key return"])
+        let screen = await app.screen { $0.split(separator: "\n").contains { $0.trimmingCharacters(in: .whitespaces).range(of: #"^CNT=\d+$"#, options: .regularExpression) != nil } }
+        return screen.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.last { $0.range(of: #"^CNT=\d+$"#, options: .regularExpression) != nil }
+            .flatMap { Int($0.dropFirst(4)) }
+    }
 
     @Test("a new window size reaches the shell as one or two sizes, never as the steps of an animation")
     @MainActor func windowResizeSizesTheShellOnce() async throws {
         try await Instance.with(shell: .zsh) { app in
             await app.until("keys") { $0.contains("focus=terminal") }
-            // zsh prints a mark each time it is told its window changed.
-            await app.send(["text trap 'print WINCHED' WINCH", "key return", "text clear", "key return"])
-            await app.send(["delay 500"])
+            await app.send(["text n=0; trap 'n=$((n+1))' WINCH", "key return", "delay 500"])
+            // Two sizes that both differ from the suite's 1600 x 900 (the start) and from each other, and both fit a small screen: a
+            // size the window already has tells the shell nothing.
             await app.send(["size 900x500", "frames 2", "delay 1200"])
-            let small = Self.marks(await app.reply("screen"))
-            app.expect(small >= 1 && small <= 2, "the shell was told \(small) times of a change to 900x500")
-            // Both sizes differ from the suite's 1600 x 900 (the start) and from each other, and both fit a small screen: a size the
-            // window already has tells the shell nothing.
+            let small = await Self.told(app)
+            app.expect(small.map { $0 >= 1 && $0 <= 2 } == true, "the shell was told \(small.map(String.init) ?? "?") times of a change to 900x500")
             await app.send(["size 1200x700", "frames 2", "delay 1200"])
-            let all = Self.marks(await app.reply("screen"))
-            app.expect(all >= 2 && all <= 4, "the shell was told \(all) times of two changes")
+            let all = await Self.told(app)
+            app.expect(all.map { $0 >= 2 && $0 <= 4 } == true, "the shell was told \(all.map(String.init) ?? "?") times of two changes")
         }
     }
 }
