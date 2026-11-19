@@ -109,8 +109,13 @@ extension EndToEnd {
             // Hide from Agents marks the title row (`agent-hide` takes the row's place in the list).
             let listed = await app.rows()
             let place = (listed.rows.firstIndex { $0.id == listed.selected } ?? 2) + 1
+            // Read from the row as it is drawn (`marked title.lock`), not from the list's flag the row is fed.
+            await app.send(["inspect on"])
+            await app.until("marked title.lock") { $0.hasPrefix("marked n=0") }
             await app.send(["agent-hide \(place) on"])
             await app.until("title") { $0.contains("hidden-from-agents: true") }
+            await app.until("marked title.lock") { $0.hasPrefix("marked n=1") }
+            await app.send(["inspect off"])
 
             // A terminal whose program ended still has its folder, but nothing can be typed into it.
             let live = await app.path(menu: "Insert into terminal")

@@ -26,6 +26,7 @@ struct TerminalCrumb: View {
             if facts.hiddenFromAgents {
                 Image(systemName: "lock").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
                     .help(PanesText.hiddenFromAgents)
+                    .inspectSite("title.lock")
             }
         }
         .accessibilityElement(children: .combine)
