@@ -5,15 +5,20 @@ extension EndToEnd {
     @Test("the command palette opens, takes a query and runs an action")
     @MainActor func palette() async throws {
         try await Instance.with { app in
-            let found = await app.reply("palette-rows split right")
-            app.expect(found, contains: "Split right")
+            // An action that does not depend on the window's size: Split Right is not offered where a pane has no room for a
+            // second one (the core's rule, the GPUI palette's too), as on a small display.
+            let found = await app.reply("palette-rows new terminal")
+            app.expect(found, contains: "New terminal")
             // The list is the core's: settings come before actions, so the action is some rows down (↓), as a person would go.
             let results = found.split(separator: "\n").filter { !$0.hasPrefix("#") }
-            guard let above = results.firstIndex(where: { $0.contains("<action-splitRight>") }) else { return }
+            guard let above = results.firstIndex(where: { $0.contains("<action-newTerminal>") }) else {
+                return app.fail("New Terminal among the rows:\n\(found)")
+            }
+            let before = (await app.rows()).live.count
             // The window settles after each step (`wait-idle`) so the field has the keys before the text comes.
-            await app.send(["palette", "wait-idle 5000", "text split right", "wait-idle 5000"] + Array(repeating: "key down", count: above) + ["key return"])
-            let split = await app.until("panes") { Panes($0).isSplit }
-            if Panes(split).ids.count != 2 { app.fail("Split Right did not run from the palette:\n\(split)\n\(await app.keysAndFrame())") }
+            await app.send(["palette", "wait-idle 5000", "text new terminal", "wait-idle 5000"] + Array(repeating: "key down", count: above) + ["key return"])
+            let rows = await app.until("rows") { Listing($0).live.count == before + 1 }
+            if Listing(rows).live.count != before + 1 { app.fail("New Terminal did not run from the palette:\n\(rows)\n\(await app.keysAndFrame())") }
         }
     }
 
