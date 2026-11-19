@@ -65,4 +65,18 @@ final class SplitOpeningTrackerTests: XCTestCase {
         _ = tracker.observe(lone, motion: Always(), plays: true, split: nil)
         guard case .none = tracker.observe(zoomed, motion: Always(), plays: true, split: 2) else { return XCTFail("a zoom is a cut") }
     }
+
+    func testALayoutThatOnlyFollowsTheAreasSizeLandsAtOnce() {
+        let tracker = SplitOpeningTracker()
+        let area = CGSize(width: 100, height: 50)
+        let bigger = PanesState(shown: [PanePlace(1, PaneRect(0, 0, 300, 120))], focused: 1)
+        // Before the area is known the core's panes are empty, then they fill it: the first layout is a cut, not a growth.
+        _ = tracker.observe(PanesState(shown: [PanePlace(1, PaneRect(0, 0, 0, 0))], focused: 1), motion: Always(), plays: true, split: nil, area: area)
+        XCTAssertTrue(tracker.observe(lone, motion: Always(), plays: true, split: nil, area: area).isCut, "the first fill")
+        // A window resize: the same panes for a new size.
+        XCTAssertTrue(tracker.observe(bigger, motion: Always(), plays: true, split: nil, area: CGSize(width: 300, height: 120)).isCut, "a new size")
+        // A split in an area the panes fill is still an opening.
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil, area: area)
+        guard case .plays = tracker.observe(two, motion: Always(), plays: true, split: 2, area: area) else { return XCTFail("a split of the area's panes plays") }
+    }
 }

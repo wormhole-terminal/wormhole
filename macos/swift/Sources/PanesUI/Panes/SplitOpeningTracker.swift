@@ -20,12 +20,19 @@ final class SplitOpeningTracker {
         func ended(at now: Date) -> Bool { now.timeIntervalSince(began) >= opening.duration }
     }
 
-    /// What the last layout change was: an opening that plays, one that is cut (Reduce Motion, the Motion feature off),
-    /// or neither.
+    /// What the last layout change was: an opening that plays, one that is cut (Reduce Motion, the Motion feature off, or the
+    /// layout only following the area's size), or neither.
     enum Change {
         case none, cut, plays(Playing)
 
         var isCut: Bool { if case .cut = self { true } else { false } }
+    }
+
+    /// The panes cover the area (their extent is its size, to a point): a layout made for another size does not.
+    private static func fills(_ panes: PanesState, _ area: CGSize) -> Bool {
+        let right = panes.unzoomed.map(\.rect.right).max() ?? 0
+        let bottom = panes.unzoomed.map(\.rect.bottom).max() ?? 0
+        return abs(right - area.width) < 1 && abs(bottom - area.height) < 1
     }
 
     private var seen: PanesState?
@@ -35,11 +42,18 @@ final class SplitOpeningTracker {
 
     /// The change `panes` is: decided once, the first time this layout is drawn. `split`: the terminal the window's last split
     /// opened.
-    func observe(_ panes: PanesState, motion: (any SplitMotion)?, plays: Bool, split: PaneID?) -> Change {
+    /// `area`: the size the layout is for, when the caller has one. Every rectangle is in points, so a new size of the area is a
+    /// new layout; it lands at once, as a window's resize does: animated, it would size each terminal at every step of the
+    /// motion (and the shell of each would be told, 30 times in half a second).
+    func observe(_ panes: PanesState, motion: (any SplitMotion)?, plays: Bool, split: PaneID?, area: CGSize? = nil) -> Change {
         guard panes != seen else { return change }
         let before = seen
         seen = panes
         change = .none
+        if let area, let before, !Self.fills(before, area), Self.fills(panes, area) {
+            change = .cut
+            return change
+        }
         // The same pane coming again later (it left the split and was dropped back) is a drop, not this split.
         let asked = split == weighed ? nil : split
         weighed = split
