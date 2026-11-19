@@ -1,7 +1,8 @@
 // The popover a group's name opens (`sidebar/group_popover.rs`): the name in a field, the colours as a row of swatches in
 // the theme's own hues (the swatch is the colour as the head's dot shows it) led by the empty ring for none, a picker for
 // any other, the folder's items, and the actions. ↩ keeps the name, a swatch or the picker colours the group at once, and
-// ⎋ closes it; closing it gives the keyboard back to the terminal (the list does that, as it owns the popover).
+// ⎋ closes it; closing it keeps the name (`platform/macos/popover.rs` `finish`) and gives the keyboard back to the terminal
+// (the list does that, as it owns the popover).
 
 import DesignSystem
 import SwiftUI
@@ -15,6 +16,8 @@ struct GroupPopover: View {
     let close: () -> Void
     @State private var name = ""
     @FocusState private var focused: Bool
+    /// This view's own mark on the control folder's record: closing, it forgets only what it wrote.
+    @State private var mark = UUID()
     @Environment(\.tokens) private var tokens
 
     private static let swatch: CGFloat = 20
@@ -47,7 +50,7 @@ struct GroupPopover: View {
         .onAppear { name = head.name; focused = true; record() }
         .onChange(of: name) { record() }
         .onChange(of: head.color) { record() }
-        .onDisappear { commit(); PopoverRecord.set(nil) }
+        .onPopoverClose { commit(); PopoverRecord.forget(by: mark) }
     }
 
     /// The actions under the folder's items: each runs, and the popover closes.
@@ -89,7 +92,8 @@ struct GroupPopover: View {
                 return true
             },
             close: { close() },
-            host: { NSHostingView(rootView: GroupPopover(head: head, rows: rows, context: context, close: close).themed()) }))
+            host: { NSHostingView(rootView: GroupPopover(head: head, rows: rows, context: context, close: close).themed()) }),
+            by: mark)
     }
 
     /// An action of the popover: it runs, and the popover closes.

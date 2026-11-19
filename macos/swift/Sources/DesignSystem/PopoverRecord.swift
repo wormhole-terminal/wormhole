@@ -49,8 +49,13 @@ public enum PopoverRecord {
     }
 
     public private(set) static var open: Open?
+    /// Which showing of a popover wrote the record.
+    private static var owner: AnyHashable?
 
-    public static func set(_ open: Open?) { self.open = open }
+    public static func set(_ open: Open?, by owner: AnyHashable? = nil) { (self.open, self.owner) = (open, owner) }
+
+    /// A closing popover takes only its own record with it, not the one a popover opened since has written.
+    public static func forget(by owner: AnyHashable) { if self.owner == owner { set(nil) } }
 
     /// The rows one a line, as GPUI's `popover` prints them: `# heading`, `field "name" (focused)`, `colours: Grey | Blue [x] | … | custom`,
     /// `- action`.
