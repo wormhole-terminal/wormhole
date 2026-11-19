@@ -390,6 +390,22 @@ first in natural order, labels cleaned of control and bidi characters, cut at co
 `watch(root, listener) -> FolderWatch`. Paths are relative to `root` and plain (no `..`, not absolute); a link is
 never walked through, a file link out of `root` reads `outside`, a rename goes through no link and replaces nothing.
 Pins are `files_pinned` in `config.json`, each edit through a fresh read of the file.
+Wave 4 (written, not compiled): `followProfile(profile) -> Bool` (the pins are that profile's `config.json` from then
+on; Default until told), `resolve(root, path, folder) -> String?` (the real path of a file or folder for handing to
+another app: nil when gone, not of that kind, or out of `root` by a link). `ProjectService`:
+`setProjectFeatureOn(on)` (off: no overrides, theme, actions, layout, worktree condition or setup, notes.md sync;
+a folder's colour is the person's own), `problem() -> String?` (the hub's own error), and `ProjectStateRecord.dir`
+(`.wormhole` or `.andromeda`).
+Wave 5 (written, not compiled). File names: a name that is not UTF-8 crosses as a key (`files_panel::names`): its
+text as it is, each other byte as a NUL and the byte's two hex digits. `EntryRecord.name`, `rename`'s result,
+`resolve`'s result and `pins()` may be keys; `root`, `folder`, `path` and `setPinned`'s folder are read back from
+them, and so is `open_file_run`'s `path`; a key that does not read back answers as gone. A key is never drawn (the
+label is) and never becomes a Swift path: `PanelModel.DiskName` makes the file URL of its bytes.
+`FilesService.stamp(root, path) -> String?` (core's `stamp_below`, one lstat: the same word until the folder's
+entries or the file change; nil when nothing is there). A folder's own colour (`folderPaint`, `setFolderColor`) is
+read and written in the `config.json` of the profile whose stores the `ProjectService` holds. Notes' rules:
+`note_body(text) -> String?`, `note_cap(lines, editing, show_all) -> u64?`, `note_item_key(key, empty) ->
+ItemKeyRecord?` (`leave|deleteEmpty|moveUp|moveDown`, core's `item_key` over the keymap's list scope).
 
 **`FolderWatch`**: FSEvents on a local volume, plus a timer thread as the fallback (2 s without a stream, 30 s with
 one). `PanelListener.wake()` is called at most once between two `drain()`s (same rules as `TerminalListener`); the
@@ -673,10 +689,16 @@ func compactMessage(folder, sha, lineChars) -> GitCompact?         // the compac
 func commitDiff(folder, sha, path, loadAnyway) -> GitDiff
 func revs(folder, forHistory: Bool) -> [GitRev]    // branches (current first), 200 newest tags, 10 commits, stashes
 func setBinaryUnits(binary: Bool)                  // `size_units`
+func isOn(folder, sha, rev: GitRev) -> Bool        // merge-base --is-ancestor; false for the stashes and when git can't say
+func presentFiles(folder, paths) -> [String]       // the regular files inside the repository now (first 2,000 looked at)
+gitNextAgeChange(times: [Int64]) -> UInt64?        // ms until the earliest age reads differently (core's `next_age_change`)
 
 // GitWatch: one thread per watch; listener.changed() once per debounced burst (150 ms quiet, 1 s cap, 1 s gap)
 GitWatch.start(folder, listener: GitListener) throws -> GitWatch;  isLive();  stop()   // drop also stops
 // a slow poll calls changed() when the OS watch is quiet 30 s (3 s while it could not start; retried every 60 s)
+// Git.watch(folder, listener) -> GitWatch: the same, in the sight of the window the reader serves (`Git.setSeen(seen)`, told with every
+// change of the window's key/on-screen state): while unseen a watch tells nothing (a burst is owed, one call when seen again;
+// the quiet backstops stay, the one without an OS watch at 10 s). A reader nobody told is seen.
 
 // WorktreeService (the one write; ONLY on these calls, never forced, hooks off)
 WorktreeService(base: String?, cloneBuildFolders: Bool) throws;  setOptions(base, cloneBuildFolders)
@@ -688,10 +710,12 @@ func remove(folder) throws                              // only one Wormhole mad
 
 - **Diff = core's parsed hunks.** Core parses once (caps, binary, LFS, too-large rules); `GitDiffFile` carries
   `oldPath` (nil: a new file), `newPath` (nil: deleted) and `hunks` of `GitHunk{header, lines: [GitDiffLine{kind,
-  old, new, text, noNewline}]}`, so Swift parses no diff text. Whole files are not read for highlighting (Swift's
-  lexer colours the lines). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
-  title, detail)` (ask again with `loadAnyway`), `submodule(label, note, ahead, behind)`: the last three have no
-  lines, and the words are core's (`diff_text`, `Submodule::label`).
+  old, new, text, noNewline, openLine, spans}]}`, so Swift parses no diff text. Core reads the whole files under its own limits
+  as the source of each line's `spans` ("Wave 5, syntax colours" below). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
+  title, detail)` (ask again with `loadAnyway`), `submodule(label, card)`: the last three have no
+  lines, and the words are core's (`diff_text`, `Submodule::label`). `GitSubmoduleCard` is the card's body: `old`/`new`
+  short hashes when the pointer moved, `nothing` and `inside` (core's sentences), `ahead`/`behind` (capped) with
+  `aheadTotal`/`behindTotal`. `GitStatus.baseRev` is the commit the list is against (an open diff is re-read when it moves).
 - **An opened commit is finished by core.** `commitDetails` returns `GitCommitDetails`: the subject, VoiceOver's
   words, the raw `message` and `authorLine` (what the copies put on the clipboard), `people` (author, committer when
   it differs, co-authors) as `GitFact{label, spans: [GitSpan{text, tone}]}`, parents and refs capped with their
@@ -869,10 +893,10 @@ profile's database (`Store::save_session_host`). Additive: no existing signature
 
 | Object / record | What it is |
 |---|---|
-| `HostedTerminals` | `new(dataDir?, hostBinary?, window)`: refuses outside a `Wormhole-swift*` folder. `enabled()` (core's flag rules over the folder's `config.json`), `program()` (`HostingProgram`: `found(path)`, `disposableCopy`, `missing`), `planAtLaunch()`, `adoptableOrphans()`, `start(what, listener)`, `attach(hostId, what, visible, listener)`, `finishRestore()`, `finish(endHosts)`. |
+| `HostedTerminals` | `new(dataDir?, hostBinary?, window)`: refuses outside a `Wormhole-swift*` folder. `enabled()` (core's flag rules over the folder's `config.json`), `program()` (`HostingProgram`: `found(path)`, `disposableCopy`, `missing`), `planAtLaunch()`, `adoptableOrphans()`, `start(what, listener)`, `attach(hostId, what, visible, listener)`, `finishRestore(listed)`, `quitting(endHosts)` (no wait), `finish(endHosts)`. |
 | `HostedStart` | `tab`, `program`, `args`, `cwd?`, `cols`, `rows`, `cellWidth`, `cellHeight`: the same facts `Terminal.startForTab` takes. |
 | `LaunchPlan` | `saved` (the last run's terminals in the sidebar's order, each `SavedTerminal { hostId, running, cwd?, shell? }`: `running` attach, otherwise its host is gone and a new terminal starts in the folder; their text comes in `text`, for `HostedStart.savedText`), `orphans` (live hosts no saved terminal of any profile names). |
-| `Terminal` (new methods) | `hostId() -> String?`, `hosting() -> TerminalHosting` (`local`, `persistent`, `detached`, `lost`), `detach() -> Bool`, `setVisible(Bool)`. Everything else (frames, keys, resize, scroll, find, interaction) is unchanged: a hosted terminal's engine is a replica fed from the host. |
+| `Terminal` (new methods) | `hostId() -> String?`, `hosting() -> TerminalHosting` (`local`, `persistent`, `detached`, `lost`), `detach() -> Bool`, `endKeepingRow()` (ends the program, keeps its row: Restart, Quit and End All), `setVisible(Bool)`. Everything else (frames, keys, resize, scroll, find, interaction) is unchanged: a hosted terminal's engine is a replica fed from the host. |
 | `HostingError` | `notIsolated`, `noProgram` (no host program: stay in the app), `start` (host or program did not start: the caller may start locally and say so once), `gone` (attach: the host is not there: start a new terminal), `unavailable(reason, kind, transient)` (it runs and cannot be shown: keep the terminal's place and say why; `transient` = try again), `store`. |
 
 **The host program.** Core looks beside the app's own executable and nowhere else (a disk image or translocated copy is
@@ -882,17 +906,20 @@ as that argument. A host signed by `cargo build` takes every peer of the same us
 
 **Saved rows.** Each started or attached terminal is saved at once under `window` in the default profile's database
 (`tabs.host_id`, the column the Session Hosts window and the launch plan both read, so a named host is never an orphan).
-Closing an attached terminal ends its program and forgets its row; `detach()` (or `finish(false)`) leaves both. The
-workspace gives new ids every run, so after the restore `finishRestore()` forgets the rows the last run left under old ids.
-A window saver that comes later writes the same `SessionRecord`s with `host_id` from `Terminal.hostId`.
+Closing an attached terminal (the person closed it) ends its program and forgets its row; `detach()` (or `finish(false)`)
+leaves both; `endKeepingRow()` and `finish(true)` end the program and keep the row (notes, tasks, text) naming no host.
+`finishRestore(listed)` forgets the rows the last run left under old ids, never one of `listed` (the window's terminals now).
+A window saver that comes later writes the same `SessionRecord`s with `host_id` from the terminal (none once its host was
+lost or ended at quit, core `persisted_host`).
 
 **The flow.** Launch: `enabled()` and `program()`; if both allow, `planAtLaunch()` (once; fast), then per `saved` entry
 `Workspace.apply(newTerminal)` and, on the `Opened` id, `attach(...)` for a `running` one (`gone` becomes a new terminal,
 `unavailable` shows the reason and keeps the row) or a new hosted terminal in its folder, and, off the main thread,
 `adoptableOrphans()` (up to half a second per silent host) attached the same way (the GPUI app puts them in a Recovered
 group). Then `finishRestore()`. New terminals: `start(...)`, falling back to `Terminal.startForTab` on `start`/`noProgram`.
-Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`QuitFacts.endsHosts`): true closes every terminal
-(each host ends, no row names one), false lets go of each (the hosts and their programs run on). Call it from
+Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`QuitFacts.endsHosts`): true ends every host and
+keeps every terminal's row naming none (it waits for starts under way: `quitting(true)` on the main thread, `finish(true)` off
+it), false lets go of each (the hosts and their programs run on). Call it from
 `applicationShouldTerminate`'s decision and `applicationWillTerminate`.
 
 **Threads.** `start`, `attach`, `adoptableOrphans`, `endHost` and `saveTexts` block (a host starts in about 15 ms; a stuck one
@@ -1064,7 +1091,9 @@ the object holds the engine's reply slot until every path out has answered it, w
 - Events (`TermEvent`, added at the end): `ClipboardWrite { text }` (a program set the clipboard and the setting allows
   it: Swift writes the pasteboard), `ClipboardRead` (let through: `clipboard_give(text)` answers the oldest one),
   `ClipboardAsk` (the person decides: `clipboard_answer(choice, text)`, `text` read only for a yes) and
-  `ClipboardAskClosed` (the question timed out after 30 s and counted as Deny).
+  `ClipboardAskClosed` (the question timed out after 30 s and counted as Deny). `ControlTyped` (wave 11): the control line
+  typed into the terminal (`send-text`, `send-keys`, `run`); the bridge has already forgotten the program's own selection, and
+  the view takes it as typing (its jump between prompts forgotten, the cursor held), as GPUI's `send_strokes`/`write_input`.
 - `foreground_program() -> Option<String>`: the program in front as the sidebar names it, cleaned and cut, who the
   question names; `None` when the shell holds the terminal.
 - `select_lines(first, last)` (blocks) now also brings the first line into view, as GPUI's Select Output does.
@@ -1392,7 +1421,8 @@ All additive; the core decides, Swift asks.
 
 - **What a terminal runs** is decided in Rust (`launch.rs`), as the GPUI app's window does: `HostedStart` gains `shell: String?` (the
   key "New Terminal with ▸" chose, from `Workspace::launch_facts`), `profile: String?` (`None`: the one Wormhole is in) and `program`
-  becomes optional: a program named there runs as it is (`--shell`, the welcome's tour, tests) unless `shell` names one; without it the
+  becomes optional: a program named there runs as it is (the welcome's tour, tests), whatever `shell` names (wave 13: `--shell` is no
+  longer one of them, it sets core's `WORMHOLE_SHELL`, which replaces every choice); without it the
   shell is core `shells::for_terminal` (the terminal's own, a trusted project's (`ProjectHub::enabled`: project folders on, its Settings
   on, its files approved as they are now), `default_shell`, else the login shell with `-l`). The options carry the trusted project's
   `env`, then the profile's (`apply_profile`: environment, git identity, agent logins, `WORMHOLE_PROFILE`, start folder), Settings'
@@ -1404,10 +1434,15 @@ All additive; the core decides, Swift asks.
 - `Action::NewTerminalWithShell(key)`: a new terminal that keeps its shell key; saved in the window's record (`SessionRecord.shell`) and
   restored with it. `Workspace::launch_facts(id) -> LaunchFacts { shell, saved_text, profile }`: ask as the terminal starts; the saved
   text is given once.
-- **The theme's colours to the engine**: `set_terminal_colors(slots)` (free function), 259 `0xRRGGBB` (256 indexed, foreground,
-  background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's rule). Every live terminal is told at
-  once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries, `CSI ? 996 n` and mode 2031 reports), later ones at spawn.
-  Swift calls it whenever its palette changes. Telling the same colours again does nothing.
+- **The theme's colours to the engine**: `set_terminal_colors(profile, slots)` (free function), one look per profile, 259
+  `0xRRGGBB` (256 indexed, foreground, background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's
+  rule). Every live terminal of that profile is told at once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries,
+  `CSI ? 996 n` and mode 2031 reports), later ones at spawn (`launch` reads the look of the profile the terminal starts in). Swift calls
+  it whenever a profile's palette changes (each profile's `TerminalLook`) and for the shown profile after a switch. Telling the same
+  colours again does nothing.
+  `Terminal.set_colors(slots)` (the same slots) tells one terminal the colours it is drawn in: from then on only that call reaches it,
+  never the free function. Every terminal's view calls it with its palette (the GPUI view's `share_palette`), so a terminal in a window
+  of another profile answers with that profile's theme; the free function is what a terminal starts with and has until a view dresses it.
 - **Frame layout 2**: after the fold markers, with header flag bit 5 (32), the colours programs set: a count, then `(slot, 0xRRGGBB)`
   word pairs, the whole table as it is now (count 0: all the theme's again). Sent when it changed and with every full frame while any is
   set; a frame without it leaves the table as it was. The renderer draws its palette with these over it: cells, the background behind the
@@ -1452,3 +1487,117 @@ All additive; the core decides, Swift asks.
   (the menu: yours once, built-ins by family), `studio_key_table()` and `studio_token_in_both(name)` (core's `token_scope`).
 - `IconThemeHandle.open(user_dir, name)` is `icon_theme::theme_named` for dark and light ("None": no icons): `file(path, dark)` and
   `folder(name, open, dark)` answer where the SVG is (a user file's path, or the bundled key `wormhole-icons/...`), `renders_in_colour()`.
+- Motion preview (`motion_scenes.rs`): `insert_room_at(variant, entering, elapsed_ms)`, `fold_room_at(variant, entering, rows, elapsed_ms)`,
+  `fold_summary_opacity(variant, rows, elapsed_ms)`, `column_motion_duration(variant, opening)` (ms) and `column_motion_pose(variant, opening,
+  elapsed_ms) -> ColumnPoseRecord {shown, content}`: core's `view::motion::pose` for the Settings scenes, by the settings' names.
+
+
+## Wave 4, sidebar: a tab's spoken label (`workspace_tabs.rs`, additive)
+
+- `Workspace.tab_labels(ids) -> [String]`: what VoiceOver hears for each of `ids`, the tabs of one set in the bar's order, in core's
+  words (`view::sidebar::spoken::tab_label`: name, state, "selected", "n of m"). Always as long as `ids`; a terminal the window no
+  longer has gets an empty label. Another profile's settings need no new call: `SettingsHandle.open(profile:)` is opened per profile.
+- Wave 8: `Workspace.tab_sets() -> TabSetsView { sets: [TabSetView { group?, label, members, alert? }], current?, others_alert? }`:
+  the bar's sets as the core lists them (`tab_sets` over its own listing, folded groups with all their terminals, the loose ones
+  last with `group` nil and the English "Ungrouped", which the window words), the selected terminal's set, each set's loudest alert
+  and the closed switcher's dot (`others_need_you`). `status_counts` also says how many of those who need input the tooltip names
+  and how many it counts (`named`, `more`: `Summary::needs_you_named`).
+- Wave 8, persistent terminals: `HostedTerminals.finish(endHosts)` is the desk's quit (no process-wide flag): a start or an attach
+  that ends after it lets go of its host, or ends it with `endHosts`, which also waits (6 s at most) for those still under way
+  before it ends every live host of the folder.
+
+
+## Wave 5, syntax colours (`syntax/`, `git/colors.rs`, additive but one field)
+
+- `syntax_lines(text, path) -> [[SyntaxRun]]?`: the colours of `text` read as the language the extension of `path` names, one list per
+  line (cut at every line feed), from a tree-sitter parse of the whole text. `SyntaxRun {start, end, key}`: `start..end` in unicode
+  scalars of the line, `key` an index into `syntax_keys() -> [String]` (asked once; the names are the theme's `syntax.<key>` tokens, the
+  set the GPUI app's syntax theme resolves a capture to: its own name, else its first segment, else none). `nil`: no grammar for the
+  file (nothing is parsed), a text over 4 MiB, or a parse or query over 2 s. Blocking; for a background thread. A later capture covers an
+  earlier one, so the runs of a line never overlap and are in order; a line is coloured for its first 5,000 scalars.
+- `GitDiffLine.spans: [SyntaxRun]` (the one changed record): filled by `Git.diff` and `Git.commit_diff` from the whole old and new file
+  (a removed line from the old one, any other from the new one, the old one when there is no new), which core reads under its own
+  limits (`DiffLimits`: not for a diff over 20,000 lines, not a side over 4 MiB). Empty when the file has no grammar or no longer has the
+  line's text at its number. Swift colours no diff line itself.
+- The grammars are the GPUI app's sixteen and JSON, chosen as it chooses (`rs`, `ts`, `tsx`, `js`, `py`, `go`, `sh`/`bash`, `toml`,
+  `yaml`/`yml`, `md`/`mdx`, `css`/`scss`, `html`, `c`, `cpp`, `java`, `swift`, `json`/`jsonc`, as written). The queries are each grammar
+  crate's own: GPUI Kit's own queries (Rust, Go, JavaScript, TypeScript, HTML, JSON, Markdown) and its languages inside languages are
+  not in the bridge, so those files can colour differently from the GPUI app in details.
+- Hostile input: the text is a repository's. Offsets are scalars and never leave their line; the cap, the two deadlines and the match
+  limit bound a text made to be slow; a query that does not compile leaves its language plain (logged once).
+
+## Wave 5, dev tooling: reading counters and the Scripts grant (`perf_counters.rs`, `aux_backends/access/scripted.rs`, additive)
+
+- `perf_counters_start()` and `perf_counters_stop() -> PerfCounters`: the terminal layer's counters (`wormhole_term::perf`) between the
+  two, every terminal of the process together: `bytes`, `slices`, `parse_ns`, and `reader` / `ui` as `PerfLockUse` (`locks`, `wait_ns`,
+  `wait_max_ns`, `hold_ns`, `hold_max_ns`). They count only in a library built with the crate's `perf-counters` feature (off by
+  default; it turns `wormhole-term`'s on); `available` says whether, and without it every number is 0. For `perf-profile` only.
+- `AccessDesk.grant_scripts(always) -> bool`: lets Scripts in until quit, or as a stored approval of the desk's profile. The control
+  folder's `agent-grant` only; no request over the control socket reaches it.
+
+## Wave 6, settings page rules (`settings/page_rules.rs`, `settings/theme_picks.rs`, `settings/agent_logins.rs`, `aux_backends/access/approvals.rs`, `hook_server/mod.rs`; additive)
+
+- `settings_blur_unsafe(opacity: f32, blur: bool) -> bool`: core's `Translucency::unsafe_without_blur`: translucent without the blur, below the
+  opacity text can be judged at. The Appearance page warns under the Blur row while it holds (and offers "Turn on blur").
+- `SettingsHandle.show_title_part(part: String, shown: bool) -> bool`: shows or hides one part of the title row (`part` is its stored name,
+  e.g. `terminal_status`) through core's `Settings::show_title_part`: a part switched on takes its place among the shown ones. Whether the
+  list changed; false too for a name that is no part.
+- `SettingsHandle.theme_hidden(value) -> bool` and `set_theme_hidden(value, hidden) -> bool`: whether the theme picker leaves a theme out, and
+  leaves it out or brings it back (`Settings::theme_hidden` / `set_theme_hidden`). `value` is what a theme pick holds (a built-in's name or
+  slug, a user theme's id or file): core counts a built-in's name and slug as one theme, so the app that hid it and the one that reads it agree.
+  `set_theme_hidden` says whether anything changed.
+- `settings_agent_logins() -> [SettingsAgentLogin]` and `settings_set_login_hooks(agent, dir, install)`: every profile's login of an agent
+  (`agent` the command, `profile`, `dir` absolute, `shown`, `line`, `hooks: SettingsHookState`) and the one button that fits, through core's
+  `Spec::state_in` / `install_in` / `uninstall_in`. Both throw `FfiError::NotIsolated`-like `SettingsError` outside an isolated instance. Hooks
+  are written only under `WORMHOLE_AGENT_HOME`: unset, or equal to the real home, the call is refused. A login folder is judged by where it
+  **resolves**, not by how it is written: a `..` is refused outright, every link on the way is followed (the deepest part that exists is
+  canonicalised, the rest must be plain names), and the result must lie under the canonical `WORMHOLE_AGENT_HOME`; a link that leads nowhere is
+  refused too. What is written is the resolved folder. Tested with `..` and with a symbolic link out (`agent_logins.rs` `tests`).
+- `AccessDesk.set_capability(id: u64, stored: bool, capability: AccessCapability, on: bool) -> bool`: switches one capability of an approval
+  (`stored`: a database row of the profile's `wormhole.db`; else one held in memory) as the ticks of its row in Settings do. False for an unknown
+  id, for Close (never a tick) and for a profile with no database. Turning one on ends nothing.
+- `HookServer.set_approval_capability(profile, id, stored, capability, on) -> bool`: the same through the server, for the desk of `profile`. Taking
+  a capability away also ends every stream the approval let in (`revoke_holder`: broader than the one capability, the safe side); the stored
+  capabilities are read at decision time, so a change bites at the next request. No control-socket verb reaches either call: a terminal program
+  cannot tick a capability on.
+
+## Wave 7, Settings and Theme Studio (additive; one record gained a field)
+
+- `SettingsOptionRow.detail: Option<String>` (the one changed record): what a choice does, shown under its name in the menu. Filled by
+  `shell_options` (the Default shell select: "Login shell: /bin/zsh" for the login shell, the command line for a profile or a system shell);
+  `None` for the other selects. Swift draws a select that has any detail with the system pop-up button (`SubtitledPicker`: an `NSMenuItem`
+  subtitle).
+- `settings_watch_project(root: String, listener: ProjectListener) -> ProjectWatch`: follows the `.wormhole` folder (and the older `.andromeda`
+  one) of the project at `root` through core's `platform::watch`. `ProjectListener.changed()` is called on a thread of Rust's, once after a burst
+  of events has settled (about 100 ms) and when the system lost events; it must return at once. The watch lives as long as the returned object:
+  let it go to stop it. A folder that cannot be watched is followed by nothing (logged). The Project folders page keeps the watch on the selected
+  project and reads again on `changed`; its read when the window comes forward stays as the fallback.
+- `studio_folder_files(themes_dir) -> [String]`, `studio_folder_read(path) -> String`, `studio_folder_write(themes_dir, path, text)`,
+  `studio_folder_versions(themes_dir, path) -> [StudioSavedVersion]`, `studio_folder_read_version(path) -> String`: the Theme Studio's themes
+  folder through core. `files` lists the non-hidden `.json` / `.jsonc` files (core's `registry::fingerprint`), sorted by path. `read` is capped
+  at core's theme size (`MAX_THEME_BYTES`) and follows links as the GPUI Studio does. `write` keeps the file it replaces as a saved version first
+  (`saved_versions::keep_version_now`, thinned by `keep_policy`: every save of the last hour up to 120, then the newest of each hour for a day,
+  then of each day for 30 days; the first hand-written file is the pinned `.original`) and then writes atomically; a version that cannot be kept
+  is logged and does not stop the save. `versions` is newest first (`StudioSavedVersion {path, saved: i64 seconds, pinned}`) under the id of the
+  theme (its slug); `read_version` is capped and stays inside the version's own folder. Swift keeps no copy of the thinning, the naming or the
+  caps (`FfiThemeFolder`).
+- `studio_completions(text, caret: u32, target) -> StudioCompletions?`: core's expression completions for a value typed for the token `target`.
+  `caret` and the returned `start` / `end` are UTF-8 byte offsets; `items` are `{label, insert, function}` (best first, at most 8). None while the
+  caret is not after a name, for a `#` colour, a number, or a name that already exists (Return then applies it). Swift offers them under the field
+  with ↑ ↓, ⇥ and ↩ taking the row, Esc closing the list.
+- `studio_contrast(themes_dir, text, shown: String?, increase_contrast: bool) -> StudioContrast` (throws `FfiError::Theme`): the theme `text`
+  (the shown appearance of a pair), as Increase Contrast shows it when asked, measured once: `checks` is every pair of core's `CONTRAST_PAIRS`
+  (`contrast_checks`, `{fg, bg, underlay, ratio, min}`), `issues` the ones that fall short, each `{fg, bg, underlay, ratio, min, fix:
+  {token, expression, label}?, follows: String?}` from core's `contrast_issues`: the fix wraps what the person typed (`readable(<it>,
+  <backgrounds>, <min>)`), follows tokens that merely name a failing one (`follows`: that token's fix clears this pair too), spots cycles, and
+  has none for the terminal palette's own pair. The Studio asks once per change of the draft (`StudioDocument.contrast`) and the list's marks,
+  the Low filter, the editor's Contrast section and the card all read that one answer; Swift keeps no pair table or ratio maths. The Studio
+  applies a fix only when the person presses it.
+- `studio_token_uses() -> [StudioTokenUse]`: core's `TOKEN_USES` in its order, each `{id, label, area, tokens}` (`area` is `sidebar`, `panel`,
+  `chrome`, `settings`, `ambient`, or `all` for core's `Basics`; `terminal.*` / `syntax.*` stand for a family). What the Studio's "Used by", a
+  metric's "n uses", the gallery header's count and the token list's area filter tell, as in the GPUI Studio (`FfiTokenUses`,
+  `GalleryKnowledge(uses:)`). The gallery's outlines follow `GalleryUses.swift` instead, generated from what the Swift views really draw
+  (`macos/scripts/gen-gallery-uses.py`).
+- `cli_is_command(arguments) -> bool` (wave 13): whether the core answers the command line itself (`ipc::command`: `hook`, `statusline`,
+  `welcome`, a control verb, a leading `--help` or `-h`). The Swift `main` asks it for a first word with a dash, so `wh --help` is the
+  control line's usage and the app keeps no list of verbs; `cli_exit_code` then runs it.

@@ -12,6 +12,9 @@ WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-<x> WORMHOLE_SHELL=/bin/zsh WORMHOLE_AUTH=
 printf 'click 150 66\nrows\n' > <ctl>/cmd.tmp && mv <ctl>/cmd.tmp <ctl>/cmd     # results are appended to <ctl>/out.txt
 ```
 
+`WORMHOLE_LANGUAGE=en-XA` beside `WORMHOLE_DEVCTL` starts the instance in the pseudo-language (the `language` command at
+launch); without a control folder the variable is not read, as a GPUI build without devctl cannot show `en-XA`.
+
 Lines run in order. A line that takes time (`drag`, `scroll`, `wait-idle`, `perf-profile`) holds the rest of its batch and any
 batch written meanwhile. Points are the window content's, from its top left, in points (a `window-shot` at 1x). Persistent
 terminals need `flags-unlock`, `set feature_flags={"persistent_terminals":true,"unlocked":true}`, a restart and
@@ -19,7 +22,7 @@ terminals need `flags-unlock`, `set feature_flags={"persistent_terminals":true,"
 
 ## How the pointer and keys get there
 
-Events are made in the process and given to the window (`NSWindow.sendEvent`, `NSApp.sendEvent` for keys), which routes them
+Events are made in the process and given to the window (`NSWindow.sendEvent`, `NSApp.sendEvent` for keys: see wave 13 for which window gets a key), which routes them
 as the window server's: hit testing, gesture recognizers, SwiftUI gestures, menus' key equivalents, the window's own event
 monitors. The real pointer, the real keyboard focus, the clipboard and the window's place behind other apps are untouched
 (the transcripts print the window's z-order and the front app before and after). A background app is never active, so while
@@ -39,8 +42,9 @@ of the press (`Driving/Injector.swift`).
 | `hover x y` / `hover-cmd x y` | `hover-cmd 389 51` | move the pointer there (with ⌘: a link underlines) |
 | `mouse-down x y` / `mouse-move x y` / `mouse-up x y` | `mouse-down 150 182` | a held drag, a line each, so a `window-shot` can catch it mid-way |
 | `drag x1 y1 x2 y2 [steps]` | `drag 351 400 300 400 10` | pressed, moved in steps a frame apart, released (reorder, column edges, window resize) |
-| `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart |
+| `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart, at most 60 steps: a longer way is the same total in 60 larger steps (the scenarios' longest, 9000, was 450 steps and over 30 s on a loaded runner) |
 | `key <keystroke>` | `key shift-f6`, `key ctrl-c` | a key as the keyboard sends it (menu equivalents run their action) |
+| `key-held <keystroke>` | `key-held ctrl-cmd-t` | the key held: pressed, two of the keyboard's repeats (`isARepeat`), let go |
 | `text <text>` | `text Build` | typed into whatever has the keys, a key per character (a field being edited, the terminal) |
 | `pointer-window [title]` | `pointer-window Settings` | the window the pointer acts on (none: the workspace's in front) |
 | `bounds x y [levels]` | `bounds 700 400 2` | the views under a point, then the accessibility element there and its parents |
@@ -58,12 +62,259 @@ shows no panel for. `row-menu [terminal]` is ⌃↩ on a sidebar row (SwiftUI's 
 menu is kept for `menu` and `menu-pick`. `key backspace|delete`, `key cmd-+` and the ⌃⌥ keys work; ⌘C and ⌘⌫ in a text field are the field's
 (the palette's own), and `key cmd-c|x|v` refuse in a field (the system's would use the person's clipboard). `keys` also names the
 first responder. A `--background` instance holds questions for the control folder only when it has one (`WORMHOLE_DEVCTL`). With
-`WORMHOLE_SHELL` set, core runs that program whatever shell a terminal asks for: use `--shell` to try New terminal: bash.
+`WORMHOLE_SHELL` set, core runs that program whatever shell a terminal asks for, and `--shell` is the same variable given on the
+command line (wave 13): to try New terminal: bash, start the instance with neither and name a shell in `config.json` (`default_shell`).
 `evidence/s2-overlays/` has the fixture (`fixture-e.sh`: three agent-named programs, a trusted project, hooks), `pair.py` and `menu-keys.py`.
 
 Landed by other lanes on `exp/swift`: `question`, `question confirm|cancel|also` (a background instance never shows a
 question sheet; the control folder answers it), `studio-out`, `intro`, `welcome`, `onboarding-step`, `tear-off`, `tear-off-at`,
 `profile-menu`, `minimise`, `place`, `hold-cmd`, `release-cmd`, `look-keys`. Injected clicks never need a sheet on screen.
+
+Added by wave 5 (dev tooling, GPUI devctl's remaining commands; written without compiling, see TO-VERIFY.md):
+
+| Command | Example | Does |
+|---|---|---|
+| `inspect` / `inspect on\|off` | `inspect on` | inspect mode (⇧⌥⌘I in a debug build): the Inspector panel opens beside the window and every element the design marks reports where it is |
+| `inspect x y [levels]` | `inspect 150 66 3` | pins the marked element at a point: its note (`File.swift:line  id`, the line of code in a debug build, `W×H · style`, `tokens: …`), then `levels - 1` parents |
+| `inspect parent` / `inspect pick` / `inspect copy` | `inspect copy` | walk out to the element it stands in; pick again (then `hover x y` highlights and `click x y` pins, as in GPUI); the panel's Copy (read it with `pasteboard`) |
+| `inspect nudge <property> <+\|->` / `inspect reset` | `inspect nudge padding x +` | debug builds: steps the scale value that part of the pinned element's style names (4 pt, a radius 2 pt), for the session; it shows wherever that value is used, and the note gets `change: padding x _1 → _2`. Reset takes every step back |
+| `window-state <active on\|off> <seen on\|off>` | `window-state off on` | what AppKit tells the window when it comes forward or is covered, to the workspace and to the panel's git reads (which wait while it is not seen). A test instance's window is behind the others, so it is not seen until a scenario says so (`Instance.seeWindow()` in `PanelUnseenWindowTests.swift`) |
+| `detach` / `reattach` | `detach` | let go of the front window's hosted terminals, the views kept (`detached <n>`); attach them again as a launch does (their ids). `window-state` shows `detached(hostID:)` between |
+| `agents` | | the script in force, each approval (`approved stored\|memory:<id> <label> <how> caps=…`), how many questions wait and the one that is up with its buttons |
+| `agent-ask <deny\|session\|quit\|always>` | `agent-ask session` | answers the question that is up as that button does (a button it does not offer comes to Quit, else Deny); for the question about a changed mode, deny is Don't Keep |
+| `agent-script <hold\|deny\|session\|quit\|always>` | `agent-script quit` | what answers programs' questions from now on, with no sheet; `hold` leaves them for `agent-ask` |
+| `agent-grant scripts [quit\|always]` | `agent-grant scripts` | lets Scripts in, as an answer to its question does (until quit, or stored for the profile) |
+| `menubar-icons [prefix]` | `menubar-icons bar` | the status item's glyph in its nine states as `<ctl>/<prefix>-<state>.tiff` (a background instance has no status item to look at) |
+| `studio-select <token>` / `studio-set <value>` / `studio-type <text>` | `studio-set #ff8800` | select a token; put a value in its field with Return (`ok=`, `field=` the refusal); type without Return (what the field says) |
+| `studio-save [name]` / `studio-rename <name>` / `studio-undo` / `studio-redo` / `studio-revert` / `studio-use` | `studio-save Mine` | ⌘S (a name first for a copy without a file); the title row's and Edit menu's verbs |
+| `studio-filter <all\|yours\|base\|low> [text]` / `studio-area <area>` | `studio-filter low` | what the token list shows; the gallery's part of the app |
+| `studio-appearance light\|dark` / `studio-add-appearance [light\|dark]` / `studio-chip [token]` | `studio-chip primary` | the appearance of a pair being edited; add the one it lacks; move a value between both appearances and this one |
+| `studio-update-from [apply\|cancel]` / `studio-versions [select <n>\|restore [<n>]\|close]` | `studio-versions select 1` | the Update from sheet; the Versions sheet opened as Browse All Versions… opens it (a theme with a file only) and the saves behind the file (row 0 is the file now): preview one in every window, restore one as unsaved edits; `close` is its Done (the draft back, the sheet down). `state`'s studio line says `modal=update\|versions\|-` |
+| `studio-menu [save\|duplicate\|json\|project]` / `studio-theme-menu` / `studio-open own:<stem>\|builtin:<name>\|from:<name>\|new\|project` | `studio-open builtin:Nord` | the Save menu's entries (`json` writes `<data dir>/studio-out/pasteboard.txt`); what the theme menu offers; choose in it |
+| `studio-resize <w> <h>` / `studio-scroll <y>` / `studio-shot <name>` / `studio-frames <n> [tick\|scroll]` | `studio-frames 40 tick` | the Studio window: its size, the gallery scrolled to y points from its top (by the wheel; `at=` where it got to), `<ctl>/<name>.png`, n timed draws to `frames.txt` in GPUI's words (`studio-frames <mode> n= avg= max= first=`, the first three left out of avg and max): `tick` lays the window out before each draw, `scroll` turns the wheel 40 points first. `state` ends with a `studio dirty= asking= subject= undo= redo= format= shown= update= modal= inuse= token= origin= reach=` line while the Studio is open |
+
+A `studio-*` line that may ask (saving over a file, opening over unsaved edits) replies when it is done; answer its question with
+`question confirm|cancel` in a later batch. `perf-profile` now also prints draws per second, the Rust side's share of a fetch
+(snapshot, pack), where the window's terminals run, and the reader's bytes, speed and lock use: the last only from a bridge built
+with its `perf-counters` feature: `WORMHOLE_FFI_PERF_COUNTERS=1 macos/scripts/build-ffi.sh` (off by default; otherwise it says the reader was not counted). `agent-*` and `inspect` never reach the control
+socket: they are the control folder's alone.
+
+Added by wave 6 (dev tooling; written without compiling, see TO-VERIFY.md): **each window has its own control files**, as in GPUI:
+`cmd` acts on the window in front (the key one, else the one opened or used last) and is answered in `out.txt`; `cmd1`, `cmd2`,
+`cmd3` … are the windows in the order they were opened, whatever is in front, answered in `out1.txt`, `out2.txt` … A line of `cmd<n>` acts on that window, keys included (`key`, `keys`, `text`, `state`, the window commands). A number no window in sight has answers `error: no window <n> (<k> in sight)` in `out<n>.txt` and does nothing.
+
+**Which window a command file reaches once there are profiles.** One rule: `cmd<n>` is the n-th window *in sight*, in the order they
+were opened, and `cmd` is the one of those in front. A window is in sight when its profile is the one Wormhole is in, or when it
+was opened in or moved to another profile while Wormhole stayed where it was (the odd window). The windows of a profile Wormhole
+left are parked: no command file reaches them until `profile-switch <id>` brings that profile back. `sessions` lists every window,
+parked ones too (`visible=false`), so a number for `cmd<n>` is a line's place among the `visible=true` lines, not among all of them.
+What the profile commands do to that:
+
+- `profile-new <name>` makes the profile and enters it, as Settings does: its one new window is in sight (`cmd`, `cmd1`), the
+  windows of the profile left are parked.
+- `profile-switch <id>` enters that profile: its windows are in sight again, the ones of the profile left are parked. An odd
+  window stays in sight through it.
+- `profile-open <id>` opens a window in that profile and leaves Wormhole where it is: the new window is in sight, last in the
+  order, and in front.
+- `profile-move <id>` moves the window the command file reaches to that profile; it stays in sight, at its place in the order.
+
+So a scenario about a window "in another profile" makes the profile, goes back with `profile-switch default`, and then opens
+(`profile-open`) or moves (`profile-move`) a window; a profile's own `config.json` is `profiles/<id>/config.json` in the data folder
+(`set` writes the one of the window the file reaches).
+
+| Command | Example | Does |
+|---|---|---|
+| `blocks` | `blocks` | the selected terminal's command blocks, oldest first, one a line: `n: lines a..=b output c..=d \| state \| command` |
+| `block <n> <select\|copy-output\|copy-command\|to-prompt\|fold>` | `block 2 copy-output` | the Edit menu's action on the n-th block of `blocks` (`block` alone still says which block the menu would act on) |
+| `images` | `images` | the pictures the last frame placed: a total, then each picture (key, size, bytes or `decoding`) and its placements |
+| `pane-bar` | `pane-bar` | what the bar and banner over the selected terminal say (a clipboard question, a notice, a host's trouble), or `none` |
+| `panes` | `panes` | the shown split's panes (`pane id x y w h [focused] [zoomed]`) and dividers, and the layout in force |
+| `layout <columns\|rows\|grid\|single>` | `layout grid` | View ▸ Layout |
+| `shells` / `new-shell <key>` / `new <dir>` | `new-shell fish` | the shells on offer (`-` is the login shell); a terminal running one; a terminal in a folder (`~/` expands) |
+| `close <n>` / `agent-hide <n> [on\|off]` | `close 2` | row n (1-based, as the sidebar lists) closed at once, without the question; Hide from Agents |
+| `zen [on\|off\|toggle]` | `zen on` | Zen mode (nothing saved); says whether it is on |
+| `files` / `files-root <abs path>` / `files-follow` / `files-pin <abs path>` / `files-rename <path> <name>` | `files-root /tmp/x` | the Files tab as text (`v` open folder, `>` closed, `~` link, `*` selected) and what its path menu, pins and rename do |
+| `delay <ms>` / `sync <token>` | `delay 300` | the rest of the batch waits; `sync` answers `sync <token>` once every line before it has run |
+| `control [--from <tab>] <words…>` | `control --from 3 list --json` | a request as `Wormhole <words…>` sends it, as from inside tab 3 (none: outside the app); the reply's JSON line. Reads, waits, runs and streams are not carried here (use the socket) |
+
+Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written without compiling, see TO-VERIFY.md):
+
+| Command | Example | Does |
+|---|---|---|
+| `note-seed [count] [lines]` / `note-toggle <n>` | `note-seed 50 12` | that many notes of that many lines (GPUI's text); fold or unfold the n-th note |
+| `task-seed [open] [done]` / `task-done <n>` | `task-seed 38 12` | that many next steps, the done ones spread among the open; tick or untick the n-th |
+| `send` / `send-submit` / `stash` | `send-submit` | the focused note (the walker's, else the newest) goes to the terminal (and Return); the prompt typed in an agent's box becomes a note |
+| `comment [text]` | `comment too long` | the comment dialog a click on a diff line opened (a sheet on the window): text set (none: what was typed in it), saved, closed; says the review's summary (`1 comment`); `error: no comment dialog is open` while no sheet is up |
+| `flags` | `flags` | the feature flags that are on as the window in front has them, `flags on=automation,notices` (its profile's, read from the file a moment after `set feature_flags=…` wrote it) |
+| `changes` | `changes` | the Changes tab on show (GPUI's `changes`) and what its store holds: `changes phase=loaded files=1 open=README.md diff=shown hunks=1`, then a line a file in the list's order, `  M README.md +1 -0` (the kind's letter, the path, lines added and removed, `-` where git counts none) |
+| `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
+| `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
+| `project-init` | | the Project tab's Create project folder button: the project is made in the folder the tab is for, a repository's root when the terminal is in one, and that folder is named (`creating <dir>/.wormhole`); `folder-color` without a path colours the same folder |
+| `onboarding <welcome\|folder\|look\|agents\|primer\|close>` | `onboarding look` | the intro window at that step, or closed, as the GPUI app's devctl (`onboarding-step` is the same; a bare `onboarding` is Help ▸ Welcome) |
+| `history <n>` | `history 1` | a click on the n-th commit of the log: it opens, and closes when it is the open one; `history 0` folds whatever is open |
+| `group-ask [use\|use only\|later]` | `group-ask use only` | the question a terminal opening in a group without a folder puts up (from the sidebar's +, the tab bar's +, an empty set or Ctrl-Opt-N; held for the control folder in a test instance): without an argument the folder, the group and how many terminals would leave; `use` is Use Folder, `use only` also ticks "Only keep terminals in this folder", `later` is Not Now. There is no Cancel; the terminal opens after the answer |
+| `rename-edit <n>` | `rename-edit 2` | row n's name becomes a field, as Rename… in its menu makes it |
+| `folder-color [path] <name\|#rrggbb\|none>` | `folder-color ~/Projects/x teal` | colours the folder (the terminal's without a path) as the band's menu does; says `<colour> <folder>` |
+| `folder-picker open\|close\|type <text>\|tab\|right [mid]\|left [start\|mid]\|accept-ghost\|up\|down\|pageup\|pagedown\|enter\|pick\|forget\|click <line>\|crumb <n>\|scroll\|state` | `folder-picker type src/` | the folder picker (⌘J) over the terminal: open it (the Folder picker flag must be on), type into its field, press its keys, pick; `state` lists text, ghost, `busy`, crumbs, facts, lines (`> ` marks the selection) and the panel. The queries run off the main thread: ask `state` again while it says `busy true`. `scroll` is a no-op here |
+| `profiles` | `profiles` | the core's profile list (what Settings' Profile page reads, so it works with one profile), one a line: `* id "name" "colour"`, `*` for the one Wormhole is in |
+| `profile-open <id>` / `profile-move <id>` / `profile-delete <id>` | `profile-open work` | a window in that profile (the odd window when Wormhole is in another); the window in front goes there; delete as Settings does after its question (TEST: scratch data dir only) |
+| `notice sticky [text]` | `notice sticky` | a warning that stays until clicked: the session host's, with `text` in its explanation (the chip's own words are that warning's) |
+| `notice-click [close\|info\|body]` | `notice-click info` | a click on the chip: the × dismisses a sticky one, the ⓘ and the capsule open its explanation (or dismiss it where it has none); a copy's chip takes none. `error: no chip to click` without a chip |
+| `notify-sim <kind> <n> [post]` | `notify-sim needs-you 1 post` | what the core's rules decide for that event in row n (`needs-you`, `agent-done`, `agent-failed`, `command-done`, `command-failed`, `bell`, `notice`): `-> Banner\|Nothing level sound bounce title subtitle body`; with `post` also delivered to the instance's log (`notice-log`). `notices` keeps its Swift meaning (the logged banners); GPUI's per-window chip listing is `notice chip` |
+| `notice-count` | `notice-count` | how many banners the instance's log was handed in all, `notice-count=4`: a banner posted again in the same words replaces itself in `notices`, and only the count tells |
+| `notify-permission <not-asked\|allowed\|denied\|outside\|checking>` | `notify-permission denied` | pretends macOS said so, for the welcome's and Settings' pages (a test instance never asks the system) |
+| `hosts-toggle [id]` / `hosts-scroll <points>` | `hosts-toggle` | open or fold a host's card in the Hosts window (the first without an id); scroll its list to that offset from the top (the window must be open: `hosts`) |
+| `licenses-search <query>` / `licenses-select <name>` | `licenses-select serde` | filter the Licenses list (says the count and the selected package); open a package (a search that hides it is cleared) |
+| `intro-frames <style> [count]` | `intro-frames voyage 8` | `count` frames (8, at most 60) of the intro drawn off screen over a stand-in window, to `<ctl>/intro-<style>-<n>.bmp` |
+| `onboarding-tailor <n\|back\|over\|ok>` | `onboarding-tailor 2` | in the Look step's "How much to show" walk: answer n (from 1), Back, Start over, or Looks good (`onboarding look` first) |
+| `welcome-probe <tab\|-> <token> <op as JSON>` | `welcome-probe - T {"op":"state"}` | a welcome request as the first-run program sends it, from that tab (`-`: from outside any); the reply's JSON line (TEST of the token's rules: a wrong token must be refused) |
+| `update-installed <version> [pending]` | `update-installed 9.9.9 pending` | Settings → Updates as after an install: Restart, or with `pending` the line that it restarts when the terminals are idle (the real updater only; the next change it reports replaces it) |
+| `import-scan [<fixture home>]` | `import-scan ~/fixture` | Settings → Import over a folder standing in for the home (`~/` is the instance's, never the real one), shown; waits for the scan and lists what it found. `import-open <id>` opens a card and `import-apply <id>` presses its Apply: before the card's settings are read (a moment after it opens) it answers `error: … not read yet`, so ask again |
+| `font-picker <interface\|code\|terminal> [query]` | `font-picker code mono` | opens that font picker with the query typed (the Fonts page on show: `settings-section fonts`); says the entries and the family previewed |
+| `settings-record <row id> [keys]` / `settings-reveal <id>` | `settings-record hotkey cmd-k` | a shortcut row's recorder started (a click on its row) and keys pressed into it, once the recorder has the keys (`error: the click on <id> did not start its recorder` when it never gets them; the keys go to the Settings window itself); open Settings at a row, scrolled and marked |
+| `settings-reset-confirm` / `settings-cli-tool [install\|uninstall]` | `settings-cli-tool install` | Advanced → Reset all settings pressed (its question is held: `question`, then `question cancel`; nothing resets); Coding agents → Command line tool: what it says, or Install / Uninstall into the instance's `WORMHOLE_CLI_DIR` |
+| `menu-native [press <n>]` | `menu-native` | the kept menu (a right-click's, a key's) with each item's key, marks and tooltip, and a row of colour dots with their names; `press <n>` presses the n-th dot as a click on it does (the menus are native already: `menu`, `menu-pick`, `menu-close` read and press them) |
+| `path-menu` / `files-menu [model]` | `path-menu` | the folder's menu (title row) / the Files tab's path menu, kept unshown for `menu` and `menu-pick` and printed |
+| `title-menu` | `title-menu` | the title row's own menu (a right-click on the row, not on its folder: the same entries, `TitleMenuEntries`, the right-click's SwiftUI menu draws), kept unshown for `menu` and `menu-pick`; the first line is the row on screen (`row=folder,branch,…`). `path-menu` is the folder's, from the facts the row is drawn from |
+| `available <action>` | `available toggleSidebar` | whether the bar's item for the action is on for the window in front (an action with no item: whether the action table runs it): `<action>: true\|false` |
+| `popover` / `popover-press <title>` / `popover-close` | `popover-press Ungroup` | the open popover (the group's name popover; the folder's hover card is `path-card`): its rows one a line (`field "Group name" (focused)`, `colours: No colour \| Red [x] \| … \| custom`, `- action`); press an action by its title as a click does; close it |
+| `popover-type <text>` / `popover-key <enter\|escape>` / `popover-colour <name\|none\|#rrggbb>` | `popover-type Build` | type into its field (replacing what is there); ↩ keeps and closes, ⎋ closes (the Swift popover keeps the name either way, as its own close does); colour the group by name or hex |
+| `popover-native [name]` / `popover-real` / `popover-real-close` | `popover-native card` | the open popover's content drawn to `<ctl>/<name>.png` as AppKit lays it out; opened for real as an `NSPopover` at the window's top left, and closed |
+| `drag <x> <y> <path>` / `drag-end` | `drag 600 400 /tmp/a.png` | a file hovering over the window at a point, as from Finder: the terminal there tints (`window-shot` in a later batch shows it); `drag-end` abandons it. The drop is `drop-files <path>` (pastes the paths as a drop does). GPUI's `drop <x> <y>` keeps its Swift meaning (a sidebar drop, see `drop`/`plan`) |
+| `close-window` | `close-window` | the window the command acts on closes as its red button does: it asks first while something runs (a test instance holds the question: `question confirm`), and the last window ends the app |
+Added by wave 9 (lane commands; written without compiling, see TO-VERIFY.md): **read-outs** of what a view holds, for the
+end-to-end tests. Each answers in one shape, `DesignSystem/Driving/Readout.swift` (`Readout.line`), which the tests' own
+`Tests/EndToEndTests/Readout.swift` parses: a line a thing, `kind word… "text"… key="value"… flag…`, a line under another
+indented by two spaces. A quoted text never holds a straight quote or a line break (written `”` and `⏎`). GPUI's devctl has
+none of these; `status-bar` is the bar's switch, so its items are `status-items`.
+
+| Command | Reply, line by line |
+|---|---|
+| `settings-page` | `settings-page <section\|results> "<title>" query="<q>"`; a `nav <id> [badge="<n>"] [attention] [dim]` per page of the nav; `banner <info\|warning\|danger> "<text>"` per banner over the page; `group "<title>"`; `row <id> "<label>" value="<words>" [chip="<tag>"] [project="<name>"] [group="<g>"] [changed] [off] [found] [revealed]` (on the Changed page and in results, every row); under a row: `caption "<text>"`, `note <info\|warning> "<text>" [button="<title>"]`, `swatches <#hex>… chosen="<#hex\|->" [well]`, `problem "<text>"` (a shortcut's), `option "<label>" "<detail>"` (a menu's subtitled choice) |
+| `theme-filter [text]` | types `text` into the theme cards' filter box (nothing: clears it), the text field's own binding: `theme-filter "<text>"` |
+| `theme-cards` | what the cards show, narrowed by what the filter box holds (no argument: it never filters by itself): `theme-cards mode="<theme_mode>" filter="<f>" placeholder="Filter N themes"`; `project "<name>" "<notice>"`; per shelf `shelf <dark\|light> "In Dark Mode" total="<n>" collapsed="4"` and under it `card "<band label>" value="<value>" [newer="<n>"] [file="<path>"] [picked]`; `none "No themes match the filter."`; `hidden "<name>" kind="<Dark\|Light\|->" value="<value>"` |
+| `status-items` | `status-items detail="<words\|numbers\|lean>" width="<pt>" <shown\|hidden>`; `profile "<name>"`; `attention <id> "<title>" words="needs input · 2m" tooltip="…" [spoken="…"]`; `count <activity> <n> first="<id>" words="<2 working\|2>" [spoken="…"]`; `probe "<text>" tooltip="…"`; `state "<working · 4m>"`; `hosting <symbol> ["<word>"] tooltip="…"` (the SF Symbol always, the word only where the bar writes it: `detail` words or numbers); `size "<program> · <cols>×<rows>"` (the bar's order, each item as the bar draws it at the window's width, the bar on or off; the state and hosting words come from the functions the bar calls) |
+| `tab-bar` | `tab-bar set="<label>" alert="<none\|attention\|failed>" <shown\|hidden> [switcher]`; `tab <id> "<name>" activity="…" alert="…" [number="<n>"] [spoken="…"] [selected]`; `plus "New terminal"`; `tabs <on-top\|in-sidebar>` |
+| `tab-click <n\|+>` | `tab-click <n>` once the n-th tab (from 1) is clicked (its terminal selected and given the keys), `+` the bar's + (the group folder question first, as the sidebar's); `error: no tab <n> of <m>` |
+| `switcher [query]` | `switcher query="<q>" placeholder="…" [hidden] [open]`: without an argument the switcher as shown (`open` while its popover is on screen, `query` what its field holds then, else empty); with one, what its search lists for that query; without a query `card <index> "<label>" count="<n>" tiles="<id,…>" activities="…" alert="…" spoken="…" [add="New terminal in <g>"] [current] [pinned] [group]`, `  empty <index> "No terminals"`, `footer "New group" "Show all groups in the sidebar" keys="⌃⌥[ / ] previous, next group" range="⌃⌥1–9"`; with one `hit <set\|terminal> <index\|id> "<label>" note="…" mark="<dot\|tile\|none>"` or `none "No matches"` |
+| `onboarding-state` | `onboarding-state <welcome\|folder\|look\|agents\|primer> number="<n>" folder="<~/…\|->" [first-run] [last]`; `card "<title>" "<intro>" counter="<n of 3>"`; `button <back\|main\|skip> "<title>"`; `place <recent\|place> "<name>" detail="<~/…>" [picked]`; `agent <id> "<name>" hooks="<…>"`; `agents "Looking for agents…"`; `trust "<has>" "<waits>" button="<title>" later="Later" root="<path>" [approving]`; `primer "<thing>" keys="<glyphs>"`; `problem "<text>"` (error: the intro window is not open) |
+| `onboarding-pick <path>` / `onboarding-press back\|main\|skip` | a folder dropped on the card (`onboarding-pick <path>`); the card's buttons (main: Continue, Start on the last step) |
+| `changes-menu <n\|path>` / `history-menu <n\|details>` / `files-row-menu <path>` | the menu a right-click on that row opens, found at the row's own frame and kept for `menu-pick`: `menu:` then `AppController.rows(of:)`'s lines (`n. title [key] [x] [off]`, `---`, a submenu's items indented). The row must be on screen (its tab shown): ask again until it answers `menu:`; `error: no row … on screen` before |
+| `diff-header` | `diff-header <changes\|history> "<path>" [position="<i> of <n>"] [commit="<short>"] [counts="+a −r"] [split] [wrap] [gone]` (`"none"` with no diff open); `badge "<words>"` per badge in the header's order; `out-of-date "<why>"`; `submodule old=… new=… ahead=… behind=… listed=… [nothing=…] [inside=…]` |
+| `diff-step next\|prev` | the header's arrows: `diff-step <dir>` |
+| `diff-spans [from] [count]` | `diff-spans unified rows="<n>" [colored-by-core] [no-highlight]` (or `diff-spans "none" phase=…`); then from row `from` (0) `count` rows (60): `hunk <row> "<@@ …>"`, `line <row> <context\|added\|removed> old="<n\|->" new="<n\|->" text="<line>" spans="<start>-<end>:<token>,…"` (Characters of the text; empty: plain) |
+| `settings-press <id> [menu]` | a click at the centre of the Settings control recorded under `id` (`settings-rows` lists them: a row's control by the row's id; `changed.copy`, `import-theme`, `open-studio`, `reset-tips`, `open-in.choose`, `zen.leave`, `theme-card.<value>`, `agent.<id>.hooks`, …), the way `click` makes one: `settings-press <id>: <press>, <release>`; with `menu` a right-click there: `menu:` and its lines, kept for `menu-pick` |
+| `settings-page` (wave 9, second pass) | also, under the title row's row, `  part <value> "<label>" [note="…"] <shown\|hidden> [hideable]`; on Fonts `specimen <terminal\|code\|interface> "<facts line>" family="…" size="<pt>"` per tab and `preview <slot> family="…" size="…"` while a picker looks at a font |
+| `files-viewer [from] [count]` | `files-viewer "<path>" kind="<reading\|text\|binary\|image\|unavailable-<gone\|outside\|notAFile\|denied\|other>>" [lines="<n>" digits="<gutter digits>"] [size="<bytes in words>"] [truncated]` (`"none"` with no file open); `note "<the card's words>"` (empty, binary, truncated, a refused picture, why it can't be read); `button "Open in…"` and `button "Reveal in Finder"` when the card has them; `picture width="<px>" height="<px>"` once decoded; then from line `from` (0) `count` (20) lines: `line <n> text="…" spans="<start>-<end>:<token>,…"` |
+| `usage` | `usage now="<s>" reports="<n>"`; `report <agent> "<name>" updated="Updated just now"`; under it `limit "<label>" share="0.42" words="42% · resets 3h" level="<normal\|warn\|danger>"` (the store's `now`, which moves each second only while the tab is up) |
+| `recents [projects\|folders]` | `recents projects count="<n>"` then `project "<name>"` per entry of Open Recent, read from the menu state the menu bar is handed for that window, most recent first; `recents folders profile="<id>"` then `json <the list the database keeps>` |
+| `switcher open` / `switcher-press new-group\|sidebar\|card <n>\|add <n>` | the tab bar opens its group switcher (a counter the bar watches, `WindowHub.switcherAsk`: the popover is the bar's own); its New group, Show all groups in the sidebar, a card's click (`openSet`), a pinned empty card's +: `switcher-press <what>` or `error: …` |
+| `onboarding-press trust\|later\|theme <name>` | the trust card's Trust with Touch ID (answered by `WORMHOLE_AUTH`) and Later; a Look step card by its theme's name (`ThemeStore.setTheme`, the card's action). `onboarding-state` on the Look step adds `theme <id> "<name>" [current]` per card |
+| `find-state` | `find-state query="<q>" count="<the bar's count words>" <open\|closed> [case] [word] [regex]` |
+| `branch-chip [<terminal>\|state]` | the title row's branch chip for that terminal (`TitleActions.pickBranch`): `branch-chip <id>`; `state`: `branch-chip picker=<terminal\|-> list=<open\|closed>` (who the compare list is asked for, until that list closes; whether a popover is open over the window) |
+| `group-popover <group>` | the group's popover in the list, as "Other colour…" opens it: `group-popover <id>`; `popover` then reads it |
+| `sidebar-tip [close\|never\|keep\|settings]` | `sidebar-tip <off\|note\|offer>` (off while an agent is on screen); the note's ×, Don't show again, the offer's ×, Coding agents settings |
+| `plus-menu [pick <key>]` | `plus-menu` then `<key\|-> "<name>" [default]` per shell (`HubActions.shells`); a pick opens a terminal with it: `plus-menu picked <key>` |
+| `comment-at <row>` / `review` | the comment dialog of the Changes diff's row (numbered as `diff-spans` numbers it), as a click on the line opens it (it sets `ChangesStore.commenting`, which the diff's sheet is put up from): `comment-at <path>:<line>`; the sheet is on screen once `windows` says `sheet=true` (then `comment <text>`); `review` then the text a paste of the review would paste, or `review: none` |
+| `title-words` / `exited-words` / `overlay` | `title-words "<working · 4m>"` or `title-words none` (the bar on, or nothing to say); `exited-words "<fish exited>"` or `none`; `overlay <palette\|shortcuts\|none>` |
+| `title` | the core's title state of the selected terminal as Swift prints it, then `gauge: …` and `hidden-from-agents: <bool>` (the lock the row draws: it comes from the list's summary of the terminal, which the core's title does not carry) |
+| `sheet ok\|cancel\|info` | the sheet on the window in front (a save or print panel): its kind, title and the name in its field, then answered. `sheet ok` saves under the name the panel opened with, and the reply to the action that opened it (`export <path>`) says which file was written; a path after `ok` does not rename a save panel that is already up |
+| `trust-state` | `trust-state <trusted\|changed\|untrusted> "<project name>" summary="…" lines="<n>" [problem="…"]`: what the open project commands window draws (its model's review, which follows the project's changes); `trust-state none` while it is closed (`trust` opens it for the project in front) |
+| `project-layout` / `project-note <prompt id>` / `step-draft` | the Project tab's Open terminals; a prompt's Copy into a new note; Notes' Add next step |
+| `panel-kept` | `panel-kept files="<ids>" changes="<ids>" history="<ids>" roots="<folders>" [watching] [shown]`: the terminals each store keeps a state for, the folders' repository roots, whether Files reads and watches |
+| `studio-complete [text]` | types `text` into the selected token's value field (nothing: leaves what it holds), then the list the field itself shows under it: `studio-complete <the field's text> items=<n>` then `item "<label>" insert="…" group="…" [function]`; `error: no value field shows <token>` for a metric or without the Studio's window |
+| additions | `project-state` ends with `dir=<.wormhole\|.andromeda> problem=<…\|->` (no project: `project=none loaded=… problem=…`); `history-state` ends with `present=[…]`; `notes` ends with `draft=<bool>`; `windows` lines end with `edited=<bool>`; `diff-header` has `widest="<columns>"` |
+
+Also wave 9: `key cmd-left|cmd-right|cmd-backspace` (any key the keymap gives a view's own action, `ActionRouter.viewed`) goes the
+keyboard's way, to the terminal's `performKeyEquivalent` before the menus; `key esc` in a field goes through the window first, so
+SwiftUI's `onKeyPress(.escape)` hears it, and the field's own Esc binding follows only while the field still has the keys; `a11y`
+first sets `AXEnhancedUserInterface` on the application, as an assistive client would, so SwiftUI's hosting views build their
+nodes (wave 13 reads them: see there).
+
+Added by wave 11 (lane tooling; written without compiling, see TO-VERIFY.md), after GPUI's devctl:
+
+| Command | Does |
+|---|---|
+| `front` | the window the command acts on brought to the front with the keys for real (`NSApp.activate()`, `makeKeyAndOrderFront`), background mode or not: only for a check that needs the real key window outside an injected event (a field editor's own Esc), as it takes the front from the app in use; `window-front` says it without moving anything |
+| `grow-hold <t>` / `grow-hold off` | every window growing from a torn-off terminal's chip stands at that point of its growth (0 the chip, 1 the window) with no clock running, for a `window-shot`; `off` grows it on from there. Send it before the `tear-off` |
+
+Added by wave 12 (lane settings; written without compiling, see TO-VERIFY.md):
+
+| Command | Does |
+|---|---|
+| `settings-press <id> at <x> [y]` | the click of `settings-press` at those fractions (0 to 1) of the control's frame instead of its centre: a segment of a segmented control (`settings-control` lists one segment where the system's control is autosized, so a driver aims along it and reads the value back), a stepper's up arrow (`at 0.95 0.25`) |
+
+Added by wave 12, lane panel (the right panel's parts and the cursor; written without compiling, see TO-VERIFY.md),
+`Driving/AppController+ControlPanelActs.swift`:
+
+| Command | Does, and its reply |
+|---|---|
+| `changes-rows` | the Changes list as its view builds it (`ChangeRows.build` with the layout in force, cut into cards as `ChangesListView` cuts them): `changes-rows <tree\|list> <grouped\|together>`, a `band <changes\|untracked\|all> count="<n>" [folded]` per card, under it `note "<folded note>"`, `dir "<path>" label="<a/b>" depth="<n>" [collapsed]`, `file "<path>" depth="<n>" kind="<M\|A\|…>" [submodule="<words>"] [enter]` |
+| `panel-tabs` | the panel's strip: `tab <name> badge="<n\|->" spoken="<VoiceOver's words>" [shown]` a tab, from the functions `RightPanel` draws them with (`PanelController.badge`, `WindowHub.spokenTab`) |
+| `submodule-enter <path>` | a submodule row's "Open a terminal in …" button (`SubmoduleRowView.enter`, which the row calls): a terminal in its folder; `error:` for a row without the button |
+| `diff-drawn` | how `DiffView` laid the open diff out at its own width (`DiffSession.drawn`): `diff-drawn <split\|unified> rows="<rows of that list>" [switch]` (`switch`: the header had room for Split / Unified), then `note <old\|new\|whole> "<text>" detail="<sizes\|->"` per column note as `columnNotes` picks them |
+| `diff-layout split\|unified` | the header's Split / Unified switch (it writes `diff_split`); `error:` where the view had no room for it |
+| `review-paste` / `review-clear` | the review bar's Paste into Terminal and Clear (`ChangesStore.pasteReview`, the bar's clear): `<command> copied-instead=<bool>` (true: the program takes no paste as text, the review went to the clipboard); `error:` while no bar is shown |
+| `comment-remove` | the comment dialog's Remove (offered only for a line with a comment): the review's summary after it |
+| `task-move <from> <to>` / `note-move <from> <to>` | a step or a note dropped on another (1-based), the drop's own `move` (`NotesStore.moveTask`/`moveNote`, core `view::reorder::move_item`); the drag's gesture stays a person's |
+| `cursor [terminal]` | the cursor as that terminal's view draws it next (`MetalTerminalView.cursorReadout`, from what `TerminalScene` builds its row from): `cursor drawn=<block\|underline\|beam\|outline\|none> shape= blinking= on= focused= hidden= at=<row>,<col> colour=#rrggbb`, or `cursor none` |
+
+Added by wave 12 (lane chrome; written without compiling, see TO-VERIFY.md): what a window's views drew, read from the views
+themselves (`Driving/AppController+ControlLooks.swift`), not from the model they were given. Both act on the window
+`pointer-window` names (the Studio is `pointer-window Theme Studio`), else the workspace's in front.
+
+| Command | Does |
+|---|---|
+| `colour-count <#rrggbb> [x y w h] [click]` | the window drawn now (`cacheDisplay`, into sRGB): `colour-count <#hex> pixels=<n> box=<x>,<y>,<w>,<h>` (`box=-` with none), the pixels of that colour (within 4 of each channel, opaque) in the region (content points from the top left; none: the whole window) and the box round them in points; `click` then clicks at the box's centre as `click` does |
+| `studio-out …` (changed) | its reply ends with `from=<folder\|->`: where the next Export's save panel starts, the folder the core remembers (`studio_export_dir`) |
+| `group-drop <group> <over>` / `group-plan <group> <over>` | a group's head let go over `over` (as `drop`'s: `row:<id>:<part>`, `head:<g>:<part>`, `after-loose:<id>`, `after-group:<g>`, `tail`), the `dropGroup` the end of the list's drag sends; `group-plan` only asks where it would land (`nothing`: it would not move) |
+| `sidebar-let-go <id> <x> <y>` / `sidebar-let-go <id> right-of <terminal>` | the list's drag of a row let go outside the list at that window point (from the top left): the window is asked first whether it tears it off (`torn-off`), else the pane area lands it on the edge under the point (`released at x,y`); `right-of` is 20 points in from that terminal's view's right edge, half way down. The gesture stays a person's |
+| `profile-chip [switch <n>]` | the chip as its view decides it (`ProfileChoice.named(by:)`, the function `ProfileChip` draws from) and its menu's rows: `profile-chip choices="<n>" named="<the profile it names>"`, or `profile-chip choices="<n>" hidden` while it draws none (one profile), then `choice <id> "<name>" [current] [here]`; `switch <n>` runs its menu's n-th profile row (`ProfileActions.switchTo`). The menu itself is AppKit's and stays a person's |
+| `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, `profile.chip`, `title.tab`, `icon.button`, `badge`, and a row's `row.pin`, `row.lock`, `row.worktree`, `row.notes` and `row.changes`, marked by wave 12 (with the chip) so inspect mode finds them, …) |
+
+Added by wave 13 (lane fix): no new command; how `key` and `text` get there (`AppController+ControlKeys.swift`, `Driving/InFront.swift`).
+
+- **A key goes to the window it was sent to.** The application hands a key to the window *it* holds for key, whatever the event
+  names and whatever `keyWindow` answers; in a test instance that is the first workspace window. So a key or typed text sent to
+  a second window (`cmd2`) was typed into the first window's terminal, and a ⌘ or ⌃ key sent to Settings or the Studio
+  (`pointer-window <title>`, `settings-record`) was asked of the workspace's views: a shortcut recorder in Settings heard nothing.
+  While a key is routed, the window the application picks now hands it on to the window it was sent to (its `sendEvent` and
+  `performKeyEquivalent`, replaced for that moment only, as `keyWindow` and `isKeyWindow` are): the app's monitors, the
+  application's order for a key (the views' `performKeyEquivalent`, the menus, `keyDown`) and the window's own dispatch run as
+  for a real key. What the pointer commands do is unchanged: they hand their events to the window themselves.
+- **A key whose action the window's menus leave out** (its feature is off in the window's profile: ⌥⌘S with Notes off) goes the
+  keyboard's way instead of running the action's handler: the reply is `key <spec> focus=…`, without `-> <action>`.
+
+- **A Settings control out of sight** (`settings-press`, `settings-record`): on a display shorter than the page (a hosted runner's)
+  a control low on the page is below the window. The driver turns the wheel over the page until the control's recorded frame is in
+  sight and presses where it is then; `settings-size WxH` makes the window small to try it.
+- **`a11y` lists SwiftUI's controls.** SwiftUI's accessibility nodes answer the accessibility methods without adopting AppKit's
+  `NSAccessibilityProtocol`, so the dump's cast to it dropped every one of them; each element is now read by its methods' names
+  (`Driving/AccessibilityDump.swift`), once the application was told an assistive client reads it (`AXEnhancedUserInterface`, set by
+  the first `a11y`). An element named by another (a picker's words beside its radio group: `accessibilityTitleUIElement`) is
+  printed with those words as its label, as VoiceOver names it. `bounds` reads the same way.
+
+A new window's keys: the selected terminal takes them when its pane arrives in the window, whatever AppKit chose as the window came
+on screen (its first key view), and the focus holder is never that choice. On the macOS 26 runner the holder was, and every scenario
+that sent a key failed with `focus=title-row toggle-sidebar` from its first `state` on; if that line shows again there, the keys did
+not reach the terminal at launch and the scenario's own steps are not at fault.
+
+Added by wave 13 (cover; compiled and run by the scenarios that use them):
+
+| Command | Does, and its reply |
+|---|---|
+| `update-status` | Settings → Updates as the open Settings window draws it (`Driving/AppController+ControlUpdates.swift`): `update-status <idle\|checking\|up-to-date\|available\|unsupported\|downloading\|installed\|failed> "<the status line>" channel="<stable\|preview>" [version="<offered or installed>"] [note="<what a channel change did>"] [pending] [security]` (the line is the page model's own `statusLine`, which the page writes; the channel is the updater's), a `button <id>` per button the page laid out, left to right (`update.check`, `update.skip`, `update.install`, `update.restart`, `update.keep`: click one with `settings-press <id>`; a button that left is listed until the page's change has run its course, so wait for the set), `security "<what it fixes>" advisories="<ids>" <danger\|warning>` for a security release, `notes "<line>"` per line under What's new. `update-status none` in a build without an updater; `error:` while Settings is closed |
+| `scrollback [terminal]` | `scrollback history=<lines> offset=<lines back> rows=<n>`: the history that terminal's view was last given, from the last frame's header, which its scroll bar is drawn from (`Driving/AppController+ControlScrollback.swift`); `scrollback none` before a first frame |
+| `hosts-window` / `hosts-forget <id>` | the Session Hosts window as its own model holds it (`HostsWindow.model`, what the cards are drawn from and what follows the hosts folder by itself; `hosts-list` asks the hosts anew instead): `hosts-window cards="<n>"`, a `card <id> <attached\|detached\|orphan\|stale> "<standing>" note="…" [open] [attention] [can-end] [can-forget]` per card and under it `fact <field> "<value>" [warning\|danger]` per fact (`hostPid`, `shellPid`, `program`, `link`, `socket`, …); `hosts-forget` is a stale card's Forget (`error:` for a card that has none) (`Driving/AppController+ControlHostsWindow.swift`) |
+| `window-look` | what the window the command acts on is drawn with, each from the thing that draws it: `window-look profile="<id>" theme="<name>" window="<#rrggbb, the theme's `surface.window`>" status_bar="<bool>" font="<the selected terminal's pt>" terminal="<#rrggbb, its background as drawn>"` (`Driving/AppController+ControlWindowLook.swift`). `status-items`, `tab-bar`, `tab-click` and `switcher` are now built from that window's own look too (they took the app's, which is the shown profile's) |
+| `file-icon <name> [light]` / `file-icon dir:<name> [open] [light]` / `file-icon themes` | the icon the rows draw for a file or a folder of that name, asked of the icon theme in force as the Files, Changes and History rows ask it (`FileIconSource.shared`): `file-icon "<name>" icon="<the SVG's path\|->" [colour]`; `themes`: the choices Settings' Icon theme menu is built from, a `theme "<name>"` each (`Driving/AppController+ControlFileIcon.swift`) |
+| `stall <ms>` | `stall 1500` | the main thread does nothing for that long (up to 10000), the Rust threads going on: a busy Mac's main thread, for the races between the two (a hook's status the look at the process hands back before the list is pulled); replies `stall <ms>` when it is over (`Driving/AppController+ControlStall.swift`) |
+| `pane-restart` | Restart on the bar over the selected terminal once its shell has ended, pressed (`WindowHub.restart`, what the bar's button is wired to): `pane-restart <terminal>`; `error:` while the terminal has no such bar (`exited-words` says when it has) (`Driving/AppController+ControlPaneRestart.swift`) |
+
+An instance with an updater that asks a feed of the scenario's own: `Instance.with(feed: server.base)` over a `FeedServer`
+(`Tests/EndToEndTests/FeedServer.swift`: a listener on `127.0.0.1` that serves the files of a folder in the scratch and keeps
+what was asked). With "Install updates automatically" on (the default) a check installs what it finds, which an instance
+that runs from no app bundle refuses in words: turn `auto_update` off to see an update offered.
 
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
@@ -85,10 +336,8 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 
 ## What still needs a person
 
-- **VoiceOver and the SwiftUI accessibility tree.** SwiftUI builds its accessibility nodes only for an assistive app (an AX
-  client the system trusts); in-process asking, AppKit's own entry points and its request flags do not wake it, and an AX
-  client needs a Privacy grant no script has. `a11y` shows AppKit's part (window, buttons, the terminal's text area, any
-  NSView); the SwiftUI controls' labels need Accessibility Inspector or VoiceOver.
+- **VoiceOver itself.** `a11y` lists the tree VoiceOver gets, SwiftUI's controls included (wave 13: role, spoken name, value,
+  frame); what it says aloud while moving, its rotor and its own focus ring are heard and seen only with VoiceOver on.
 - **Shown menus and popovers**: `right-click` reads a menu without showing it; how AppKit draws it, and the menu bar, the
   status item, the Dock tile and the global hotkey (PL02, PL04 to PL06) are never made in a background instance.
 - **Notifications** (PL03): banners are logged, not shown.
@@ -96,3 +345,69 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
   position on screen (`NSEvent.mouseLocation` stays the real pointer's).
 - **The input method's own UI** (marked text, the candidate window): `text` applies the key bindings directly.
 - **Signed bundle behaviour** (update install, Time Sensitive entitlement).
+
+## End-to-end tests
+
+`macos/swift/Tests/EndToEndTests` is the first suite that uses the app instead of its parts: short scenarios a person would do
+(a first window, new/select/rename/close, splits, groups and tabs, the palette, Settings, the right panel, notes, quit and come back,
+a worktree, an agent's status, two windows, the Theme Studio's contrast and versions), each asserted on what the app reports through this control folder, never on pixels. One
+`Instance` (`Instance.swift`) starts the built `Wormhole` with `--background` on a scratch folder, sends a batch (a `sync <token>`
+after every command says it is done: the wait is on the output file's change events and a deadline, never a pause), and always ends
+what it started (`quit-end-all`, by its own pid if that does not answer), checks that no session host of its folder runs on (each
+host's `hosts/<id>.meta` names its process), and removes the folder.
+
+Persistent terminals: `Instance.with(hosts: true)` links the built session host into the scratch `bin` (the app is told where by
+`WORMHOLE_HOST_BIN`; the build's own folder is never touched) and turns the feature's flag on in the scratch `config.json`. The host is
+`$WORMHOLE_E2E_HOST`, else `crates/wormhole-ffi/target/debug/wormhole-host` (`cargo build -p wormhole-host` there, as `swift.yml`'s
+"Session host for the hosting tests" does); the hosting scenarios (`HostingTests.swift`) skip without it.
+
+Run them where the bridge is linked (`macos/scripts/build-ffi.sh swift`, then in `macos/swift`):
+
+```sh
+swift test --filter EndToEndTests               # builds the app too; WORMHOLE_E2E_APP=<path> runs another build of it
+swift test --filter EndToEndTests/firstWindow   # one scenario
+```
+
+The suite skips itself, saying why, when no `Wormhole` is built. A failure attaches the control files and the app's output to the
+test's result; with `WORMHOLE_E2E_ARTIFACTS=<folder>` set (CI does) it also copies them, with `config.json` and the logs, there before
+the scratch folder goes. `swift.yml` runs the suite as a step of its own after the other tests and uploads that folder on failure.
+
+To add one: a test in `extension EndToEnd` (one file per theme, `@MainActor`), `try await Instance.with { app in … }` (a shell
+other than `/bin/cat`: `shell: .zsh` or `.agent("codex")`), commands through `app.send([...])`, `app.reply("…")`, `app.rows()`, and
+`app.until("command") { reply in … }` for a fact nothing announces (it asks again with the app's own `delay` between asks and a
+deadline). Read the command's real reply in its `AppController+Control*.swift` before asserting on it, and ask for a command that does
+not exist instead of inventing one. A repository comes from `app.scratch.repository(…)`. Without `window:` a batch goes to `cmd`,
+which acts on the window in front (the newest, once a second one is open); `app.send([...], window: 1)` writes `cmd1` and reads
+`out1.txt`, the first window's own, and `window: 2` the second's.
+
+Every instance gets one window size (`Instance.window`, 1600 x 900 points: 100 columns beside both side columns, and room to
+split), asked with `size` once the window answers and checked with `geometry`, so no scenario depends on the display it runs on:
+a size asked through the control folder holds where the screen is smaller than the window (AppKit would fit the window to the
+screen: on a 1024-point display the terminal was 304 points wide, a split was refused and text wrapped at 35 columns).
+The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
+`a11y` lists SwiftUI's controls too (wave 13), so a button's or a row's spoken name is checked through it.
+
+`WORMHOLE_E2E_LONG_PROMPT=1` (a variable of the test process, not the app's): the suite's zsh prints the runner's 62-character host name as its prompt, so a pass on a Mac shows what a prompt that fills most of a line does to a scenario; the Mac's own host name is never changed. `Instance.size(window:)` puts a window opened later at the suite's size (it is otherwise as large as its screen lets it be: 944 points on the runner), and `Instance.unwrapped(screen)` joins the rows a long line wrapped over. The lines the app writes by itself (`exited terminal=…`, `saved-text-forgotten …`, `group-to-window …`) are left out of every answer.
+
+A session host of an older build: `Instance.with(hosts: true, hostFrom: Instance.oldHostProgram())`. It is made from the repository's
+own history, in the worktree's ignored `target/`: `git archive 1feca30ff^ | tar -x -C target/oldhost-src` (the commit before hosts could
+forget a terminal's history, protocol minor 1), then `CARGO_TARGET_DIR=$PWD/target/oldhost-target cargo build -p wormhole-host` in that
+folder (30 seconds; or `$WORMHOLE_E2E_OLD_HOST`). Scenarios that use it skip without it.
+
+Wave 8 (lane e2e-b) added: `Instance.with(auth: "allow", config: "<json>")` (what the owner's question answers, a `config.json`
+before the first launch), `app.cli([...])` and `app.cliRun([...])` (the app's own command line asking the instance through its
+socket, as an agent or a script would: `Client.swift`), `app.later(command, answer: prefix)` for a command that answers from a task
+after its batch's `sync` marks (`project …`, `update`, `probe`, `studio-save`, `studio-open`, `studio-menu`, `history-copy`,
+`studio-out`), `app.flags([...])`, `app.setting(key)`, `app.terminal(in:)`, `app.screen(showing:)` and `app.signal(SIGTERM)`.
+
+A terminal of a test instance starts in the scratch `HOME` and its `~` is that folder: the app writes a `~` out with the core's
+home (`HomeFolder`, `$HOME` first), so `rows` shows the scratch home's full path where `/tmp` and `/private/tmp` differ.
+After `size` the window is laid out at once, and a key sent while nothing in the workspace window has the keys goes to the
+selected terminal: a hosted runner's window gets no display cycle and never made the terminal its first responder.
+
+What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
+browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data
+folder is `Wormhole-swift-e2e` inside `/tmp/wh-e2e-<id>`, `HOME`, `TMPDIR` and `WORMHOLE_AGENT_HOME` are folders in it,
+`WORMHOLE_AUTH=cancel` (`Instance.with(auth: "allow")` for a scenario that trusts a project: answered, never prompted), `WORMHOLE_NOTIFY=log`, `WORMHOLE_AGENT_PATH=` empty, git without the person's config. A test never passes a
+real path to the app, never spawns a program itself (`Spawn.swift` is the one place `rules.py` allows a `Process`, marked
+`// process:`), and never sets the app's isolation variables by hand.
