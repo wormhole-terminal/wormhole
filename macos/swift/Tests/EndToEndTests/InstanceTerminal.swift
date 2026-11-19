@@ -86,6 +86,27 @@ extension Instance {
         (await windowLines()).filter { $0.contains("visible=true") }.firstIndex { $0.contains("profile=\(profile) ") }.map { $0 + 1 }
     }
 
+    /// The screen's rows as one text with the rows a long line wrapped over joined again: a row the line fills to the edge has no
+    /// padding after it, so rows are joined without a break and their padding dropped. A fact printed on one logical line is found
+    /// whatever the terminal's width.
+    static func unwrapped(_ screen: String) -> String {
+        screen.split(separator: "\n", omittingEmptySubsequences: false).map { row in
+            var text = String(row)
+            while text.last == " " { text.removeLast() }
+            return text
+        }.joined()
+    }
+
+    /// Window `window` at the suite's size (`Instance.window`), as the first window is made: a window opened later is as large as
+    /// its screen lets it be (944 points wide on the runner, 33 columns of terminal beside the two columns), so a scenario that
+    /// reads its text or its bar asks for the size it counts on.
+    func size(window: Int) async {
+        let wanted = "(\(Self.window.width).0, \(Self.window.height).0)"
+        await send(["size \(Self.window.width)x\(Self.window.height)"], window: window)
+        let sized = await until("geometry", window: window) { $0.contains("content=\(wanted)") }
+        expect(sized.contains("content=\(wanted)"), "window \(window) did not take the size \(wanted):\n\(sized)")
+    }
+
     /// Feature flags for a profile other than the default one, written into its own `config.json` (the map unlocked, as
     /// `flags` writes it); the window `window` of that profile is waited for until it has them.
     func flags(_ wanted: [String: Bool], profile: String, window: Int? = nil) async throws {

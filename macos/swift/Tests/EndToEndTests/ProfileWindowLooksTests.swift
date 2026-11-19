@@ -33,6 +33,9 @@ extension EndToEnd {
             guard let other = await app.window(inProfile: work), let mine = await app.window(inProfile: "default") else {
                 return app.fail("a window of each profile in sight:\n\(await app.reply("sessions"))")
             }
+            // A window opened later is as large as the screen lets it be: the bar drops what does not fit it.
+            await app.size(window: other)
+            await app.size(window: mine)
 
             // The Work window is drawn with Work's: its theme, its window and terminal colours, its font; the bar on.
             let worn = Readout(await app.until("window-look", window: other) { Readout($0).first("window-look")?["theme"] == theme && Readout($0).first("window-look")?["font"] == "19.0" }).first("window-look")

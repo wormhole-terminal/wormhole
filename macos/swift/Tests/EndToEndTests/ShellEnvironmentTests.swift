@@ -7,10 +7,9 @@ import Testing
 extension EndToEnd {
     @Test("with no shell named anywhere a terminal runs the person's login shell, as a login shell")
     @MainActor func loginShellByDefault() async throws {
-        // The login shell of whoever runs the suite, as the account names it (the app is given no `SHELL`).
-        guard let entry = getpwuid(getuid()), let path = entry.pointee.pw_shell.map({ String(cString: $0) }), !path.isEmpty else { return }
-        let name = URL(fileURLWithPath: path).lastPathComponent
-        guard ["zsh", "bash", "sh"].contains(name) else { return }
+        // Core's rule (`terminal::shells::login_shell`, the GPUI app's too): `$SHELL`, else `/bin/zsh`. The app is given no `SHELL`
+        // here, so it is zsh whatever the account that runs the suite names (the runner's is bash: the app never asks the account).
+        let path = "/bin/zsh", name = "zsh"
         try await Instance.with(shell: .configured) { app in
             // A login shell reads its profile file, which lies in the scratch home: it says so before the first prompt.
             let home = app.scratch.home
@@ -20,11 +19,11 @@ extension EndToEnd {
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.screen(showing: "profile-file-was-read")
-            // It is the account's shell, and it says itself that it is a login shell.
+            // It is core's login shell, and it says itself that it is a login shell.
             await app.shell(#"case $0 in *zsh) [[ -o login ]] && echo LOGIN-$((1+1));; *) shopt -q login_shell && echo LOGIN-$((1+1));; esac; echo "zero=$0=""#)
             let screen = await app.screen { $0.contains("zero=/") || $0.contains("zero=-") }
             app.expect(screen, contains: "LOGIN-2")
-            app.expect(screen.contains("zero=\(path)=") || screen.contains("zero=-\(name)="), "the account's shell (\(path)) runs:\n\(screen)")
+            app.expect(screen.contains("zero=\(path)=") || screen.contains("zero=-\(name)="), "the login shell (\(path)) runs:\n\(screen)")
         }
     }
 
@@ -75,10 +74,13 @@ extension EndToEnd {
             await app.until("sessions") { $0.split(separator: "\n").contains { $0.contains("profile=work ") && $0.contains("visible=true") } }
             guard let window = await app.window(inProfile: "work") else { return app.fail("a Work window in sight:\n\(await app.reply("sessions"))") }
             await app.until("rows", window: window) { Listing($0).live.count == 1 }
+            // As large as the suite's windows: the new one is as large as the screen lets it be, and what it prints would wrap.
+            await app.size(window: window)
             await app.send(["type " + words + "\\n"], window: window)
             let fresh = await app.until("screen", window: window) { $0.contains("at=/") }
-            app.expect(fresh.replacingOccurrences(of: "/private/tmp", with: "/tmp"), contains: "at=\(start.path.replacingOccurrences(of: "/private/tmp", with: "/tmp"))=")
-            app.expect(fresh, contains: "p=from-work=")
+            let logical = Instance.unwrapped(fresh).replacingOccurrences(of: "/private/tmp", with: "/tmp")
+            app.expect(logical, contains: "at=\(start.path.replacingOccurrences(of: "/private/tmp", with: "/tmp"))=")
+            app.expect(logical, contains: "p=from-work=")
         }
     }
 }
