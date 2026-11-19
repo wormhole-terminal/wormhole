@@ -1,12 +1,20 @@
 // One theme in miniature: a narrow sidebar band, five lines in the theme's ANSI colours on its terminal
-// background, and a band with its name. The current pick has the theme's own primary ring and a check.
+// background, and a band with its name. The current pick has the theme's own primary ring and a check. The keyboard's
+// place is the shared ring (`focus_outline`), not the system's; VoiceOver hears the shelf's radio group (`ThemeCards`).
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct ThemeCard: View {
     let theme: Theme
+    /// What the band says: the theme's name, or its family's where the shelf holds one version of it.
+    var label: String?
     let isSelected: Bool
+    /// A theme file made with a newer Wormhole: how many values this version skipped; the band wears a warning mark.
+    var newer: Int?
+    /// The keyboard is on this card (the shelf's focus).
+    var focused = false
     let action: () -> Void
     @Environment(\.tokens) private var tokens
     @State private var hovering = false
@@ -38,9 +46,13 @@ struct ThemeCard: View {
                 }
                 .frame(height: Self.sceneHeight)
                 HStack {
-                    Text(theme.name).textRole(.label, weight: .medium).lineLimit(1)
+                    Text(label ?? theme.name).textRole(.label, weight: .medium).lineLimit(1)
                         .foregroundStyle(isSelected ? own.primary : own.textPrimary)
                     Spacer(minLength: 0)
+                    if let newer {
+                        let said = Words.text("settings-appearance-theme-newer", ["count": .whole(newer)], fallback: "Made with a newer Wormhole: \(newer) value\(newer == 1 ? " was" : "s were") skipped")
+                        Image(Icon.warning).font(.system(size: Metric.glyph)).foregroundStyle(tokens.statusWarning).help(said).accessibilityLabel(said)
+                    }
                     if isSelected { Image(Icon.check).font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }
                 }
                 .padding(.horizontal, Space._3).frame(height: Metric.control + Space._1).background(own.surfacePanel)
@@ -52,9 +64,10 @@ struct ThemeCard: View {
             .contentShape(shape)
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .keyboardFocusRing(focused, radius: tokens.metrics.radiusLg)
         .onHover { hovering = $0 }
         .motion(Motion.press, value: hovering)
-        .accessibilityLabel(theme.name)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityLabel(label ?? theme.name)
     }
 }

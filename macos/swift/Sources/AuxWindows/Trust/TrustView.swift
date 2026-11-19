@@ -89,7 +89,7 @@ private struct TrustLineView: View {
             text += runs
         }
         if !line.note.isEmpty { text += AttributedString(" " + line.note) }
-        return Text(text).font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+        return Text(text).font(codeFont.lineFont(TextRole.caption.size)).foregroundStyle(tokens.textMuted)
             .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
     }
 }

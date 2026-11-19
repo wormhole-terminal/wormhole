@@ -52,7 +52,8 @@ public struct AccessDisplay: Equatable, Sendable {
 
     static func buttons(_ request: AccessRequest) -> [AccessButton] {
         var buttons: [AccessButton] = [.deny]
-        if request.program != nil { buttons.append(.session) }
+        // Scripts has no process to tie it to (`resolved.process.is_some()`).
+        if request.program != nil, request.kind != .scripts { buttons.append(.session) }
         buttons.append(.quit)
         // A terminal is not a stable thing to approve for good: only the question about the program has Always.
         if request.canBeRemembered, request.terminal == nil { buttons.append(.always) }

@@ -18,11 +18,19 @@ public final class StudioDocument {
     public var filter = TokenFilter()
     public internal(set) var tokens: ThemeTokens
     public internal(set) var fieldError: FieldError?
+    /// The text in the selected token's value field: the field's own (`ExpressionField` binds to it), kept here so that what
+    /// types into it from outside the view (the control folder's `studio-complete <text>`) types into the field itself.
+    public var fieldText = ""
+    /// What that field shows, told by the field; nil while none is on screen. Not observed: nothing draws from it.
+    @ObservationIgnored public var fieldOffer: FieldOffer?
     public internal(set) var notice: StudioNotice?
     /// What reading the file had to do (made with a newer Wormhole, entries skipped), when the core is there to say.
     public internal(set) var report: StudioFileRead?
     /// Whether the theme it was copied from has changed since (Update from), kept while the base stays the same.
     public internal(set) var update = UpdateCheck()
+    /// Core's contrast for the draft as the window shows it, asked once per change: the list's marks, the Low filter,
+    /// the editor's Contrast section and the card all read it, so they never disagree.
+    public internal(set) var contrast = ContrastReport()
     @ObservationIgnored var updateKey: String?
     /// Whether the app shows this theme now (see `refreshInUse`), and the pick that was asked of.
     public internal(set) var inUse = true
@@ -54,6 +62,7 @@ public final class StudioDocument {
         selected = "primary"
         store.preview = first
         refreshUpdate()
+        refreshContrast()
         refreshInUse()
     }
 
@@ -77,6 +86,12 @@ public final class StudioDocument {
         tokens = resolved.tokens(increaseContrast: store.increaseContrast)
         store.preview = resolved
         refreshUpdate()
+        refreshContrast()
+    }
+
+    /// Asks core for every pair of the draft and the ones that fall short; none without the core (a test).
+    func refreshContrast() {
+        contrast = (try? environment.files?.contrast(file.json(), shown: shown, increaseContrast: store.increaseContrast)) ?? ContrastReport()
     }
 
     /// Made with a newer Wormhole than this one: saving would lose what it does not know, so it is never written back.

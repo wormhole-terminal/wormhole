@@ -17,8 +17,10 @@ public enum SettingsBridge {
         public let shortcuts: RustShortcuts
     }
 
-    /// Opens `profile`'s settings (the Default profile for `nil`) and starts following its file. Reads, and may
-    /// create, `config.json`: call it off the main thread when the window is not waiting for it.
+    /// Opens `profile`'s settings (`nil`: the profile Wormhole is in) and starts following its file. Reads, and may
+    /// create, `config.json`: call it off the main thread when the window is not waiting for it. Only the settings of the
+    /// profile Wormhole is in (`nil`) register its fonts folder with CoreText; a named profile's (a window beside, a parked
+    /// one) register none, as GPUI registers `active_profile::paths().fonts_dir()` alone (`fonts.rs:77`).
     @MainActor
     public static func make(
         profile: String? = nil, platform: RustSettingsHost.Platform = .init(),
@@ -27,7 +29,8 @@ public enum SettingsBridge {
         let relay = WakeRelay()
         let handle = try SettingsHandle.open(profile: profile, listener: relay)
         let schema = try SettingsSchema(json: Data(settingsSchemaJson().utf8))
-        let backend = RustSettingsBackend(handle: handle, relay: relay, bundledFonts: platform.bundledFonts())
+        let backend = RustSettingsBackend(
+            handle: handle, relay: relay, bundledFonts: platform.bundledFonts(), registersFonts: profile == nil)
         return Kit(
             schema: schema, backend: backend,
             host: RustSettingsHost(handle: handle, backend: backend, platform: platform, importHome: importHome),

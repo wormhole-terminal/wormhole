@@ -18,19 +18,21 @@ struct EntryRowView: View {
         case .block, .bare: BlockView(model: model, entry: entry)
         case .row, .tallRow:
             VStack(alignment: .leading, spacing: 0) {
-                row
+                // The id a search result's reveal scrolls to. On the row, not on this stack: a group lays its rows out as
+                // subviews (`SettingGroup`), which takes an id at a subview's root for its own and hides it from `scrollTo`.
+                row.id(entry.id)
                 if entry.id == "shells" { ShellLines(lines: model.host.shellProfiles()) }
             }
-            .id(entry.id)
         }
     }
 
     private var row: some View {
         SettingRow(
-            label: entry.label, description: projectNote ?? caption ?? entry.description,
+            label: caption?.label ?? entry.label, description: projectNote ?? caption?.text ?? entry.description,
             visibleHint: entry.visibleHint || projectNote != nil || caption != nil,
             state: state,
-            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: entry.keys, json: { model.host.copyJSON(keys: entry.keys) }, onReset: { model.reset(entry) }
+            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: projectNote == nil ? entry.keys : [], json: { model.host.copyJSON(keys: entry.keys) },
+            chip: projectChip ?? RowExtras.chip(entry, model), below: RowExtras.below(entry, model), onReset: { model.reset(entry) }
         ) {
             EntryControl(model: model, entry: entry)
         }
@@ -38,27 +40,56 @@ struct EntryRowView: View {
 
     /// "Set by <project>/.wormhole/config.json while one of its terminals is in front; yours is kept": the project of the
     /// terminal in front sets this row.
-    private var projectNote: String? {
+    private var projectNote: String? { Self.projectNote(entry, model) }
+
+    static func projectNote(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> String? {
         guard let project = model.host.panelRecords().project, project.entries.contains(entry.id) else { return nil }
         return project.note
     }
 
-    /// What a profile row says under its label (`describe`): where the start folder's folders open, and why Default stays.
-    private var caption: String? {
+    /// The row shows the changed dot and the reset arrow: it differs from its default and no project sets it. A row a project
+    /// sets shows the project's chip instead, and its arrow would put back a value the project hides (`SettingState::Project`).
+    static func isChanged(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> Bool {
+        projectNote(entry, model) == nil && model.isChanged(entry)
+    }
+
+    /// The project that sets this row, as the tag after its label (the row keeps neither key nor menu then).
+    private var projectChip: String? { projectNote == nil ? nil : model.host.panelRecords().project?.name }
+
+    private var caption: Caption? { Self.caption(entry, model) }
+
+    /// What a row says under its label, and in place of it where GPUI's `describe` changes the label too (the permission row).
+    /// The control folder's `settings-page` reads the same.
+    static func caption(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> Caption? {
         switch entry.id {
-        case "profile-start": model.profile.form?.startCaption
-        case "worktree-base": model.host.worktreeCaption(base: model.value("worktree_base").string ?? "")
+        case "profile-start": return Caption(model.profile.form?.startCaption)
+        case "worktree-base": return Caption(model.host.worktreeCaption(base: model.value("worktree_base").string ?? ""))
         case "profile-delete":
-            model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault == true
-                ? Words.text("settings-profile-the-default-profile-stays-it-holds", fallback: "The Default profile stays: it holds the data Wormhole always had.") : nil
-        default: nil
+            guard model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault == true else { return nil }
+            return Caption(Words.text("settings-profile-the-default-profile-stays-it-holds", fallback: "The Default profile stays: it holds the data Wormhole always had."))
+        case "notify-permission":
+            let said = NotifyText.permission(model.notifyStatus.permission)
+            return Caption(said.hint, label: said.title)
+        case "notify-test": return Caption(NotifyText.test(model.notifyStatus.test))
+        case "notify-needs-you": return Caption(NotifyText.needsYou(timeSensitive: model.notifyStatus.timeSensitive))
+        default: return Caption(RowCaptions.text(entry, model))
+        }
+    }
+
+    struct Caption {
+        let text: String
+        var label: String?
+
+        init?(_ text: String?, label: String? = nil) {
+            guard let text else { return nil }
+            (self.text, self.label) = (text, label)
         }
     }
 
     private var state: RowState {
         RowState(
-            isChanged: model.isChanged(entry), resetAlways: resetAlways,
-            configKey: (model.value("show_config_keys").bool ?? false) ? entry.keys.first : nil,
+            isChanged: Self.isChanged(entry, model), resetAlways: resetAlways,
+            configKey: (model.value("show_config_keys").bool ?? false) && projectNote == nil ? entry.keys.first : nil,
             found: found?.labelRange, foundDescription: found?.descriptionRange,
             isRevealed: model.revealed == entry.id, context: found?.group)
     }

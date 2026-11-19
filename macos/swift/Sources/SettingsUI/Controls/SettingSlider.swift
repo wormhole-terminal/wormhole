@@ -9,8 +9,14 @@ struct SettingSlider: View {
     let spec: ControlSpec.Slider
     let value: Double
     let label: String
+    /// The opacity slider: off, with its value quiet, while Reduce Transparency or Increase Contrast makes every window opaque.
+    var offWhenOpaque = false
     let onChange: (Double) -> Void
     @Environment(\.tokens) private var tokens
+    @Environment(\.reduceTransparency) private var reduceTransparency
+    @Environment(\.increaseContrast) private var increaseContrast
+
+    private var off: Bool { offWhenOpaque && (reduceTransparency || increaseContrast) }
 
     var body: some View {
         HStack(spacing: Space._3) {
@@ -25,7 +31,8 @@ struct SettingSlider: View {
             .labelsHidden()
             .accessibilityValue(spec.format(value))
             .frame(width: SettingsMetric.controlWidth)
-            Text(spec.format(value)).monospacedDigit().foregroundStyle(tokens.textMuted)
+            .disabled(off)
+            Text(spec.format(value)).monospacedDigit().foregroundStyle(off ? tokens.textFaint : tokens.textMuted)
                 .frame(width: SettingsMetric.stepperValueWidth, alignment: .trailing)
         }
     }

@@ -24,6 +24,13 @@ extension RustSettingsHost {
         if handle.followSystemWith(light: light, dark: dark) { backend.reload() }
     }
 
+    public func themeHidden(_ value: String) -> Bool? { handle.themeHidden(value: value) }
+
+    public func setThemeHidden(_ value: String, hidden: Bool) -> Bool {
+        if handle.setThemeHidden(value: value, hidden: hidden) { backend.reload() }
+        return true
+    }
+
     public func themeSelects(_ setting: String, path: String) -> Bool { handle.themeSelects(setting: setting, path: path) }
 
     /// The icon theme in force: the setting, or the bundled one while the Icon themes flag is off.

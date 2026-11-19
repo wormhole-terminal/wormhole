@@ -11,6 +11,7 @@ struct FolderStep: View {
     @Namespace private var selection
     @Environment(\.tokens) private var tokens
     @State private var dropTargeted = false
+    @Environment(\.stepKeys) private var keys
 
     var body: some View {
         let picked = session.flow.folder
@@ -30,7 +31,7 @@ struct FolderStep: View {
                 }
                 .padding(.vertical, Space._2)
             }
-            .keyboardShortcut("o", modifiers: .command)
+            .keyboardShortcut(keys ? KeyboardShortcut("o", modifiers: .command) : nil)
             let recents = session.places.filter { $0.kind == .recent }
             if !recents.isEmpty { label(AuxText.recents); ForEach(recents) { place(rowFor: $0, picked: picked) } }
             label(AuxText.places)
@@ -38,8 +39,10 @@ struct FolderStep: View {
             dropZone
         }
         .dropDestination(for: URL.self) { urls, _ in
-            guard let folder = urls.first(where: \.hasDirectoryPath) else { return false }
-            session.pick(folder)
+            // A file dropped on the step picks the folder it is in (`onboarding/mod.rs`).
+            guard let dropped = urls.first else { return false }
+            let isFolder = (try? dropped.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? dropped.hasDirectoryPath
+            session.pick(isFolder ? dropped : dropped.deletingLastPathComponent())
             return true
         } isTargeted: { dropTargeted = $0 }
     }

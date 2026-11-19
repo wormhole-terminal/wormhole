@@ -58,7 +58,7 @@ private struct ImportCard: View {
                         .padding(.horizontal, Space._2).background(tokens.controlBackground, in: Capsule())
                     Spacer(minLength: 0)
                     Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(tokens.textMuted)
-                        .motion(Motion.selection, value: open)
+                        .motionTurn(Motion.selection, value: open)
                 }
                 .frame(minHeight: Metric.control).contentShape(Rectangle())
             }

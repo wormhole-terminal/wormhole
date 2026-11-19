@@ -24,6 +24,7 @@ struct OpenInControl: View {
                 model.set(key, $0)
             }
             LinkButton(title: Words.text("settings-terminal-choose-app", fallback: "Choose app…")) { chooseApp() }
+                .recordFrame("open-in.choose")
         }
         .fixedSize(horizontal: true, vertical: false)
     }

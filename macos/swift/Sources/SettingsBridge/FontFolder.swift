@@ -2,6 +2,11 @@
 // at launch, and the files of the profile's fonts folder when the app starts and each time core says one was added,
 // replaced or removed. Core decides what a font file is and what changed (`font_folder_changes`); this only calls
 // CoreText with the answer. A custom family named like the bundled one replaces it, as it does there.
+//
+// Registered fonts are the whole process's, so there is one of these at a time: the settings of the profile Wormhole is in
+// have it, as GPUI follows `active_profile::paths().fonts_dir()` (`fonts.rs:77`). On a profile switch GPUI's next look finds
+// another folder, so every file of the profile left is unregistered and the new one's are registered (`fonts.rs:83-99`);
+// here the backend being left calls `leave()` before the new profile's is made.
 
 import CoreGraphics
 import CoreText
@@ -46,6 +51,14 @@ final class FontFolder {
         guard !changes.removed.isEmpty || !changes.added.isEmpty else { return false }
         state = FontFolderState(revision: state.revision + 1, families: names)
         return true
+    }
+
+    /// Wormhole left this folder's profile: none of its files stays with CoreText (the bundled family does, as in GPUI,
+    /// where it is registered once at launch).
+    func leave() {
+        for path in Array(registered.keys) { unregister(path) }
+        families = [:]
+        if !state.families.isEmpty { state = FontFolderState(revision: state.revision + 1, families: []) }
     }
 
     private func register(_ path: String) {

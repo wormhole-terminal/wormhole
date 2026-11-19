@@ -12,6 +12,9 @@ struct UndoStack: Equatable {
 
     init(start: ThemeFile) { steps = [Step(label: "", file: start)] }
 
+    /// How many steps undo, and redo, can take (the control line's `state`, as GPUI's `undo_len` / `redo_len`).
+    var undoDepth: Int { cursor }
+    var redoDepth: Int { steps.count - 1 - cursor }
     var canUndo: Bool { cursor > 0 }
     var canRedo: Bool { cursor < steps.count - 1 }
     /// What undo would take back, and what redo would do again.

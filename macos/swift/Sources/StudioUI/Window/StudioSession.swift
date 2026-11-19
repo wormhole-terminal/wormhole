@@ -13,6 +13,8 @@ public final class StudioSession {
     public var renaming = false
     /// The Update from… sheet is up.
     public var showsUpdate = false
+    /// The Versions sheet (Browse All Versions…) is up.
+    public var showsVersions = false
     /// Save was asked of a copy with no name of its own yet: the name is being asked for first.
     private var savingAfterRename = false
     @ObservationIgnored public weak var window: NSWindow?

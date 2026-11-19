@@ -2,6 +2,8 @@
 // seam the page acts through: the defaults every project starts from, the trusted list, and one project's trust and its
 // own Default | On | Off for each feature.
 
+import Foundation
+
 public struct ProjectDefault: Sendable, Equatable, Identifiable {
     public var id: String { key }
     public let key: String
@@ -82,8 +84,24 @@ public protocol ProjectsBackend: Sendable {
     @MainActor func openTerminal(_ root: String)
     /// Whether the owner can be asked at all (Touch ID or a login password); the page says so when not.
     @MainActor var canApprove: Bool { get }
+    /// Calls `changed` once whenever the files of the project's `.wormhole` folder change, until the returned token is let go
+    /// (the core's watch; a change arrives as an event, never by looking again and again).
+    func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject?
+    /// Calls `changed` once whenever the profile's approvals change on disk (a project trusted or revoked in another window,
+    /// the trust window or the command line), until the returned token is let go (the core's watch).
+    func followTrust(changed: @escaping @Sendable () -> Void) -> AnyObject?
+    /// The project's own folder (`dirName` in `root`) for the Finder; nil when it has no project folder anymore. The core
+    /// reads `root`, which is a key where the folder's name is not text: the URL is of its very bytes.
+    func projectFolder(_ root: String, dirName: String) async -> URL?
 }
 
 extension ProjectsBackend {
     @MainActor public var canApprove: Bool { true }
+    /// Nothing follows the folder by default (a backend with no watch): the page reads when the window comes forward.
+    public func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject? { nil }
+    public func followTrust(changed: @escaping @Sendable () -> Void) -> AnyObject? { nil }
+    /// A backend without the core has only text paths.
+    public func projectFolder(_ root: String, dirName: String) async -> URL? {
+        URL(fileURLWithPath: root).appendingPathComponent(dirName)
+    }
 }

@@ -4,6 +4,7 @@ import Foundation
 
 extension AuxText {
     public static var trustWindowTitle: String { tr("trust-window-title", "Project commands") }
+    public static var trustClosed: String { tr("trust-window-closed", "This project is no longer open in a terminal.") }
     public static var trustTrusted: String { tr("trust-badge-trusted", "trusted") }
     public static var trustChanged: String { tr("trust-badge-changed", "changed") }
     public static var trustNot: String { tr("trust-badge-not", "not trusted") }

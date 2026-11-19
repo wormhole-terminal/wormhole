@@ -30,6 +30,9 @@ public final class RustSettingsHost: SettingsHost {
         /// Takes an approval back (`stored`: a database row; else one held in memory): the hook server ends the
         /// streams it let in, which only the app can reach.
         public var revokeApproval: @MainActor (_ number: UInt64, _ stored: Bool) -> Void = { _, _ in }
+        /// Switches one capability of an approval on or off (the ticks of its row): the hook server ends the streams that
+        /// were started under it when one is taken away.
+        public var setApprovalCapability: @MainActor (_ number: UInt64, _ stored: Bool, _ capability: AccessCapability, _ on: Bool) -> Void = { _, _, _, _ in }
         /// The project service the Project tab uses, so trust given in Settings is what the tab shows; nil: no Project folders page.
         public var projects: @MainActor () -> ProjectService? = { nil }
         /// Asked before a Probe that needs it is approved (Touch ID, or the password); nil: no Extensions page.
@@ -52,7 +55,9 @@ public final class RustSettingsHost: SettingsHost {
     /// Told when core changed settings by itself (Reset all), so the model does not wait for a wake.
     let backend: RustSettingsBackend
     let platform: Platform
-    let importHome: String?
+    /// Where the Import page looks for other terminals' settings: the Mac's home, or (`WORMHOLE_IMPORT_HOME`, the control folder's
+    /// `import-scan`) a folder standing in for it.
+    public var importHome: String?
     var records: PanelRecords
     public let probes: (any ProbesBackend)?
     /// Read on first use: the settings model is made before the first window, and the service is the window's.
@@ -76,6 +81,7 @@ public final class RustSettingsHost: SettingsHost {
         records = PanelRecords(
             agents: [], imports: [],
             profile: profile ?? ProfileRecord(name: "", startFolder: "~", gitName: "", gitEmail: ""))
+        records.agentsRead = false
         refreshAgents()
         refreshSkills()
         refreshImports()
@@ -151,11 +157,22 @@ public final class RustSettingsHost: SettingsHost {
         }
     }
 
-    /// Reads the agents and their hooks again (after an install, a removal, Rescan PATH).
+    public func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord) {
+        Task.detached {
+            let result = Result { try settingsSetLoginHooks(agent: login.agent, dir: login.dir, install: hooks != .remove) }
+            await MainActor.run {
+                self.problem(result.failure.map(SettingsFailure.sentence))
+                self.refreshAgents()
+            }
+        }
+    }
+
+    /// Reads the agents, their hooks and the profiles' logins again (after an install, a removal, Rescan PATH).
     public func refreshAgents() {
         Task.detached {
             let rows = settingsAgentRows().map(RecordMapping.agent)
-            await MainActor.run { self.records.agents = rows }
+            let logins = ((try? settingsAgentLogins()) ?? []).map(RecordMapping.login)
+            await MainActor.run { (self.records.agents, self.records.logins, self.records.agentsRead) = (rows, logins, true) }
         }
     }
 

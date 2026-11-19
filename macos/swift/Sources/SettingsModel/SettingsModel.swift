@@ -9,6 +9,8 @@ import Observation
 public final class SettingsModel {
     /// The page Changed shows is not a section of the schema: it lists the others' rows.
     public static let changedID = "changed"
+    /// The Components page is not in the schema either: it is drawn from the controls themselves.
+    public static let componentsID = "components"
 
     public let schema: SettingsSchema
     public let backend: any SettingsBackend
@@ -20,6 +22,12 @@ public final class SettingsModel {
     /// The open page: a section id or `changed`.
     public var selection: String
     public var query = ""
+    /// What the Appearance page's theme filter box holds. The window's, not the page's: it stays through a visit to another
+    /// page, as GPUI's does (`settings_window/mod.rs:177`, `sections/theme_picker/mod.rs:57`), and the control folder's
+    /// `theme-cards` reads the box the cards are narrowed by, not a filter of its own.
+    public var themeFilter = ""
+    /// The query a section was opened under: the page shows that section, its matches still marked, until the query changes.
+    public private(set) var browsing: String?
     /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.
     public var showsNewProfile = false
     /// The font an open font picker is looking at; the Fonts page's scene shows it instead of the settings' own.
@@ -39,6 +47,18 @@ public final class SettingsModel {
     /// Opens the Theme Studio (the button beside Import theme).
     @ObservationIgnored public var openStudio: (() -> Void)?
     @ObservationIgnored public var hotkeyError: (() -> String?)?
+    /// What macOS allows for notifications and what the last test came to; the app keeps it and `refreshNotify` reads it again.
+    public var notifyStatus = NotifyStatus()
+    @ObservationIgnored public var refreshNotify: (() -> Void)?
+    /// A trusted project's theme is in effect (the terminal in front is in it): the Appearance cards say whose it is.
+    public var projectTheme: ProjectThemeMark?
+    /// Zen mode is on: the windows show less than these settings say, and a page with a row it overrides says so.
+    public var zenOn = false
+    /// The Settings window is on screen (true where there is no window: a test, a specimen). The window is kept when it
+    /// closes, so a page's watches follow this, not the page's own life: they end when it closes and start when it opens.
+    public var windowShown = true
+    /// Leaves Zen mode (the note's button).
+    @ObservationIgnored public var leaveZen: (() -> Void)?
 
     public init(
         schema: SettingsSchema = .bundled, backend: any SettingsBackend, host: any SettingsHost,
@@ -119,7 +139,16 @@ public final class SettingsModel {
         return schema.sections.filter { $0.id != "profile" && $0.id != Self.changedID && shown?.contains($0.id) ?? true }
     }
 
+    /// The Components page is on for this build and these settings (the `components` feature flag): a developer page in the nav.
+    public var showsComponents: Bool {
+        _ = values
+        return host.shownSections()?.contains(Self.componentsID) ?? false
+    }
+
     public var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// The results list is the page: a search runs and no section was picked under it.
+    public var showsResults: Bool { isSearching && browsing != query }
 
     public var hits: [SearchHit] { isSearching ? searcher.search(query, values: values) : [] }
 
@@ -131,14 +160,17 @@ public final class SettingsModel {
 
     // MARK: Moving
 
+    /// Opens a page. Under a running search the page opens with the matches marked, until the search changes.
     public func show(_ section: String) {
         selection = section
         revealed = nil
+        browsing = isSearching ? query : nil
     }
 
     /// Opens the page of a search result and marks the row, as choosing it in the results list does.
     public func jump(to hit: SearchHit) {
         query = ""
+        browsing = nil
         selection = hit.section
         revealed = hit.entry.id
     }
@@ -147,6 +179,7 @@ public final class SettingsModel {
     public func reveal(_ id: String) {
         guard let found = schema.entry(id) else { return }
         query = ""
+        browsing = nil
         selection = found.section.id
         revealed = id
     }

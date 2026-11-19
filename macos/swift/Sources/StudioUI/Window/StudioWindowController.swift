@@ -15,8 +15,12 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
     /// The panel and pasteboard of Export JSON and Copy JSON; a check replaces them with a scratch folder's.
     public var outputs = StudioOutputs.system { didSet { session?.outputs = outputs } }
 
-    /// Opens the Studio on `theme` (what is in use), or brings the open one forward.
-    public func show(theme: String, environment: StudioEnvironment, store: ThemeStore = .shared) throws {
+    /// Opens the Studio on `theme` (what is in use), or brings the open one forward. `extras` draws the gallery's specimens
+    /// of the modules above this one, by id (the window's status bar, icon tabs and resize handle).
+    public func show<Extras: View>(
+        theme: String, environment: StudioEnvironment, store: ThemeStore = .shared,
+        @ViewBuilder extras: @escaping @MainActor (String) -> Extras
+    ) throws {
         if let window {
             TestInstance.bring(window)
             return
@@ -29,8 +33,8 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         window.titlebarAppearsTransparent = true
         window.minSize = StudioMetrics.windowMin
         window.title = StudioWords.title
-        window.setFrameAutosaveName("StudioWindow")
-        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store).secondaryBackdrop(.studio, store: store))
+        window.setFrameAutosaveName("StudioWindow") // text: an autosave name
+        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store, extras: extras).secondaryBackdrop(.studio, store: store))
         window.delegate = self
         window.isReleasedWhenClosed = false
         session.window = window
@@ -41,6 +45,12 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
     }
 
     public var isOpen: Bool { window != nil }
+
+    /// Whether the Studio is the key window, and the app hearing that it became or stopped being it (the Edit menu's words follow).
+    public var isKey: Bool { window?.isKeyWindow == true }
+    public var onKeyChange: (@MainActor () -> Void)?
+    public func windowDidBecomeKey(_ notification: Notification) { onKeyChange?() }
+    public func windowDidResignKey(_ notification: Notification) { onKeyChange?() }
 
     /// Closes the window as the red light does: unsaved edits are asked about first (⌥⌘, with the Studio open).
     public func close() { window?.performClose(nil) }

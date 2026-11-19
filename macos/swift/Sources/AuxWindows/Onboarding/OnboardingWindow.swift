@@ -14,6 +14,9 @@ public final class OnboardingWindow {
     public let player: IntroPlayer
     private var controller: AuxWindowController?
     private let immersive: Bool
+    /// The window ended (finished or skipped): `primer` is true when a first run ended on "Ready when you are", the machine
+    /// having no coding agent (the sidebar then puts up its note).
+    public var onEnded: ((_ primer: Bool) -> Void)?
 
     /// `immersive` false keeps the effect just above the window (a test instance kept behind other apps).
     public init(backend: any OnboardingBackend, firstRun: Bool, immersive: Bool = true, player: IntroPlayer = IntroPlayer()) {
@@ -21,8 +24,10 @@ public final class OnboardingWindow {
         self.player = player
         self.immersive = immersive
         session.onEnd = { [weak self] folder, firstRun in
+            let primer = firstRun && self?.session.step == .primer
             backend.finish(folder: folder, firstRun: firstRun)
             self?.close()
+            self?.onEnded?(primer)
         }
     }
 
@@ -38,10 +43,15 @@ public final class OnboardingWindow {
             OnboardingView(session: session, player: player, replay: { [weak self] in self?.replay() })
         }
         self.controller = controller
+        // The trust card's watch runs while the window is up, and ends with it: the window is kept after it closes.
+        session.backend.watchesTrust(true)
         Task { await session.scan() }
         guard let window = controller.window else { return }
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak player] _ in
-            MainActor.assumeIsolated { player?.stop() }
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak player, weak session] _ in
+            MainActor.assumeIsolated {
+                player?.stop()
+                session?.backend.watchesTrust(false)
+            }
         }
         // First launch: the window was never shown, so it stays out of sight until the wormhole delivers it.
         var options = IntroOptions()

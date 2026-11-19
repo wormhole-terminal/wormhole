@@ -13,6 +13,7 @@ struct PageScaffold<Action: View, Content: View>: View {
     @ViewBuilder var action: Action
     @ViewBuilder let content: Content
     @Environment(\.tokens) private var tokens
+    @Environment(\.reduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -41,7 +42,8 @@ struct PageScaffold<Action: View, Content: View>: View {
             .background(tokens.surfaceWindow)
             .task(id: revealed) {
                 guard let revealed else { return }
-                withAnimation(Motion.layout) { proxy.scrollTo(revealed, anchor: .center) }
+                // Under Reduce Motion the page jumps to the row, as GPUI's `scroll_to_item` does.
+                withAnimation(reduceMotion ? nil : Motion.layout) { proxy.scrollTo(revealed, anchor: .center) }
                 // one-shot: the found row's highlight fades after 1.6 s
                 try? await Task.sleep(for: .seconds(1.6))
                 clearReveal()

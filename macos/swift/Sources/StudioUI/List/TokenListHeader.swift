@@ -24,7 +24,7 @@ struct TokenListHeader: View {
                 Image(systemName: "magnifyingglass").foregroundStyle(tokens.textMuted)
                 TextField(StudioWords.filterPlaceholder, text: $filter.query).textFieldStyle(.plain)
                 if !filter.query.isEmpty {
-                    IconButton(symbol: "xmark.circle.fill", label: LocalizedStringKey(StudioWords.clearFilter)) { filter.query = "" }
+                    IconButton(symbol: "xmark.circle.fill", label: StudioWords.clearFilter) { filter.query = "" }
                         .frame(width: Metric.controlSmall, height: Metric.controlSmall)
                 }
             }

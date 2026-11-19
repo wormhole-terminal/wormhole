@@ -9,6 +9,10 @@ import WordsModel
 
 struct SkillList: View {
     let records: [SkillRecord]
+    /// The agents, for each row's tile (the same two letters as on the hooks list), and whether they were read yet: the note
+    /// that none was found waits for that.
+    var agents: [AgentRecord] = []
+    var read = true
     let host: any SettingsHost
     @Environment(\.tokens) private var tokens
 
@@ -17,7 +21,7 @@ struct SkillList: View {
             ForEach(records) { skill in
                 VStack(alignment: .leading, spacing: Space._2) {
                     HStack(spacing: Space._3) {
-                        Circle().fill(color(skill.state)).frame(width: Metric.statusDot, height: Metric.statusDot)
+                        AgentMark(text: agents.first { $0.id == skill.id }?.mark ?? String(skill.name.prefix(2)).uppercased(), size: Metric.tile)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(skill.name).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
                             HStack(spacing: Space._1) {
@@ -36,7 +40,7 @@ struct SkillList: View {
                 .padding(.vertical, Space._2).frame(minHeight: SettingsMetric.rowMinHeight)
                 .accessibilityElement(children: .combine)
             }
-            if records.isEmpty {
+            if records.isEmpty, read {
                 PanelNote(text: Words.text("settings-agents-skill-none", fallback: "No coding agent that loads skills was found on this Mac's PATH."))
             }
         }

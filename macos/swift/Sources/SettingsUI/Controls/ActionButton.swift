@@ -28,6 +28,8 @@ struct ActionButton: View {
 struct LinkButton: View {
     let title: String
     var goes = false
+    /// Recorded for the control folder's `settings-rows` under this id, as `ActionButton`'s.
+    var frameId: String?
     let action: () -> Void
     @Environment(\.tokens) private var tokens
 
@@ -40,5 +42,6 @@ struct LinkButton: View {
         }
         .buttonStyle(.link)
         .foregroundStyle(tokens.textLink)
+        .recordFrame(frameId)
     }
 }

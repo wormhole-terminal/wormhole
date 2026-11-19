@@ -28,6 +28,24 @@ public struct AgentRecord: Sendable, Equatable, Identifiable {
     }
 }
 
+/// A profile's own login of an agent: a second place for the status hooks, with its folder and the state there.
+public struct AgentLoginRecord: Sendable, Equatable, Identifiable {
+    /// The agent's command, and the folder (what `perform(_:login:)` takes).
+    public let agent: String
+    public let dir: String
+    /// The folder as shown (`~/.claude-work`), and "Work profile · Status hooks on in" before it.
+    public let shown: String
+    public let line: String
+    public let state: AgentRecord.State
+    /// The button that fits the state; none while the hooks there cannot be read.
+    public let hooks: AgentRecord.HookAction?
+    public var id: String { "\(agent)@\(dir)" } // text: an id
+
+    public init(agent: String, dir: String, shown: String, line: String, state: AgentRecord.State, hooks: AgentRecord.HookAction?) {
+        (self.agent, self.dir, self.shown, self.line, self.state, self.hooks) = (agent, dir, shown, line, state, hooks)
+    }
+}
+
 public struct ImportRecord: Sendable, Equatable, Identifiable {
     public let id: String
     public let app: String
@@ -49,6 +67,9 @@ public struct ProfileRecord: Sendable, Equatable {
 
 public struct PanelRecords: Sendable, Equatable {
     public var agents: [AgentRecord]
+    /// The profiles' logins of the agents above, and whether the agents were read yet ("Looking for agents…" until then).
+    public var logins: [AgentLoginRecord] = []
+    public var agentsRead = true
     public var imports: [ImportRecord]
     public var profile: ProfileRecord
     /// Every profile, Default first.

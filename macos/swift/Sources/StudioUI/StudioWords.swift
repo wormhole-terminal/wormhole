@@ -58,10 +58,14 @@ enum StudioWords {
     static var opaque: String { text("studio-srgb-opaque", "sRGB · opaque") }
     static func alpha(_ percent: Int) -> String { text("studio-srgb-alpha", ["percent": .whole(percent)], "sRGB · \(percent)% alpha") }
     static var expressionPlaceholder: String { text("studio-expression-placeholder", "#hex or expression, e.g. primary / 15%") }
+    static var completionFunction: String { text("studio-completion-function", "function") }
+    static func contrastFollows(_ token: String) -> String { text("studio-contrast-follows", ["token": .text(token)], "Follows \(token): its fix clears this too.") }
     static var didYouMean: String { text("studio-did-you-mean", "Did you mean") }
     static func metricFollow(_ source: String, _ value: String) -> String { text("studio-metric-follow", ["source": .text(source), "value": .text(value)], "Follow \(source) (\(value) px)") }
     static var helpWidth: String { text("studio-metric-help-width", "A number of pixels. No color picker for metrics.") }
     static var helpRadius: String { text("studio-metric-help-radius", "A number of pixels; a radius above half the height is fully round. No color picker for metrics.") }
+    static func metricPreview(_ value: String) -> String { text("studio-metric-preview", ["value": .text(value)], "Preview at \(value)") }
+    static func metricUses(_ count: Int) -> String { text("studio-metric-uses", ["count": .whole(count)], count == 1 ? "1 use" : "\(count) uses") }
     static func px(_ value: String) -> String { text("studio-metric-px", ["value": .text(value)], "\(value) px") }
     static var ruleSetHere: String { text("studio-rule-set-here", "This theme sets it, so the rule isn't used; Reset goes back to the rule.") }
     static var ruleFixed: String { text("studio-rule-fixed", "A fixed value. Typing a value overrides it; Reset goes back to the rule.") }
@@ -121,6 +125,21 @@ enum StudioWords {
     static var gallerySelected: String { text("studio-gallery-uses-selected", "uses the selected token") }
     static var showPalette: String { text("studio-gallery-show-palette", "Show the palette") }
     static var showSheet: String { text("studio-gallery-show-sheet", "Show the shortcut sheet") }
+    static var showQuickPanel: String { text("studio-gallery-show-quick-panel", "Show the quick panel") }
+    static var turnCount: String { text("studio-gallery-turn-count", "Turn the counts over") }
+    static var countsBeforeAfter: String {
+        text("studio-gallery-counts-before-after", "A count turns over by the system’s own transition, which cannot be held half way: before and after.")
+    }
+    static var systemTooltip: String { text("studio-gallery-system-tooltip", "macOS draws tooltips; a theme does not change them.") }
+    static var tooltipHere: String { text("studio-gallery-tooltip-here", "Rest the pointer here") }
+    static var tooltipSample: String { text("studio-gallery-tooltip-sample", "A tooltip explains a control") }
+    static var systemMenu: String { text("studio-gallery-system-menu", "macOS draws menus; a theme does not change them.") }
+    static var showMenu: String { text("studio-gallery-show-menu", "Open a menu") }
+    static var systemDialog: String { text("studio-gallery-system-dialog", "macOS draws questions as its own alerts; a theme does not change them.") }
+    static var showDialog: String { text("studio-gallery-show-dialog", "Show a question") }
+    static var systemScrollbar: String { text("studio-gallery-system-scrollbar", "macOS draws the scroll bars; a theme does not change them.") }
+    static var systemAbout: String { text("studio-gallery-system-about", "About Wormhole is the system\u{2019}s own panel; a theme does not change it.") }
+    static var showAbout: String { text("studio-gallery-show-about", "Show About Wormhole") }
 
     // The theme menu, the title row's marks and the update sheet.
     static var menuThisProject: String { text("studio-menu-this-project", "This Project") }
