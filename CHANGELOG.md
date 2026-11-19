@@ -100,6 +100,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Making a window or a pane wider no longer erases the line of output above the prompt when zsh's or bash's
+  prompt was wrapped, or a command was typed over several rows. The terminal joined those rows before the
+  shell drew them again, and the shell, counting its old rows, erased one line too far up. The rows of the
+  line the cursor is on now stay as they are until the shell has drawn again. Still open: a prompt of
+  several lines whose upper line wraps.
 - Renaming a theme of your own that had no `id` in its file and saving it in the Theme Studio no longer hides
   its earlier saves from Versions (they were still on disk, under the old name). A saved theme now keeps the id
   it had, and the save writes it into the file.

@@ -1,19 +1,18 @@
 import Foundation
 import Testing
 
-/// A window widened while zsh's prompt is wrapped. KNOWN AND UNPROVEN, kept here so it is counted and not forgotten (`TO-VERIFY.md`,
-/// "round 14", `restartedHostedShellKeepsItsText` with a 62-character prompt).
+/// A window widened while zsh's prompt is wrapped.
 ///
-/// A pane 35 columns wide holds a 62-character prompt on two rows. Widened to 103 columns the engine reflows those soft-wrapped rows
-/// into one (`wormhole-vt`, `grid/resize.rs`: no case for a prompt the shell is about to redraw), and zsh, told its window changed,
-/// moves up the rows it believes its prompt takes and clears down: the output line above the prompt goes. The GPUI app does the same
-/// with the same engine: `Pty::resize` (`crates/wormhole-term/src/handle/size.rs`) reflows the screen and then sets the PTY's window
-/// size, and the view calls it at once for the size the pane has (`terminal_view/scaling/live.rs`), the same order and no delay.
-/// Not in this repository's hands (the engine is its own), so the scenario is disabled, not weakened.
+/// A pane 35 columns wide holds a 62-character prompt on two rows. zsh remembers that its cursor is one row under the prompt's
+/// first; told of 103 columns it goes up one row, erases to the end of the screen and draws the prompt again. The engine used to
+/// join the two rows into one before that, so zsh's one row up was the output line above the prompt, and it went. The engine now
+/// leaves the rows of the cursor's line as they are when the screen gets wider (`wormhole-vt`, `grid/resize.rs`, with zsh's and
+/// bash's bytes in its `resize.vtt`). The GPUI app has the same engine and tells it the size in the same order.
+///
+/// Still open there: a prompt of several lines whose upper line wraps. That line is not the cursor's, it is joined, and zsh counts
+/// its rows too (`TO-VERIFY.md`, round 16).
 extension EndToEnd {
-    @Test(
-        "an output line above a wrapped prompt is still there when the window is widened",
-        .disabled("the engine reflows a wrapped prompt zsh then redraws over the line above: wormhole-vt's resize, see TO-VERIFY.md round 14"))
+    @Test("an output line above a wrapped prompt is still there when the window is widened")
     @MainActor func widenedWhileThePromptWraps() async throws {
         try await Instance.with(shell: .zsh) { app in
             await app.until("keys") { $0.contains("focus=terminal") }
