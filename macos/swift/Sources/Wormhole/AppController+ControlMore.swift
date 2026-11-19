@@ -25,6 +25,7 @@ extension AppController {
         if runWindowLook(command: command) { return true }
         if runFileIcon(command: command, argument: argument) { return true }
         if runPaneRestart(command: command) { return true }
+        if runStall(command: command, argument: argument) { return true }
         return false
     }
 }

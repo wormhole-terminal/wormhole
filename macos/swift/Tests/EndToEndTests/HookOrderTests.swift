@@ -21,7 +21,8 @@ extension EndToEnd {
         try await Instance.with(shell: .agent("codex")) { app in
             guard let other = await Self.second(app) else { return app.fail("a second terminal") }
             // At once: no wait for the app to have seen the agent first.
-            _ = try app.hook(agent: "codex", event: "PermissionRequest", terminal: other)
+            let sent = try app.hook(agent: "codex", event: "PermissionRequest", terminal: other)
+            app.expect(sent == 0, "the hook client was taken by the app (status \(sent))")
             await app.until("rows") { Listing($0).row(other)?.activity == "needsInput" }
             let log = await app.until("notice-log") { $0.contains("codex needs input") }
             app.expect(log, contains: "wormhole/tab/\(other)")
@@ -35,7 +36,8 @@ extension EndToEnd {
     @MainActor func hookOnAPlainTerminalIsUndoneByTheLook() async throws {
         try await Instance.with { app in
             guard let other = await Self.second(app) else { return app.fail("a second terminal") }
-            _ = try app.hook(agent: "codex", event: "PermissionRequest", terminal: other)
+            let sent = try app.hook(agent: "codex", event: "PermissionRequest", terminal: other)
+            app.expect(sent == 0, "the hook client was taken by the app (status \(sent))")
             // Not dropped, not shown late: the row and the banner are there at the first answer.
             let log = await app.until("notice-log") { $0.contains("codex needs input") }
             app.expect(log, contains: "wormhole/tab/\(other)")

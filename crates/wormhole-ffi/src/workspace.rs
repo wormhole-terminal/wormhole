@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
 use wormhole_core::view::layout::Edge;
@@ -195,6 +195,9 @@ impl From<TerminalFactsRecord> for TerminalFacts {
     }
 }
 
+/// How long the look at a process waits for the list to be pulled after a hook moved a row.
+const UNPULLED_FOR: Duration = Duration::from_millis(3000);
+
 /// What the object and the threads that feed it share.
 pub(crate) struct Shared {
     model: Mutex<WorkspaceModel>,
@@ -221,6 +224,9 @@ pub(crate) struct Shared {
     windows: Mutex<Option<(Arc<Windows>, i64)>>,
     /// The texts of the terminals the window was restored with, until each starts (`workspace_texts`).
     pub(crate) restored_texts: crate::workspace_texts::RestoredTexts,
+    /// Terminals whose row a hook moved and that no pull of the list has read since, with when: the look at the process waits for
+    /// the pull (`Shared::unpulled`).
+    unpulled: Mutex<HashMap<i64, Instant>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -228,6 +234,29 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl Shared {
+    /// A hook moved terminal `id`'s row (`moved`): until the list is pulled once, or `UNPULLED_FOR` has passed, the look at its process
+    /// waits. The notification rules compare looks at the rows, so a status that came and went between two never made its banner;
+    /// the GPUI app decides at the hook, on the thread that looks at the process too, so it cannot happen there.
+    pub(crate) fn note_unpulled(&self, id: i64, moved: bool) {
+        if moved {
+            locked(&self.unpulled).insert(id, Instant::now());
+        }
+    }
+
+    /// Whether the look at terminal `id`'s process is to wait: a hook moved its row and the list has not been pulled since
+    /// (for at most `UNPULLED_FOR`: a window nobody pulls for is looked at as before).
+    pub(crate) fn waits_for_a_pull(&self, id: i64) -> bool {
+        let mut unpulled = locked(&self.unpulled);
+        match unpulled.get(&id) {
+            Some(since) if since.elapsed() < UNPULLED_FOR => true,
+            Some(_) => {
+                unpulled.remove(&id);
+                false
+            }
+            None => false,
+        }
+    }
+
     /// The registered `Terminal` of terminal `id`.
     pub(crate) fn terminal_of(&self, id: i64) -> Option<Arc<Terminal>> {
         locked(&self.terminals).get(&id).cloned()
@@ -380,7 +409,11 @@ impl Workspace {
 
     /// [`Self::sidebar`] as it reads at `now_ms` on the workspace's clock (tests, previews).
     pub fn sidebar_at(&self, now_ms: u64) -> SidebarSnapshot {
-        self.shared.with_model(|model| model.sidebar_snapshot(now_ms))
+        // The pull that reads the rows: what a hook moved is read with them (the look at the process may hand it back from now on).
+        self.shared.with_model(|model| {
+            locked(&self.shared.unpulled).clear();
+            model.sidebar_snapshot(now_ms)
+        })
     }
 
     /// The panes of the selected terminal's split in an area of `width` x `height` points.
@@ -481,6 +514,7 @@ impl Workspace {
         let at = self.shared.now();
         let status = StatusEvent::Hook { agent, event, message };
         let events = self.shared.with_model(|model| model.feed(id, status, at));
+        self.shared.note_unpulled(id, !events.is_empty());
         let events = self.shared.close_what_closed(events);
         self.shared.serve_asks();
         self.shared.pump.kick();
@@ -587,6 +621,7 @@ impl Workspace {
             tap: OnceLock::new(),
             windows: Mutex::new(None),
             restored_texts: Default::default(),
+            unpulled: Mutex::new(HashMap::new()),
         });
         workspace_pump::spawn(&shared);
         Arc::new(Self { shared })

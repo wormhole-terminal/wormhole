@@ -17,6 +17,9 @@ use crate::terminal::Terminal;
 use crate::workspace::Shared;
 use crate::workspace_pump::{AFTER_MARK, AFTER_OUTPUT};
 
+/// How soon the look that waited for a pull asks again.
+const UNPULLED_RETRY_MS: u64 = 100;
+
 struct TerminalFeed {
     shared: Weak<Shared>,
     id: i64,
@@ -114,7 +117,9 @@ impl Shared {
     /// what the machine asks of the terminal, and the pump, whose deadlines may have moved.
     pub(crate) fn feed(&self, id: i64, event: StatusEvent) {
         let at = self.now();
+        let hook = matches!(event, StatusEvent::Hook { .. });
         let events = self.with_model(|model| model.feed(id, event, at));
+        self.note_unpulled(id, hook && !events.is_empty());
         self.post(events);
         self.serve_asks();
         self.pump.kick();
@@ -173,6 +178,11 @@ impl Shared {
         let Some(terminal) = self.terminal_of(id) else { return false };
         if !terminal.is_alive() {
             return false;
+        }
+        // A hook's status is read by a pull before a look can hand it back: a moment later.
+        if self.waits_for_a_pull(id) {
+            self.pump.probe_by(id, self.now() + UNPULLED_RETRY_MS);
+            return true;
         }
         let seen = terminal.probe();
         let look = ForegroundLook {
