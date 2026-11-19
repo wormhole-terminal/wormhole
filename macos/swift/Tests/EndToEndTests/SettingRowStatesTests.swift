@@ -30,10 +30,7 @@ extension EndToEnd {
         }
     }
 
-    // Disabled, not counted as passing: asked in the process, the tree has AppKit's views and none of SwiftUI's, so nothing
-    // here could fail. The assertions stay for the day the tree can be read.
-    @Test(
-        "the theme cards of a shelf are radio buttons in a group named by the shelf, the pick chosen (choice_card)")
+    @Test("the theme cards of a shelf are radio buttons in a group named by the shelf, the pick chosen (choice_card)")
     @MainActor func themeCardsAreRadioButtons() async throws {
         try await Instance.with { app in
             await app.send(["set theme_mode=\"dark\"", "settings-section appearance"])
@@ -41,8 +38,8 @@ extension EndToEnd {
             guard let picked = cards.all("card").first(where: { $0.has("picked") })?.label else { return app.fail("a picked card:\n\(cards.text)") }
             let tree = await app.reply("a11y Settings")
             let lines = tree.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
-            // SwiftUI builds its part of the tree only for an assistive app (DRIVING.md): where it did, the cards are radios.
-            guard lines.contains(where: { $0.contains("\"\(picked)\"") }) else { return }
+            // SwiftUI's nodes are read by `a11y` (by their accessibility methods): the picked card is in the tree, or the tree is wrong.
+            guard lines.contains(where: { $0.contains("\"\(picked)\"") }) else { return app.fail("the picked card \"\(picked)\" is in the tree:\n\(tree)") }
             app.expect(lines.contains { $0.hasPrefix("RadioGroup") && $0.contains("\"In Dark Mode\"") }, "the shelf is a radio group named by its heading:\n\(tree)")
             let radio = lines.first { $0.hasPrefix("RadioButton") && $0.contains("\"\(picked)\"") }
             app.expect(radio?.contains(" = 1") == true, "the pick is a chosen radio button:\n\(tree)")
