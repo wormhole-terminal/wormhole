@@ -42,7 +42,7 @@ of the press (`Driving/Injector.swift`).
 | `hover x y` / `hover-cmd x y` | `hover-cmd 389 51` | move the pointer there (with ⌘: a link underlines) |
 | `mouse-down x y` / `mouse-move x y` / `mouse-up x y` | `mouse-down 150 182` | a held drag, a line each, so a `window-shot` can catch it mid-way |
 | `drag x1 y1 x2 y2 [steps]` | `drag 351 400 300 400 10` | pressed, moved in steps a frame apart, released (reorder, column edges, window resize) |
-| `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart |
+| `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart, at most 60 steps: a longer way is the same total in 60 larger steps (the scenarios' longest, 9000, was 450 steps and over 30 s on a loaded runner) |
 | `key <keystroke>` | `key shift-f6`, `key ctrl-c` | a key as the keyboard sends it (menu equivalents run their action) |
 | `key-held <keystroke>` | `key-held ctrl-cmd-t` | the key held: pressed, two of the keyboard's repeats (`isARepeat`), let go |
 | `text <text>` | `text Build` | typed into whatever has the keys, a key per character (a field being edited, the terminal) |
