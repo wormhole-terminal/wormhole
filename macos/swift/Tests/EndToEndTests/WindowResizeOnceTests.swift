@@ -19,7 +19,9 @@ extension EndToEnd {
             await app.send(["size 900x500", "frames 2", "delay 1200"])
             let small = Self.marks(await app.reply("screen"))
             app.expect(small >= 1 && small <= 2, "the shell was told \(small) times of a change to 900x500")
-            await app.send(["size 1600x900", "frames 2", "delay 1200"])
+            // Both sizes differ from the suite's 1600 x 900 (the start) and from each other, and both fit a small screen: a size the
+            // window already has tells the shell nothing.
+            await app.send(["size 1200x700", "frames 2", "delay 1200"])
             let all = Self.marks(await app.reply("screen"))
             app.expect(all >= 2 && all <= 4, "the shell was told \(all) times of two changes")
         }

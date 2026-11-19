@@ -85,6 +85,9 @@ final class Instance {
         return files.isExecutableFile(atPath: built.path) ? built : nil
     }
 
+    /// A host name as the runner's (`sjc22-bt149-…-02D7A1DEE503`, 62 characters), as zsh's default prompt prints it.
+    static let longPrompt = "sjc22-bt149-30c66388-6dea-46a7-9167-544b6652d0ee-02D7A1DEE503"
+
     /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does. `auth` is what
     /// the owner's question answers (a project's trust, a Probe's approval); `config` is the text of the default profile's
     /// `config.json` before the first launch (a flag or a mode the app reads at launch); `hosts`: Persistent terminals on, with
@@ -138,7 +141,10 @@ final class Instance {
         case .configured: program = nil
         case .zsh:
             let zsh = scratch.bin.appendingPathComponent("zsh-f")
-            try Data("#!/bin/zsh\nexec /bin/zsh -f \"$@\"\n".utf8).write(to: zsh)
+            // `WORMHOLE_E2E_LONG_PROMPT=1`: the prompt a runner's host name makes (62 characters before `% `), so a pass on a Mac
+            // shows what a prompt that fills most of a line does to a scenario. The Mac's own host name is never changed.
+            let prompt = ProcessInfo.processInfo.environment["WORMHOLE_E2E_LONG_PROMPT"] == nil ? "" : "export PS1='\(Self.longPrompt)% '\n"
+            try Data("#!/bin/zsh\n\(prompt)exec /bin/zsh -f \"$@\"\n".utf8).write(to: zsh)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: zsh.path)
             program = zsh
         }
