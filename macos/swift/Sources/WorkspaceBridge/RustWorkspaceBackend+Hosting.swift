@@ -255,6 +255,8 @@ extension RustWorkspaceBackend {
 
     /// What terminal `id` starts with: the core's facts (the shell it was opened with, the profile, the text it showed when
     /// the app last quit), the program an action named or the setup's, the folder and the size until its view fits it.
+    /// The profile is the one the window is in now (the core's `facts`, which a move to another profile changes), the setup's
+    /// only where the core knows none: a moved window's new terminal never starts under the profile it left.
     func request(_ id: TerminalID, in folder: String?, old: String? = nil, text: String? = nil) -> HostedStart {
         let size = Self.startSize
         let facts = core.launchFacts(id: Int64(id))
@@ -262,6 +264,6 @@ extension RustWorkspaceBackend {
         return HostedStart(
             tab: Int64(id), shell: facts.shell, program: program?.0, args: program?.1 ?? [], cwd: folder,
             cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight,
-            oldHost: old, savedText: text ?? facts.savedText, profile: setup.profile ?? facts.profile)
+            oldHost: old, savedText: text ?? facts.savedText, profile: facts.profile ?? setup.profile)
     }
 }
