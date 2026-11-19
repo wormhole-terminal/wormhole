@@ -1,0 +1,110 @@
+import Foundation
+import Synchronization
+
+/// The app's own command line (`Wormhole <words…>`) asking the instance through its socket, as a script would, left running
+/// while its request waits on the person's answer (the control folder's `agent-ask`). It is started detached: a shell puts
+/// it in the background and exits, so its ancestors are that shell and launchd, never the test runner's own (a coding agent's
+/// session that runs the suite would otherwise be the requester the app names, rightly). Its output goes to a file of the
+/// scratch folder, its exit status to another when it ends; `finish` waits for that file and a deadline, never a pause.
+@MainActor
+final class Client {
+    private let log: URL
+    private let pidFile: URL
+    /// The program the client is: what the process behind the pid file must still be to be signalled.
+    private let program: URL
+    private let state: ClientState
+
+    fileprivate init(log: URL, pidFile: URL, program: URL, state: ClientState) {
+        (self.log, self.pidFile, self.program, self.state) = (log, pidFile, program, state)
+    }
+
+    var isRunning: Bool { !state.isDone }
+
+    /// What it printed so far.
+    var output: String { (try? String(contentsOf: log, encoding: .utf8)) ?? "" }
+
+    /// Its exit status once it has ended, nil when it is still waiting after `timeout` seconds (it is then stopped).
+    func finish(timeout: TimeInterval = 20) async -> Int32? {
+        let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let deadline = DispatchWorkItem { @Sendable in events.finish() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
+        state.onEnd { @Sendable in events.finish() }
+        defer {
+            deadline.cancel()
+            state.onEnd(nil)
+        }
+        for await _ in stream {}
+        if let status = state.status { return status }
+        // Still waiting: ended by the pid the shell wrote for it (it is no child of this process), and only while that
+        // process is still the client. One that ended between the deadline and here has given its number back.
+        if let pid = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap({ pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }),
+            Spawn.runs(pid, program: program)
+        {
+            kill(pid, SIGTERM)
+        }
+        return nil
+    }
+}
+
+extension Instance {
+    /// `Wormhole <words…>` started against this instance, from inside terminal `terminal` (none: from outside the app's terminals).
+    func cli(_ words: [String], terminal: Int? = nil) throws -> Client {
+        let name = "client-\(UUID().uuidString.prefix(6))"
+        let log = scratch.root.appendingPathComponent(name + ".txt")
+        let status = scratch.root.appendingPathComponent(name + ".status"), pidFile = scratch.root.appendingPathComponent(name + ".pid")
+        let state = ClientState()
+        // The status file is moved into place whole, so the folder's change is the moment it can be read.
+        let folder = open(scratch.root.path, O_EVTONLY)
+        if folder >= 0 {
+            let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: folder, eventMask: .write, queue: .global())
+            source.setEventHandler { @Sendable in
+                guard let text = try? String(contentsOf: status, encoding: .utf8), let code = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
+                state.finish(code)
+                source.cancel()
+            }
+            source.setCancelHandler { @Sendable in close(folder) }
+            source.resume()
+        }
+        let detached = #"status=$1; pid=$2; shift 2; ( "$@" & echo $! > "$pid"; wait $!; echo $? > "$status.tmp"; mv "$status.tmp" "$status" ) </dev/null &"#
+        _ = try Spawn.start(
+            "/bin/sh", ["-c", detached, "sh", status.path, pidFile.path, program.path] + words, environment: try clientEnvironment(terminal: terminal),
+            log: log) { _ in }
+        return Client(log: log, pidFile: pidFile, program: program, state: state)
+    }
+
+    /// `Wormhole <words…>` run to its end: its status and what it printed.
+    func cliRun(_ words: [String], terminal: Int? = nil, timeout: TimeInterval = 20) async throws -> (status: Int32?, output: String) {
+        let client = try cli(words, terminal: terminal)
+        let status = await client.finish(timeout: timeout)
+        return (status, client.output)
+    }
+}
+
+/// Whether the client has ended and with what status, told from the process's own queue.
+private final class ClientState: Sendable {
+    private struct Held {
+        var status: Int32?
+        var wake: (@Sendable () -> Void)?
+    }
+    private let held = Mutex(Held())
+
+    var isDone: Bool { held.withLock { $0.status != nil } }
+    var status: Int32? { held.withLock { $0.status } }
+
+    func finish(_ status: Int32) {
+        let wake = held.withLock { held -> (@Sendable () -> Void)? in
+            held.status = status
+            return held.wake
+        }
+        wake?()
+    }
+
+    /// What to do when the client ends (at once when it has already); nil forgets it.
+    func onEnd(_ wake: (@Sendable () -> Void)?) {
+        let now = held.withLock { held -> Bool in
+            held.wake = wake
+            return held.status != nil && wake != nil
+        }
+        if now { wake?() }
+    }
+}
