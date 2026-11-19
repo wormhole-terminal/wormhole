@@ -45,23 +45,27 @@ extension EndToEnd {
         }
     }
 
-    // Disabled: the app does not say it. A terminal that falls back to the app's process while the app runs gets the
-    // warning (`StickyCausesTests/hostFallbackWarns`); one that falls back at launch, restored from the saved window, gets
-    // none: the chip is empty and no pane has a banner. The GPUI app says it from the terminal's view when it starts
-    // (`terminal_view/hosted.rs`, `say_with(Notice::Warned(Warning::HostFallback), …)`), at a launch too. Not fixed here:
-    // the launch's order of the saved terminals' start and the window's notices is the hosting code's.
+    // A terminal restored at a launch whose helper is found but does not start is said to end with the app, as one that falls
+    // back while the app runs is (`StickyCausesTests/hostFallbackWarns`). GPUI's rule (`window/hosting.rs` `start_with`): the
+    // host program is looked for once, and a helper that is missing then is a silent `Start::Local`, so a launch with no helper
+    // says nothing in either app; the warning comes from a host that was to start and failed (`terminal_view/hosted.rs`
+    // `host_ready`, told once per run). This scenario's helper is a program that exits at once: found, and no host.
     @Test(
-        "a hosted terminal that falls back to the app at launch is said to end with the app, as one that falls back later is",
-        .disabled("a fallback at launch posts no warning in the Swift app: see the comment"),
+        "a hosted terminal restored at a launch where the helper is found but does not start is said to end with the app",
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func fallbackAtLaunchIsSaid() async throws {
         try await Instance.with(hosts: true) { app in
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             await app.quit(command: "quit-end-all")
-            try FileManager.default.removeItem(at: app.scratch.bin.appendingPathComponent("wormhole-host"))
+            let helper = app.scratch.bin.appendingPathComponent("wormhole-host")
+            try FileManager.default.removeItem(at: helper)
+            try Data("#!/bin/sh\nexit 1\n".utf8).write(to: helper)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: helper.path)
             try await app.start()
             let chip = Instance.plain(await app.until("notice chip") { $0.contains("ends when") })
             app.expect(chip, contains: "sticky=true")
+            app.expect(!chip.contains("detail=-"), "the warning carries why the helper did not start: \(chip)")
+            app.expect((await app.rows()).live.count == 1, "the terminal came back in the app")
         }
     }
 }
