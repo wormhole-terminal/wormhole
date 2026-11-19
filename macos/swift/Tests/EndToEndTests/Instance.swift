@@ -164,8 +164,9 @@ final class Instance {
     /// and room to split it.
     static let window = (width: 1600, height: 900)
 
-    /// Launches the app on this scratch folder, waits until its window answers and gives it the suite's size.
-    func start() async throws {
+    /// Launches the app on this scratch folder, waits until its window answers and gives it the suite's size. `keepingTheWindow`: a
+    /// relaunch that is about the window coming back as it was saved: it is not resized, and the scenario reads what came back.
+    func start(keepingTheWindow: Bool = false) async throws {
         ended.reset()
         if !FileManager.default.fileExists(atPath: outFile(nil).path) { FileManager.default.createFile(atPath: outFile(nil).path, contents: nil) }
         let ended = ended
@@ -174,6 +175,7 @@ final class Instance {
             onExit: { ended.finish($0) })
         let said = await until("state", timeout: 40) { $0.contains("terminals=") }
         expect(said.contains("terminals="), "the app did not come up with a window")
+        if keepingTheWindow { return }
         // One window size for every run, whatever display it runs on (a runner's is smaller than the window): the app keeps
         // a size asked through its control folder beyond the screen's edge. Checked, so a display that still decides fails here.
         let size = "(\(Self.window.width).0, \(Self.window.height).0)"

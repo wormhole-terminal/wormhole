@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 
@@ -103,10 +104,14 @@ extension EndToEnd {
         }
     }
 
-    // The line the shell printed last survives a quit that keeps the hosts and a launch. It was lost with every hosted zsh, restarted
-    // or not: at a launch (and at any change of the window's size) the pane area animated its frames from the old layout to the new
-    // one, so the terminal was resized at each step of the motion, from 2 columns up (30 sizes in half a second), and zsh redrew its
-    // prompt over the rows it believed were its own at each. GPUI lays the panes out at the new size at once.
+    // The line the shell printed last survives a quit that keeps the hosts and a launch, the window coming back as it was. It was lost
+    // with every hosted zsh, restarted or not: at a launch (and at any change of the window's size) the pane area animated its frames
+    // from the old layout to the new one, so the terminal was resized at each step of the motion, from 2 columns up (30 sizes in half a
+    // second), and zsh redrew its prompt over the rows it believed were its own at each. GPUI lays the panes out at the new size at once.
+    //
+    // The window is one a small screen can hold as it is (no panel, 1200 x 640: 100 columns, room for a 62-character host name's prompt
+    // and the command), and the relaunch does not resize it: a harness that widened a window the screen had narrowed was the runner's
+    // own cause of the loss (`RestartedShellTests`' sibling `widenedWhileThePromptWraps`, which is about that).
     @Test(
         "a restarted hosted shell's last line is still there after a quit that keeps the hosts",
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
@@ -115,6 +120,12 @@ extension EndToEnd {
             await app.flags(["persistent_terminals": true])
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             guard let id = await app.live(1)?.first else { return }
+            // A window the screen can hold unchanged, wide enough that the prompt does not wrap.
+            if (await app.reply("state")).contains("panel=true") { await app.send(["panel"]) }
+            await app.send(["size 1200x640", "frames 2"])
+            let before = await app.until("geometry") { $0.contains("content=(1200.0, 640.0)") }
+            let columns = Instance.value("grid", in: before)?.split(separator: "x").first.flatMap { Int($0) } ?? 0
+            app.expect(columns >= 90, "the pane is wide enough that the prompt does not wrap: \(before)")
             await Self.endShell(app, id)
             await Self.restart(app, id)
             await app.until("keys") { $0.contains("focus=terminal") }
@@ -122,16 +133,19 @@ extension EndToEnd {
             await app.screen { $0.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } }
             await app.send(["save-windows"])
             await app.quit(command: "quit-keep")
-            try await app.start()
+            try await app.start(keepingTheWindow: true)
             await app.until("rows") { Listing($0).live == [id] }
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
+            // The window came back as it was: its size is what the screen allows it (said here, so a run says what the screen was).
+            let back = await app.until("geometry") { $0.contains("content=") }
+            app.expect(back.contains("content=(1200.0, 640.0)"), "the window came back as it was (1200 x 640); the screens' usable areas are \(NSScreen.screens.map(\.visibleFrame)):\n\(back)")
             // On the screen, or just above it where the shell's redraw after the attach pushed it.
             var text = ""
             let start = Date()
             repeat {
                 text = (await app.send(["scroll 700 400 -600", "frames 2", "delay 150", "screen", "scroll 700 400 600"]))[3]
             } while !text.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } && Date().timeIntervalSince(start) < 15
-            app.expect(text.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") }, "the line from before the quit is still there:\n\(text)")
+            app.expect(text.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") }, "the line from before the quit is still there (the window: \(back)):\n\(text)")
         }
     }
 }
