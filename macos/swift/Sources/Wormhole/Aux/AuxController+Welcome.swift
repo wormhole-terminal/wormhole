@@ -44,7 +44,7 @@ extension AuxController {
             guard welcomeIsProgram, let hooks = app.hooks, let backend = app.hub.store.hooks as? RustWorkspaceBackend else { return false }
             let animates = introPlayer.progress != nil
             let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            let importHome = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"]
+            let importHome = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"] // text: a sample signer
             let before = app.hub.state.all.map(\.id)
             let panelOpen = app.hub.state.panelVisible
             var started: Int?

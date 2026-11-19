@@ -16,6 +16,9 @@ extension AppController {
             let detail = NoticeReason.dataFolder(profile: "default", folder: dataDirectory.path, error: rest.isEmpty ? "permission denied" : rest)
             notices.post(.warned(.dataFolder), detail: detail)
         case "host-fallback": notices.post(.warned(.hostFallback), detail: NoticeReason.clean(rest.isEmpty ? "no such file: wormhole-host" : rest))
+        case "sticky":
+            // A warning that stays until it is clicked (`notice-click`): the session host's, whose explanation says `text`.
+            notices.post(.warned(.hostFallback), detail: NoticeReason.clean(rest.isEmpty || rest == "again" ? "no such file: wormhole-host" : rest))
         case "move": notices.post(.warned(.moveToApplications))
         case "history-kept": notices.post(.failed(.historyKeptByHost))
         case "copy-path": notices.post(.failed(.copyPath))

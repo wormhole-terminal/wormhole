@@ -84,7 +84,7 @@ extension AppController {
         } else if command == "welcome", let handover = Handover(rawValue: argument) {
             aux.playWelcome(handover)
         } else {
-            return reply("error: \(command) takes \((command == "intro" ? IntroStyle.allCases.map(\.rawValue) : Handover.allCases.map(\.rawValue)).joined(separator: "|"))")
+            return reply("error: \(command) takes \((command == "intro" ? IntroStyle.allCases.map(\.rawValue) : Handover.allCases.map(\.rawValue)).joined(separator: "|"))") // text: a control reply
         }
         reply("\(command) \(argument)")
     }

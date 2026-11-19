@@ -5,6 +5,9 @@
 import AppKit
 
 extension AppController {
+    /// The most wheel events one `scroll` posts.
+    static let scrollSteps = 60
+
     /// False when `command` is not one of the pointer's; a drag and the wheel go in steps, a frame apart.
     func runPointer(command: String, argument: String) async -> Bool {
         let words = argument.split(separator: " ").map(String.init)
@@ -44,10 +47,11 @@ extension AppController {
             }
             reply("drag \(argument): \(down), \(steps) steps, " + injector.release(to, in: window, flags: flags))
         case ("scroll", 3...):
-            // In steps of at most 20 points, a frame apart, as a trackpad's scroll arrives (a long list's end is reached).
-            // An optional fourth number scrolls sideways: `scroll x y dy dx`.
+            // In steps of at most 20 points, a frame apart, as a trackpad's scroll arrives (a long list's end is reached), and in
+            // at most `scrollSteps` steps: past that the step grows, so the command's time stays bounded where a frame is slow
+            // (450 steps took 7 s here and over 30 s on a loaded runner). An optional fourth number scrolls sideways: `scroll x y dy dx`.
             let total = numbers[2], across = numbers.count > 3 ? numbers[3] : 0
-            let count = max(1, Int((max(abs(total), abs(across)) / 20).rounded(.up)))
+            let count = min(Self.scrollSteps, max(1, Int((max(abs(total), abs(across)) / 20).rounded(.up))))
             var said = ""
             for _ in 0..<count {
                 said = injector.scroll(at(0), in: window, dy: total / Double(count), dx: across / Double(count))
@@ -74,7 +78,7 @@ extension AppController {
     /// The window `pointer-window <title>` named: by its title, or `popover` for the one a popover (the font picker, a row's
     /// description) shows its content in, which has no title.
     var drivenWindow: NSWindow? {
-        injector.windowTitle.flatMap { title in
+        injector.target ?? injector.windowTitle.flatMap { title in
             NSApp.windows.first { title == "popover" ? String(describing: type(of: $0)).contains("Popover") : $0.title == title }
         }
     }

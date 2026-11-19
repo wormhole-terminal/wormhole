@@ -38,6 +38,9 @@ enum PanelSettings {
     static func codeFont(_ values: [String: JSONValue], folderRevision: Int = 0) -> CodeFont {
         let own = values["code_font_family"]?.string?.trimmingCharacters(in: .whitespaces) ?? ""
         let family = own.isEmpty ? values["font_family"]?.string : own
-        return CodeFont(family: family, size: values["code_font_size"]?.number ?? 13, folderRevision: folderRevision)
+        // Ligatures is one setting for the terminal and for code text (`fonts.rs:219` `code_font_features`).
+        return CodeFont(
+            family: family, size: values["code_font_size"]?.number ?? 13, ligatures: values["font_ligatures"]?.bool ?? true,
+            folderRevision: folderRevision)
     }
 }

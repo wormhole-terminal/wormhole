@@ -12,6 +12,8 @@ extension AppController {
     func runKeys(command: String, argument: String) -> Bool {
         switch command {
         case "key": reply(sendKey(argument))
+        // The key held: pressed, then two of the keyboard's repeats (`isARepeat`), then let go.
+        case "key-held": reply(sendKey(argument, repeats: 2))
         case "keys": reply("focus=\(hub.focus.detail) responder=\(keyTarget?.firstResponder.map { String(describing: type(of: $0)) } ?? "none")")
         case "hold-cmd", "release-cmd":
             // ⌘ pressed alone and kept down (the ⌘1-9 hints show after 250 ms), or let go: the modifier event the window's monitors see.
@@ -35,7 +37,7 @@ extension AppController {
     private static let ansiKeys = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
 
     /// `[shift-|cmd-|ctrl-|alt-]…key`, the key a name (`f6`, `tab`, `esc`, `left`, `return`, `space`) or one character.
-    private func sendKey(_ spec: String) -> String {
+    func sendKey(_ spec: String, repeats: Int = 0) -> String {
         var parts = spec.lowercased().split(separator: "-", omittingEmptySubsequences: false).map(String.init)
         if parts.last == "" { parts.removeLast(); parts[parts.count - 1] += "-" }
         guard let name = parts.last, let window = keyTarget else { return "error: key needs a spec like shift-f6" }
@@ -66,7 +68,14 @@ extension AppController {
         }
         // In another window (`pointer-window Settings`) the key goes to that window's views first, as a person's would, a recorder's
         // among them; only what they leave goes on to the menu.
-        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags) {
+        // A key the keymap gives a view's own action (⌘← ⌘→ ⌘⌫ are the terminal's line editor: `ActionRouter.viewed`) goes the
+        // keyboard's way, so the view's `performKeyEquivalent` has it before the menus, as a real key's does.
+        // An action the window's menus leave out (its feature is off in the window's profile: `FeatureMask::hidden_actions`)
+        // has no item to answer the key: it goes the keyboard's way too, and is whoever's it is there (nobody's, for ⌥⌘S
+        // with Notes off).
+        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags), !ActionRouter.viewed.contains(id),
+            !menuState(for: hub).hidden.contains(id)
+        {
             // An action nothing in the table runs is AppKit's own (Edit ▸ Paste, Undo…): the menu would send it up the responder chain.
             if router.table[id] == nil, let selector = StandardActions.selectors[.action(id)] {
                 // In a text field the system's own copy, cut and paste would use the person's clipboard.
@@ -79,7 +88,7 @@ extension AppController {
             }
             return "key \(spec) -> \(id.rawValue) focus=\(settled())"
         }
-        press(code: code, characters: text, flags: flags, in: window)
+        press(code: code, characters: text, flags: flags, in: window, repeats: repeats)
         return "key \(spec) focus=\(settled())"
     }
 
@@ -91,21 +100,44 @@ extension AppController {
     }
 
     /// A key down and up, through the application's own dispatch (its monitors, then the window's first responder).
-    private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow) {
-        for type in [NSEvent.EventType.keyDown, .keyUp] {
+    private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow, repeats: Int = 0) {
+        // Nothing in the workspace's window has the keys (its first responder is the window itself) and nothing covers the
+        // terminal: the keys are the selected terminal's, as they are once a window has been in front. A window that never
+        // really got on a screen (a hosted runner's session) never made it first responder.
+        if window === self.window, window.firstResponder === window, hub.panel.cover == nil, let view = selectedView, view.window === window {
+            window.makeFirstResponder(view)
+        }
+        var strokes: [(NSEvent.EventType, Bool)] = [(.keyDown, false)]
+        strokes += Array(repeating: (NSEvent.EventType.keyDown, true), count: repeats)
+        strokes.append((.keyUp, false))
+        for (type, isARepeat) in strokes {
             NSEvent.keyEvent(
                 with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                 windowNumber: window.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters,
-                isARepeat: false, keyCode: code
+                isARepeat: isARepeat, keyCode: code
             ).map { event in
                 // A field being edited reads keys through the input method, which only a really active app has; the key
                 // bindings it would apply are applied directly (typing, Return, Esc, arrows), the rest go the usual way.
                 if let editor = window.firstResponder as? NSTextView, type == .keyDown, flags.isDisjoint(with: [.command, .control]) {
+                    // Esc goes the window's way first: SwiftUI's `onKeyPress(.escape)` on a field (a row's rename, the find bar)
+                    // hears the key there, never in the key binding. The binding (`cancelOperation:`) is applied after it only
+                    // while the field still has the keys (Esc did not end it), as it was before for every field.
+                    if code == 53 {
+                        route(event, to: window)
+                        if window.firstResponder === editor { editor.interpretKeyEvents([event]) }
+                        return
+                    }
                     return editor.interpretKeyEvents([event])
                 }
-                InFront.during(window) { NSApp.sendEvent(event) }
+                route(event, to: window)
             }
         }
+    }
+
+    /// One key event on its way to `window`, through the application: its monitors, then its own order for a key, with the
+    /// window it picks handing the key on to the one it was sent to (`InFront.during(_:key:)`).
+    private func route(_ event: NSEvent, to window: NSWindow) {
+        InFront.during(window, key: true) { NSApp.sendEvent(event) }
     }
 
     /// Where the keys are once SwiftUI has acted on a request for focus, which it does on the next turn of the run loop.

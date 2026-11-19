@@ -65,10 +65,15 @@ final class AmbientController {
         dock.update(terminals: terminals, badgeMode: badgeMode)
     }
 
-    private func pushStatus() {
+    /// The status item's menu as things are now; also when a key it shows changed (`apply`, `bindJumpKey`), which no
+    /// terminal's change carries.
+    func pushStatus() {
         var snapshot = StatusSnapshot()
         snapshot.terminals = listed
         (snapshot.actions, snapshot.recent) = (listedActions, listedRecent)
+        // The two keys the menu shows beside Show Wormhole and Jump to Next Waiting (`menubar` `hotkey`, `jump_key`).
+        snapshot.hotkey = app.settingsModel.value("hotkey").string.flatMap { try? KeySpec(parsing: $0) }
+        snapshot.jumpKey = Keymap.shared.key("goToWaiting")
         snapshot.icon = iconMode
         snapshot.animate = animatesIcon
         status.update(snapshot)
@@ -76,18 +81,19 @@ final class AmbientController {
 }
 
 extension AppController {
-    /// The actions of the trusted project of the terminal in front (what the status item lists under its terminals).
+    /// The actions of the trusted project of every open terminal of the profile shown (what the status item lists under Projects).
     var ambientActions: [StatusSnapshot.Action] {
-        guard let state = hub.panel.project.state else { return [] }
-        return state.actions.map { .init(project: state.name, root: state.root, id: $0.id, title: $0.title) }
+        var roots = Set<String>()
+        return shown.compactMap { $0.hub.panel.project.state }.filter { roots.insert($0.root).inserted }
+            .flatMap { state in state.actions.map { .init(project: state.name, root: state.root, id: $0.id, title: $0.title) } }
     }
 
     /// The projects worked in lately, for the status item's list.
-    var ambientRecent: [StatusSnapshot.Recent] { recents.roots.map { .init(name: ($0 as NSString).lastPathComponent, path: $0) } }
+    var ambientRecent: [StatusSnapshot.Recent] { recents.roots(of: windowsHost.profile).map { .init(name: RecentProjects.name($0), path: $0) } }
 
     /// What the quick panel's Do section offers: a new terminal where the one in front is, Open folder…, the project's actions.
     var ambientItems: [QuickPanelDo] {
-        let folder = hub.state.all.first { $0.id == hub.state.selected }?.folder.map { ($0 as NSString).expandingTildeInPath }
+        let folder = hub.state.all.first { $0.id == hub.state.selected }?.folder.map { HomeFolder.expanding($0) }
         return [.newTerminal(cwd: folder), .openFolder] + ambientActions.map(QuickPanelDo.action)
     }
 
@@ -104,7 +110,7 @@ extension AppController {
 
     /// What the surfaces call a terminal's folder (core's `notify::Terminal.folder`): its name, "~" being the home folder's.
     static func folderName(_ path: String) -> String {
-        let full = (path as NSString).expandingTildeInPath
+        let full = HomeFolder.expanding(path)
         return full == "/" ? "/" : (full as NSString).lastPathComponent
     }
 

@@ -18,6 +18,10 @@
     final class HookHost {
         let handle: HookServerHandle
         private var listening: Task<Void, Never>?
+        /// Tells the core which window is in front (`start`).
+        private var frontObserver: NSObjectProtocol?
+        /// The Probes are read again about once a minute, the backstop for what changes behind the app's back.
+        private var probeBackstop: Task<Void, Never>?
         /// The task that tells the welcome what macOS says of banners (`HookHost+Welcome`).
         var permissionWatch: Task<Void, Never>?
         unowned let app: AppController
@@ -32,13 +36,32 @@
         }
 
         func start() {
+            // The window in front is what a control request without a window acts on (the core cannot see AppKit's key window).
+            frontObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] note in
+                // Which window, as a value: the notification itself does not cross to the main actor.
+                let key = (note.object as? NSWindow).map(ObjectIdentifier.init)
+                MainActor.assumeIsolated {
+                    guard let self, let key, let session = self.app.sessions.first(where: { $0.window.map(ObjectIdentifier.init) == key }) else { return }
+                    self.handle.setFrontWindow(Int64(session.id))
+                }
+            }
             let actions = handle.actions
             listening = Task { [weak self] in
                 for await batch in actions { batch.forEach { self?.perform($0) } }
             }
+            probeBackstop = Task { [weak self] in
+                while !Task.isCancelled {
+                    // one-shot: the minute after which the Probes are read again (the backstop of a watch that missed an edit)
+                    try? await Task.sleep(for: .seconds(60))
+                    self?.handle.reloadProbes()
+                }
+            }
         }
 
-        func stop() { handle.stop() }
+        func stop() {
+            probeBackstop?.cancel()
+            handle.stop()
+        }
 
         /// macOS asked to open these files and folders: a terminal each in window `window` (`SystemOpen.swift`).
         @discardableResult
@@ -48,6 +71,14 @@
         func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {
             if stored { handle.revokeStoredApproval(profile: profile, number) } else { handle.revokeApproval(profile: profile, number) }
         }
+
+        /// Settings → Agent access → a tick of an approved program's row.
+        func setApprovalCapability(_ number: UInt64, stored: Bool, capability: AccessCapability, on: Bool, profile: String) {
+            handle.setApprovalCapability(profile: profile, number, stored: stored, capability: capability, on: on)
+        }
+
+        /// The new-worktree sheet of window `window` came up or went away, however it was opened.
+        func worktreeSheet(window: Int, up: Bool) { handle.worktreeSheet(window: Int64(window), up: up) }
 
         /// A profile opened beside the first one: its windows' requests are judged by its own desk.
         func addDesk(_ desk: AccessDesk) { handle.addDesk(desk) }
@@ -70,7 +101,17 @@
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
-            case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)
+            case .worktreeAsked(let window, let folder, let branch, let command):
+                // In the window the request reached (whose profile judged the trust), not the one in front. Each window's store
+                // tells the control line when its sheet is up or gone (`AppController+Windows`), so a second request is answered Failed.
+                guard let reached = app.sessions.first(where: { $0.id == Int(window) }) else {
+                    // That window is gone: the question goes to the first, whose sheet says when it is up, and the gone one's
+                    // mark is taken down, or nothing would ever take it down.
+                    worktreeSheet(window: Int(window), up: false)
+                    app.sessions.first?.hub.askWorktree(branch: branch, in: folder, command: command)
+                    return
+                }
+                reached.hub.askWorktree(branch: branch, in: folder, command: command)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
                 app.session(holding: Int(terminal))?.hub.gauges.tell(
@@ -113,6 +154,7 @@
         func settingsChanged(profile: String) {}
         func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {}
         func stop() {}
+        func worktreeSheet(window: Int, up: Bool) {}
         @discardableResult func openFromSystem(_ urls: [URL], in window: Int) -> Int { 0 }
     }
 

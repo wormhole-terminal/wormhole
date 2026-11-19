@@ -29,10 +29,15 @@ final class TerminalLook {
     /// The terminals of every window, asked for when a change is to reach them.
     private let terminals: () -> [TerminalViews]
     private let themes: ThemeStore
+    /// Each terminal's view tells the engine the colours it is drawn in (`MetalTerminalView.setPalette`); the engine also
+    /// keeps one palette per profile for a terminal no view has dressed yet, which this look tells for the profile it is
+    /// (asked each time: the app's own look is the shown profile's, whichever that is now).
+    private let engineProfile: () -> String?
 
-    init(terminals: @escaping () -> [TerminalViews], themes: ThemeStore = .shared) {
+    init(terminals: @escaping () -> [TerminalViews], themes: ThemeStore = .shared, engineProfile: @escaping () -> String?) {
         self.terminals = terminals
         self.themes = themes
+        self.engineProfile = engineProfile
     }
 
     /// Fonts from Settings. Nothing is redrawn when they are the ones in use.
@@ -65,9 +70,16 @@ final class TerminalLook {
 
     /// Takes the theme's colours now and again whenever the theme changes (a pick, the appearance, the Studio's preview).
     func followTheme() {
-        let tokens = withObservationTracking { themes.tokens } onChange: { [weak self] in
+        take(withObservationTracking { themes.tokens } onChange: { [weak self] in
             Task { @MainActor in self?.followTheme() }
-        }
+        })
+    }
+
+    /// The theme's colours as they are now, without waiting for `followTheme`'s next turn: a profile switch moved the theme
+    /// and is about to dress windows in this look (the next turn then finds nothing new).
+    func followThemeNow() { take(themes.tokens) }
+
+    private func take(_ tokens: ThemeTokens) {
         let glow = NSColor(tokens.agentAttention), radius = CGFloat(tokens.metrics.radiusLg)
         if glow != bellColor || radius != bellRadius {
             (bellColor, bellRadius) = (glow, radius)
@@ -81,15 +93,20 @@ final class TerminalLook {
         guard next != palette else { return }
         palette = next
         terminals().forEach { $0.forEach { $0.setPalette(next) } }
+        shareEngineColours()
+    }
+
+    /// What a terminal of this look's profile starts with, and has until a view dresses it (the views above told the engine
+    /// their own). Told again when the shown profile changed: the colours may stay while the profile they are for does not.
+    /// From the theme as it is now, not the palette last followed: right after a switch that is still the profile left's.
+    func shareEngineColours() {
         #if WITH_UNIFFI
-            // The engine answers programs' colour queries (OSC 4, 10, 11, 12) and `CSI ? 996 n` with what is drawn, and
-            // tells the programs that asked (mode 2031) when the theme turns light or dark: every live terminal and the
-            // ones started later.
-            EngineColors.share(next)
+            if palette != nil, let profile = engineProfile() { EngineColors.share(PaletteMaker.palette(for: themes.tokens), profile: profile) }
         #endif
     }
 
-    /// Whether the menus own this key: an entry of the app's scope has it (`keymap::action_for(key, Scope::App)`).
+    /// Whether the table gives this key to anything: then a terminal does not take it as the same key with ⌘ alone
+    /// (`keymap::action_for(key, Scope::App)`).
     private static func isAppKey(_ name: String, _ flags: NSEvent.ModifierFlags) -> Bool {
         var mods: KeyMods = []
         if flags.contains(.shift) { mods.insert(.shift) }
@@ -97,7 +114,19 @@ final class TerminalLook {
         if flags.contains(.control) { mods.insert(.control) }
         if flags.contains(.option) { mods.insert(.option) }
         let spec = KeySpec(mods, name.lowercased())
-        return Keymap.shared.entries.contains { $0.scope == .app && $0.keys.contains { $0.sameKey(spec) } }
+        // Any row, whatever its scope (`action_for(key, App)`: App overlaps every scope).
+        return Keymap.shared.entries.contains { $0.keys.contains { $0.sameKey(spec) } }
+    }
+
+    /// The action the table gives a key in the Terminal or Edit scope (`keymap::terminal_action`).
+    private static func terminalAction(_ name: String, _ flags: NSEvent.ModifierFlags) -> String? {
+        var mods: KeyMods = []
+        if flags.contains(.shift) { mods.insert(.shift) }
+        if flags.contains(.command) { mods.insert(.command) }
+        if flags.contains(.control) { mods.insert(.control) }
+        if flags.contains(.option) { mods.insert(.option) }
+        let spec = KeySpec(mods, name.lowercased())
+        return Keymap.shared.entries.first { ($0.scope == .terminal || $0.scope == .edit) && $0.isLive && $0.keys.contains { $0.sameKey(spec) } }?.id.rawValue
     }
 
     /// A terminal that was just made.
@@ -107,6 +136,7 @@ final class TerminalLook {
         view.bell = bell
         view.optionAsMeta = optionAsMeta
         view.isAppKey = Self.isAppKey
+        view.terminalAction = Self.terminalAction
         view.dropTint = dropTint
         view.bellColor = bellColor
         view.bellCornerRadius = bellRadius

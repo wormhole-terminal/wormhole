@@ -27,7 +27,7 @@ extension AppController {
     /// while something runs in it, and is forgotten once it closes.
     func shouldClose(_ session: WindowSession) -> Bool {
         guard shown.count > 1 else {
-            NSApp.terminate(nil)
+            terminateSoon()
             return false
         }
         guard !asking(in: session).isEmpty else { return true }
@@ -61,8 +61,12 @@ extension AppController {
         session.hub.terminals.shutdown()
         session.windows.backend.forget(session.id)
         sessions.removeAll { $0 === session }
+        dropUnusedProfileLooks()
         if lastFront === session { lastFront = shown.last }
         menus?.windowsChanged()
+        #if WITH_UNIFFI
+            projectSettings?.follow()
+        #endif
     }
 
     /// Every window as it is, written now (a quit).

@@ -1,6 +1,7 @@
 // The control folder's commands for the right panel's own text: `note-add <text>` and `task-add <text>` as the Notes tab's
-// buttons do, and `notes` to say what the tab holds (so a check can see it was saved and loaded again). `history N`
-// opens the Nth commit of the log (0 folds it), `history-file N` the Nth file of that commit, `history-rev <name>` the branch picker, `history-copy N <what>`, `history-state` and
+// buttons do, and `notes` to say what the tab holds (so a check can see it was saved and loaded again).
+// `changes` shows the Changes tab (GPUI's `changes`) and says what its store holds: the files, their counts, the open diff. `history N`
+// is a click on the Nth commit of the log (it opens, or closes when it is the open one; 0 folds whatever is open), `history-file N` the Nth file of that commit, `history-rev <name>` the branch picker, `history-copy N <what>`, `history-state` and
 // `project-state` say what the tabs hold, `project-approve`, `project-feature <key> on|off`, `project-run <id>` and
 // `project-send <id>` are the Project tab's buttons.
 
@@ -25,13 +26,14 @@ extension AppController {
         case "note-add": notes.add(note: argument)
         case "task-add": _ = notes.model.tasks.add(argument)
         case "notes":
-            reply("notes=\(notes.model.notes.map(\.text)) steps=\(notes.model.tasks.items.map { "\($0.text):\($0.done)" })")
+            reply("notes=\(notes.model.notes.map(\.text)) steps=\(notes.model.tasks.items.map { "\($0.text):\($0.done)" }) draft=\(notes.drafting)")
             return true
         case "history":
             hub.send(.showPanelTab(.history))
             let history = hub.panel.history
+            // As a click on the row (the GPUI app's `commit <n>`): it opens the commit, and closes it when it is the open one.
             if let n = Int(argument), n > 0, history.model.commits.indices.contains(n - 1) {
-                if history.expanded != history.model.commits[n - 1].id { history.toggle(history.model.commits[n - 1].id) }
+                history.toggle(history.model.commits[n - 1].id)
             } else if let open = history.expanded {
                 history.toggle(open)
             }
@@ -52,13 +54,32 @@ extension AppController {
             let commit = history.model.commits[n - 1]
             Task { reply("copy=\(await history.text(of: what, for: commit) ?? "nil")") }
             return true
+        case "changes":
+            // The Changes tab on show, and what its own store holds: a head line, then a line a file in the list's order.
+            hub.send(.showPanelTab(.changes))
+            hub.panel.tab = .changes
+            let changes = hub.panel.changes
+            let diff = switch changes.diff.phase {
+            case .idle: "idle"
+            case .loading: "loading"
+            case .shown(let file): "shown hunks=\(file?.hunks.count ?? 0)"
+            case .failed(let why): "failed(\(why))"
+            }
+            reply("changes phase=\(changes.phase) files=\(changes.files.count) open=\(changes.diff.file?.path ?? "-") diff=\(diff)")
+            for file in changes.files {
+                reply("  \(file.kind.letter) \(file.path) +\(file.added.map(String.init) ?? "-") -\(file.removed.map(String.init) ?? "-")")
+            }
+            return true
         case "history-state":
             let history = hub.panel.history, details = history.details
             reply("phase=\(history.phase) commits=\(history.model.commits.count) branch=\(history.model.branch ?? "-") open=\(history.expanded.map { String($0.prefix(7)) } ?? "-") "
                 + "people=\(details?.people.map { "\($0.label)=\($0.spans.map(\.text).joined())" } ?? []) parents=\(details?.parents.map(\.short) ?? []) "
-                + "changes=\(details?.changes.spans.map(\.text).joined() ?? "-") files=\(history.files.map(\.path)) diff=\(hub.panel.history.diff.phase)")
+                + "changes=\(details?.changes.spans.map(\.text).joined() ?? "-") files=\(history.files.map(\.path)) diff=\(hub.panel.history.diff.phase)"
+                // The open commit's files that are regular files in the working tree now (the open icon's), wave 9.
+                + " present=\(history.present.map { $0.sorted() } ?? [])")
             return true
         case "project-approve": hub.panel.project.approve()
+        case "project-revoke": hub.panel.project.revoke()
         case "project-feature":
             let words = argument.split(separator: " ").map(String.init)
             guard words.count == 2, let feature = ProjectFeature(rawValue: words[0]) else { return fail("project-feature <settings|theme|actions|prompts|layout|notes> on|off") }
@@ -70,9 +91,10 @@ extension AppController {
             else { return fail("\(command): no such id \(argument)") }
         case "project-state":
             let project = hub.panel.project
-            guard let state = project.state else { reply("project=none loaded=\(project.loaded)"); return true }
+            // `problem=` and `dir=` (wave 9): the stores' reset note and the project folder's name on disk.
+            guard let state = project.state else { reply("project=none loaded=\(project.loaded) problem=\(project.problem ?? "-")"); return true }
             reply("root=\(state.root) status=\(state.status) asks=\(state.asksForTrust) commands=\(state.commands.count) features=\(state.features.map { "\($0.feature.rawValue)=\($0.on)" }) "
-                + "actions=\(state.actions.map(\.id)) prompts=\(state.prompts.map(\.id)) layout=\(state.layout) errors=\(state.errors)")
+                + "actions=\(state.actions.map(\.id)) prompts=\(state.prompts.map(\.id)) layout=\(state.layout) errors=\(state.errors) dir=\(state.dir) problem=\(project.problem ?? "-")")
             return true
         case "panel-option":
             // The settings the panel reads, set as the settings follower would: tree|group|split|wrap on|off, tabwidth N.
@@ -118,6 +140,10 @@ extension AppController {
         case "notice-log":
             // Each banner as the centre would be handed it: id, thread, level, sound, category.
             reply((notices?.logged ?? []).map { "\($0.id) thread=\($0.thread) level=\($0.level) sound=\($0.sound) category=\($0.category.rawValue) title=\($0.title) body=\($0.body)" }.joined(separator: "\n"))
+            return true
+        case "notice-count":
+            // Every banner handed over, the ones that replaced an earlier one of the same terminal too.
+            reply("notice-count=\(notices?.posted ?? 0)")
             return true
         case "notice-respond":
             let words = argument.split(separator: " ", maxSplits: 2).map(String.init)

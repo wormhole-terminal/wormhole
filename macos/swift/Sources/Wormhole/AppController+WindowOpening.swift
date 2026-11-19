@@ -19,15 +19,17 @@ extension AppController {
             // One that was in the Dock opens behind, unfocused, and goes back there: it is never the one that comes forward,
             // which is the last of the others (`window/window_bounds.rs` `front_after_restore`).
             guard present(session, frame: frame, activate: frame?.minimised != true) else {
-                throw Options.UsageError(description: "no terminal source could start")
+                throw Options.UsageError(description: "no terminal source could start") // text: a stderr line
             }
         }
     }
 
     /// A window with nothing but a new terminal, laid out like the one in front, a step from it (⌘N, the Dock's menu).
     func openNewWindow(folder: String? = nil) {
-        let planned = windowsHost.backend.plan(from: front.hub.store.source, folder: folder)
-        openPlanned(window: planned.window, activate: true)
+        // In the profile of the window in front, an odd one too (`new_window_in`: `self.profile`), not the shown profile.
+        let windows = front.windows
+        let planned = windows.backend.plan(from: front.hub.store.source, folder: folder)
+        openPlanned(window: planned.window, activate: true, in: windows)
     }
 
     /// The window the core planned (`plan`, or `wh new-window`): its workspace is filled from the plan. It opens a step
@@ -45,25 +47,28 @@ extension AppController {
         let first = hub.state.selected.flatMap { hub.terminals.view(for: $0) }
         if first == nil, !hub.state.live.isEmpty { return false }
         // A fixed grid is a measuring mode: the window fits it. The title row and the status bar sit above and below the
-        // terminal: 38 + 24 pt. Otherwise the GPUI app's default window (1320 x 820): both columns open leave the
-        // terminal the room its title row needs.
+        // terminal: 38 + 24 pt. A window with a place (a saved one, a cascaded one) is made at its size, as the GPUI app opens a
+        // window at its bounds: made at the default and moved, its terminal was told the default's size first (69 columns) and then
+        // its own, which a shell redrew its prompt for. Otherwise the GPUI app's default window (1320 x 820): both columns open
+        // leave the terminal the room its title row needs.
         let size = options.grid.flatMap { grid in
             first.map { view in
                 let terminal = view.renderer.pointSize(forGrid: grid.cols, grid.rows)
                 let pad = 2 * MetalRenderer.padding
                 return CGSize(width: terminal.width + pad, height: terminal.height + pad + 62)
             }
-        } ?? CGSize(width: 1320, height: 820)
-        let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)")
+        } ?? frame.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1320, height: 820)
+        let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)") // text: a stderr line
         let controller = WorkspaceWindowController(
-            title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, look: look))
+            title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, dress: session.dress))
         wire(controller, of: session)
         session.controller = controller
+        followWindow(session)
         if let frame, let window = controller.window { WindowFrames.place(frame, on: window) }
         // A torn-off terminal's window grows from its chip: it starts as the chip, before it is shown.
         if let start = growing, let window = controller.window {
             growing = nil
-            session.grow = TearOffGrow(window: window, start: start, appearance: look.sidebar, backend: session.windows.backend) { [weak session] in
+            session.grow = TearOffGrow(window: window, start: start, appearance: session.dress.look.sidebar, themes: session.dress.look.themes, backend: session.windows.backend) { [weak session] in
                 session?.grow = nil
             }
         }
@@ -97,10 +102,10 @@ extension AppController {
             return self?.shouldClose(session) ?? true
         }
         controller.gridFacts = { [weak session] in session?.hub.gridFacts }
-        controller.snapsToGrid = { [weak self] in !(self?.look.smoothResize ?? false) }
+        controller.snapsToGrid = { [weak session] in !(session?.dress.look.smoothResize ?? false) }
         controller.onState = { [weak self, weak session] active, seen in
             guard let session else { return }
-            session.hub.store.windowState(active: active, seen: seen)
+            session.hub.windowState(active: active, seen: seen)
             if active { self?.cameToFront(session) }
         }
         controller.onFrameChange = { [weak session] in session?.saver?.frameChanged() }

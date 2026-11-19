@@ -21,6 +21,10 @@ extension AppController {
             else { reply("error: usage set key=<json value>"); return true }
             settingsModel.set(parts[0], value)
             reply("set \(parts[0]) -> \(settingsModel.value(parts[0]))\(settingsModel.backend.refusal.map { " refused: \($0)" } ?? "")")
+        case "flags":
+            // The feature flags that are on as the window in front has them (its own profile's, read from the file a moment
+            // after `set` wrote it): what a driver waits on before it relies on a flag.
+            reply("flags on=" + flagsOn(front).sorted().joined(separator: ","))
         case "panel-pick":
             // The answer of the next open panel of Settings (Choose app…, a folder, Import theme…); a test instance shows none.
             PanelPick.answer(with: argument.isEmpty ? nil : URL(fileURLWithPath: argument))
@@ -38,7 +42,11 @@ extension AppController {
         case "flags-unlock":
             // ⌃⌥⌘F in the window: unlocks the feature flags (and opens their page) or locks them again.
             let unlocked = settingsModel.host.toggleFlagsUnlocked()
-            if unlocked { settingsModel.show("featureFlags") }
+            // The key is pressed in the Settings window, so the window is there for the page it opens.
+            if unlocked {
+                showSettings()
+                settingsModel.show("featureFlags")
+            }
             reply("flags-unlock unlocked=\(unlocked) nav=\(settingsModel.navSections.map(\.id).joined(separator: ","))")
         case "settings-size":
             // A taller window shows more of a page in one `window-shot`.
@@ -125,6 +133,11 @@ extension AppController {
             settingsModel.importDraft.toggle(argument)
             reply("import-open open=\(settingsModel.importDraft.open ?? "none") reviews=\(settingsModel.importDraft.reviews.keys.sorted())")
         case "import-apply":
+            // The card's rows are read a moment after it opens; Apply is on the card only once they are there.
+            guard settingsModel.importDraft.reviews[argument] != nil else {
+                reply("error: \(argument)'s settings are not read yet (`import-open \(argument)` opens its card; ask again)")
+                return true
+            }
             settingsModel.importDraft.apply(argument)
             reply("import-apply \(settingsModel.importDraft.outcome?.text ?? "nothing")")
         case "probe-approve":

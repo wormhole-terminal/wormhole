@@ -6,6 +6,7 @@ import DesignSystem
 import Foundation
 import StudioModel
 import StudioUI
+import WindowUI
 
 #if WITH_UNIFFI
     import AuxBridge
@@ -18,18 +19,31 @@ import StudioUI
 @MainActor
 final class StudioLauncher {
     private let controller = StudioWindowController()
-    private let themes: URL
+    /// The themes folder of the profile Wormhole is in, asked each time the Studio opens (a profile switch moves it): what the
+    /// live theme reads its user themes from (`ThemeStore.themesDirectory`), else the data folder's own.
+    private let themesFolder: @MainActor () -> URL
     /// The project of the terminal in front (a trusted project's theme is the one in effect while one of its terminals is).
     private let project: @MainActor () -> (any StudioProject)?
 
-    init(dataDirectory: URL, project: @escaping @MainActor () -> (any StudioProject)? = { nil }) {
-        themes = dataDirectory.appendingPathComponent("themes")
+    init(
+        dataDirectory: URL, themesFolder: (@MainActor () -> URL)? = nil,
+        project: @escaping @MainActor () -> (any StudioProject)? = { nil }, keyChanged: @escaping @MainActor () -> Void = {}
+    ) {
+        controller.onKeyChange = keyChanged
+        self.themesFolder = themesFolder ?? { dataDirectory.appendingPathComponent("themes") }
         self.project = project
     }
 
     var document: StudioDocument? { controller.document }
     var session: StudioSession? { controller.activeSession }
     var isOpen: Bool { controller.isOpen }
+
+    /// What the Edit menu's Undo and Redo name while the Studio is the key window: its draft's own steps (`publish_edit_titles`);
+    /// nil in any other window.
+    var editTitles: (undo: String?, redo: String?)? {
+        guard controller.isKey, let document = controller.document else { return nil }
+        return (document.undoLabel, document.redoLabel)
+    }
 
     /// The menu's Save theme and Duplicate, Export JSON and Copy JSON.
     func saveTheme() async { await controller.saveTheme() }
@@ -45,16 +59,24 @@ final class StudioLauncher {
 
     func show(store: ThemeStore = .shared) {
         #if WITH_UNIFFI
+            let themes = themesFolder()
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
+            // The folder is asked again at every call, so a profile switch moves an open Studio to the new profile's themes.
+            // Every caller asks from the main thread today; one from elsewhere waits for the main thread instead of trapping.
+            let live: @Sendable () -> URL = { [themesFolder] in
+                if Thread.isMainThread { return MainActor.assumeIsolated { themesFolder() } }
+                return DispatchQueue.main.sync { MainActor.assumeIsolated { themesFolder() } }
+            }
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
-                resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: themes), knowledge: GalleryKnowledge(),
-                files: FfiStudioFiles(directory: themes), project: project(),
+                resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: live), knowledge: GalleryKnowledge(uses: FfiTokenUses.all()),
+                files: FfiStudioFiles(folder: live), project: project(),
                 exportFolder: ExportFolder(
                     recall: { studioExportDir().map { URL(fileURLWithPath: $0) } },
                     remember: { studioRememberExportDir(dir: $0.path) }))
             do {
-                try controller.show(theme: store.theme.name, environment: environment, store: store)
+                // The window's own chrome in the gallery: the Studio is a layer below the window and is handed its specimens.
+                try controller.show(theme: store.theme.name, environment: environment, store: store) { WindowSpecimens.view(for: $0) }
             } catch {
                 FileHandle.standardError.write(Data("theme studio: \(error)\n".utf8))  // text: a log line
             }

@@ -23,10 +23,12 @@ extension AppController {
         { [weak self, weak session] in
             #if WITH_UNIFFI
                 guard let self, let session, let rows = try? (self.settingsModel.host as? RustSettingsHost)?.profiles() else { return [] }
+                // A profile's colour as this window's own theme draws it (`odd_profile`: the tokens of the window's profile).
+                let tokens = session.dress.look.themes.tokens
                 return rows.map {
                     ProfileChoice(
                         id: $0.id, name: $0.name, letter: $0.name.first ?? "?",
-                        colour: GroupColor(key: $0.color).map { $0.mark(ThemeStore.shared.tokens).color }, current: $0.isActive,
+                        colour: GroupColor(key: $0.color).map { $0.mark(tokens).color }, current: $0.isActive,
                         here: $0.id == session.windows.profile)
                 }
             #else
@@ -67,19 +69,36 @@ extension AppController {
             let settingsOpen = settingsController?.window?.isVisible == true
             do {
                 let target = try profileHosts[id] ?? beside(id)
+                // Before its saved windows start their terminals: the engine knows the target's own colours (its look, made
+                // while it is not yet the shown one, tells them), not the ones of the profile being left.
+                if windows(of: id).isEmpty { _ = profileLook(for: id) }
                 // What a relaunch restores: the profile being left, as it is now. Windows opened in another profile stay in sight.
                 let leaving = windows(of: windowsHost.profile)
                 leaving.forEach { $0.saver?.saveNow() }
                 try (settingsModel.host as? RustSettingsHost)?.switchProfile(to: id)
                 profileHosts[id] = target
                 windowsHost = target
+                // What agents report goes to the profile Wormhole is in; each window still draws its own profile's.
+                (sessions.first?.panelBackends.usage as? RustUsageBackend)?.setShown(profile: id)
                 aux.startAccess(profile: id)
                 leaving.forEach { $0.parked = true }
+                // Each window wears its own profile's look. The ones left put theirs on out of sight (their terminals keep their
+                // colours and light or dark, as GPUI's hidden windows read `settings_in(&self.profile)`) before the app's moves.
+                leaving.forEach(dressForProfile)
+                // The new profile's settings and theme, and the app's terminal look on its colours at once rather than a
+                // main-actor turn later: a window coming back (or opened from the saved ones) is dressed once, in its own
+                // profile's look, so its programs never hear the colours of the profile just left (a program with mode 2031 on
+                // would hear light and dark flip twice, and a frame could draw in the other theme).
+                followProfileSettings()
+                terminalLook.followThemeNow()
                 let back = windows(of: id)
                 back.forEach { $0.parked = false }
+                back.forEach(dressForProfile)
                 if back.isEmpty { try openSavedWindows() } else { back.forEach(show) }
-                // After the windows exist: applying the settings reaches the shown ones (and the menus read the window in front).
-                followProfileSettings()
+                // The profile left keeps its terminals: a change of its agent access still settles (`ParkedAccess`).
+                followParkedAccess()
+                // The engine's colours for the profile now shown, whether or not its theme differs from the one left.
+                terminalLook.shareEngineColours()
                 leaving.forEach { $0.window?.orderOut(nil) }
                 lastFront = shown.last
                 if policy.touchesSystem { front.window?.makeKeyAndOrderFront(nil) }
@@ -88,10 +107,15 @@ extension AppController {
                 settingsController = nil
                 if settingsOpen { showSettings() }
                 menus?.windowsChanged()
+                // The project of the terminal in front goes over the new profile's settings, by that profile's trust.
+                projectSettings?.follow()
             } catch {
                 devctl?.append("switch-profile \(id) failed: \(error)") // text: a line for a test driver
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8)) // text: a line on stderr for whoever launched the app
-                // A profile whose data folder cannot be opened saves nothing: the chip says so and why.
+                // A profile whose data folder cannot be opened saves nothing: the log and the chip say so and why (GPUI's
+                // `data_folder::record`).
+                let folder = id == "default" ? dataDirectory.path : dataDirectory.appendingPathComponent("profiles/\(id)").path
+                LaunchLogging.log("error", "persistence disabled: profile \(id), folder \(folder): \(error)")
                 hub.notices.post(.warned(.dataFolder), detail: NoticeReason.dataFolder(profile: id, folder: id == "default" ? dataDirectory.path : dataDirectory.appendingPathComponent("profiles/\(id)").path, error: "\(error)"))
             }
         #endif
@@ -112,8 +136,11 @@ extension AppController {
                 session.window?.close()
             }
             profileHosts[id] = nil
+            profileLooks[id] = nil
+            followParkedAccess()
             if lastFront == nil || !sessions.contains(where: { $0 === lastFront }) { lastFront = shown.last }
             menus?.windowsChanged()
+            projectSettings?.follow()
         #endif
     }
 
@@ -121,10 +148,10 @@ extension AppController {
     private func windows(of id: String) -> [WindowSession] { sessions.filter { $0.windows.profile == id } }
 
     /// "Open Window in <profile>": a window in `id` beside the ones of the profile Wormhole is in, which stays where it is
-    /// (the odd window, as the GPUI app has it); in the profile Wormhole is in, a new window.
+    /// (the odd window, as the GPUI app has it); the profile Wormhole is in gets its own window the same way.
     func openWindow(inProfile id: String) {
         #if WITH_UNIFFI
-            guard id != windowsHost.profile else { return openNewWindow() }
+            // The picked profile's own host (the shown one's too: `profileHosts` holds it), not the front window's: that is ⌘N's road.
             guard let target = hostBeside(id) else { return }
             // Its own start folder (the profile's), not the one of the window in front.
             let planned = target.backend.plan(from: nil, folder: nil)
@@ -149,7 +176,10 @@ extension AppController {
             // (agent access is judged by the window's own profile in the core, which `rehome` told). The panel's
             // backends were made for the profile it left.
             (session.panelBackends.project as? RustProjectBackend)?.service.followProfile(profile: id)
-            (session.panelBackends.usage as? RustUsageBackend)?.service.followProfile(profile: id)
+            (session.panelBackends.usage as? RustUsageBackend)?.follow(profile: id)
+            (session.panelBackends.files as? RustFilesBackend)?.followProfile(id)
+            // The worktrees a window makes, and their ports, are remembered in its own profile's database.
+            session.panelBackends.worktrees.followProfile(id)
             session.saver?.windows = target.backend
             // Not left without a window: the profile Wormhole is in keeps one to type in.
             if windows(of: windowsHost.profile).isEmpty {
@@ -157,7 +187,11 @@ extension AppController {
                 openPlanned(window: planned.window, activate: false)
             }
             session.hub.actions.profiles = profileList(for: session)
+            // Its settings, theme and fonts are the ones of the profile it is in now.
+            dressForProfile(session)
             menus?.windowsChanged()
+            // Its project no longer goes over the settings of the profile it left, or goes over the ones it came into.
+            projectSettings?.follow()
         #endif
     }
 
@@ -191,6 +225,15 @@ extension AppController {
 
     /// The new profile's settings and theme files, applied to the window as the launch's were.
     private func followProfileSettings() {
+        #if WITH_UNIFFI
+            // The fonts folder of the profile left goes from CoreText before the new one's comes (`fonts.rs:83-99`), and
+            // whatever drew in one of its families makes its fonts again (the count the type roles read).
+            if let left = settingsModel.backend as? RustSettingsBackend {
+                let had = !left.fontFolder.families.isEmpty
+                left.leaveFonts()
+                if had { ThemeStore.shared.fontFiles += 1 }
+            }
+        #endif
         settingsModel = AppSettings.makeModel(app: self)
         configureThemes()
         let applier = SettingsApplier(app: self, model: settingsModel)

@@ -1,5 +1,6 @@
 // The control folder's commands for several windows (`WORMHOLE_DEVCTL`): list them, open one, make another the one commands
-// act on, move terminals between windows, write the saved records now and read back what was saved.
+// act on, move terminals between windows, write the saved records now and read back what was saved; bring one to the front
+// for real (`front`) and hold a torn-off terminal's window part-way through its growth (`grow-hold <t>|off`).
 
 import AppKit
 import Foundation
@@ -79,12 +80,32 @@ extension AppController {
             let point = CGPoint(x: CGFloat(numbers[1]), y: CGFloat(numbers[2]))
             reply("tear-off \(numbers[0]) took=\(source.hub.terminalDrag.tearOff?(numbers[0], point) == true)")
             return true
+        case "sidebar-let-go":
+            // A row dragged out of the list let go there, as the end of the list's drag does with the pointer outside it
+            // (`SidebarView.dragEnded`): the window is asked first whether it tears it off, else the pane area under the
+            // point lands it (`PaneArea.land`). The point is the window's (`X Y`), or `right-of <terminal>`: 20 points in from
+            // the right edge of that terminal's view, half way down, in its right drop band.
+            reply(sidebarLetGo(argument.split(separator: " ").map(String.init)))
+            return true
         case "tear-off-at":
             guard numbers.count == 3, let source = session(holding: numbers[0]), let height = NSScreen.screens.first?.frame.height else {
                 reply("error: \(command) needs a terminal id and a point")
                 return true
             }
             land(numbers[0], from: source, at: CGPoint(x: CGFloat(numbers[1]), y: height - CGFloat(numbers[2])), covered: false)
+        case "front":
+            // The window the command acts on really brought to the front with the keys, background mode or not, as GPUI's
+            // `front`: only for a check that needs the real key window outside an injected event (a field editor's own Esc),
+            // since it takes the front from the app in use. `window-front` says it without moving anything.
+            NSApp.activate()
+            window?.makeKeyAndOrderFront(nil)
+        case "grow-hold":
+            // A window growing from a torn-off terminal's chip stands at that point of its growth and stays, for a shot.
+            guard argument == "off" || Double(argument) != nil else {
+                reply("error: grow-hold <0 to 1> | off")
+                return true
+            }
+            TearOffGrow.hold = Double(argument)
         case "save-windows":
             saveAllWindows()
         case "saved-windows":
@@ -107,8 +128,31 @@ extension AppController {
             let hosts = session.hub.state.live.map { id in
                 "\(id):\(store.hosting(of: id).map { String(describing: $0) } ?? "off")\(store.hostProblem(of: id).map { " problem=\($0)" } ?? "")"
             }.joined(separator: ", ")
-            return "window=\(session.id) profile=\(session.windows.profile) visible=\(session.window?.isVisible ?? false) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
+            // `visible` is "in sight" as `cmd<n>` counts it (not parked), so a number read from these lines is the file's.
+            return "window=\(session.id) profile=\(session.windows.profile) visible=\(!session.parked) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
+    }
+
+    /// `sidebar-let-go`: torn off when the window takes it, else released over the panes.
+    private func sidebarLetGo(_ words: [String]) -> String {
+        guard let id = words.first.flatMap({ Int($0) }), let source = session(holding: id), let point = letGoPoint(words, in: source) else {
+            return "error: sidebar-let-go <id> <x> <y> | <id> right-of <terminal>"
+        }
+        let drag = source.hub.terminalDrag
+        if drag.tearOff?(id, point) == true { return "sidebar-let-go \(id) torn-off" }
+        drag.release(id, at: point)
+        return "sidebar-let-go \(id) released at \(Int(point.x)),\(Int(point.y))"
+    }
+
+    /// `<id> <x> <y>` as the window's point, or `<id> right-of <terminal>` worked out from that terminal's view.
+    private func letGoPoint(_ words: [String], in session: WindowSession) -> CGPoint? {
+        if words.count == 3, let x = Double(words[1]), let y = Double(words[2]) { return CGPoint(x: x, y: y) }
+        guard words.count == 3, words[1] == "right-of", let target = Int(words[2]), let view = session.hub.terminals.existing(target),
+            let content = view.window?.contentView
+        else { return nil }
+        let frame = content.convert(view.bounds, from: view)
+        let y = content.isFlipped ? frame.midY : content.bounds.height - frame.midY
+        return CGPoint(x: frame.maxX - 20, y: y)
     }
 
     private func describe(_ frame: WindowFrame) -> String {

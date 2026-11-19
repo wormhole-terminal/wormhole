@@ -12,18 +12,17 @@ import WorkspaceModel
 
 extension AppController {
     func paletteSources(for session: WindowSession) -> PaletteSources {
-        PaletteSources(
+        let commits = PaletteCommits()
+        return PaletteSources(
             actions: { [weak self, weak session] in
                 guard let self, let session else { return ActionList() }
                 return ListedKeymap.actions(self.actionFacts(session))
             },
             settings: { [weak self] in self?.settingsModel.find($0).compactMap { self?.paletteSetting($0.entry.id, match: $0) } ?? [] },
             setting: { [weak self] in self?.paletteSetting($0, match: nil) },
-            commits: { [weak session] in
-                (session?.hub.panel.history.model.commits ?? []).map {
-                    PaletteCommit(sha: $0.sha, short: $0.short, subject: $0.subject, author: $0.author)
-                }
-            },
+            // The log of HEAD of the selected terminal's folder, read through the core when the palette opens (`load_commits`), not the
+            // History tab's model (which follows the tab's revision and path filter).
+            commits: { commits.commits },
             profiles: { [weak self, weak session] in
                 guard let self, let session else { return [] }
                 return self.profileList(for: session)().map { PaletteProfile(name: $0.name, isShown: $0.current, isHere: $0.here) }
@@ -32,7 +31,7 @@ extension AppController {
             reveal: { [weak self, weak session] target in
                 switch target {
                 case .terminal(let id): self?.show(terminal: id)
-                case .folder(let path): self?.openProject((path as NSString).expandingTildeInPath)
+                case .folder(let path): self?.openProject(HomeFolder.expanding(path))
                 case .projectAction(let id): self?.router.dispatch(.runProjectAction(id))
                 case .newTerminalWith(let key): self?.newTerminal(shellKey: key, in: session)
                 case .setting(let id):
@@ -49,7 +48,8 @@ extension AppController {
                     self?.router.dispatch(menu)
                 case .commit(let sha):
                     session?.hub.send(.showPanelTab(.history))
-                    session?.hub.panel.history.show(sha)
+                    // Also a commit the loaded log does not list (a filtered log, another branch): History goes to it.
+                    session?.hub.panel.history.reveal(sha)
                 }
             },
             hiddenActions: { [weak self, weak session] in
@@ -71,10 +71,18 @@ extension AppController {
                 self?.settingsModel.host.shellChoices().filter { !$0.isDefault }
                     .map { PaletteShell(key: $0.key, name: $0.name, commandLine: $0.commandLine) } ?? []
             },
-            recentFolders: { [weak self] in self?.recents.roots ?? [] },
+            recentFolders: { [weak self, weak session] in self?.recents.roots(of: session?.windows.profile ?? self?.windowsHost.profile ?? "") ?? [] },
             openInNewWindow: { [weak self, weak session] in self?.openInNewWindow($0, from: session) },
             // The one close entry point: it asks while something runs, and closes the window when it was the last terminal.
-            closeTerminal: { [weak self] id in self?.closeTerminal(id) })
+            closeTerminal: { [weak self] id in self?.closeTerminal(id) },
+            opened: { [weak self, weak session] in
+                guard let self, let session else { return }
+                // With History off there is nowhere to show a commit.
+                guard !self.featuresOff(session).contains("history") else { return commits.load(from: nil, folder: nil) }
+                let selected = session.hub.state.selected
+                let folder = session.hub.state.terminals.first { $0.id == selected }?.folder.map { HomeFolder.expanding($0) }
+                commits.load(from: session.panelBackends.git, folder: folder)
+            })
     }
 
     /// The menus' facts about the window, as the palette's action list wants them: what is flipped, greyed or hidden.

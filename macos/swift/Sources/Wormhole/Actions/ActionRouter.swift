@@ -44,7 +44,8 @@ final class ActionRouter {
             let project = app.hub.panel.project
             if let action = project.state?.actions.first(where: { $0.id == id }) { project.run(action) }
         case .openRecent(let index):
-            if app.recents.roots.indices.contains(index) { app.openProject(app.recents.roots[index]) }
+            let roots = app.recents.roots(of: app.front.windows.profile)
+            if roots.indices.contains(index) { app.openProject(roots[index]) }
         case .newTerminalWith(let index):
             let shells = app.settingsModel.host.shellChoices()
             if shells.indices.contains(index) { app.newTerminal(shellKey: shells[index].key) }

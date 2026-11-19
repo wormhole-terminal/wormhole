@@ -10,14 +10,20 @@
     import PlatformBridge
     import PlatformModel
     import PlatformUI
+    import SettingsModel
+    import WordsModel
     import WorkspaceBridge
     import WormholeBindings
 
     @MainActor
     final class NoticeFeed {
-        private let coordinator: NoticeCoordinator
+        let coordinator: NoticeCoordinator
         let notifier: any Notifying
-        private unowned let app: AppController
+        unowned let app: AppController
+        /// What came of the last "Send test" (the Notifications page shows it) and the task still waiting on macOS.
+        var test = NotifyStatus.Test.idle
+        var testTask: Task<Void, Never>?
+        private var focusObservers: [any NSObjectProtocol] = []
 
         init(app: AppController) {
             self.app = app
@@ -29,9 +35,22 @@
             coordinator.onSay = { text, urgent in Announcements.post(text, urgent: urgent) }
             coordinator.listen()
             follow()
+            lookOnFocus()
         }
 
-        func sendTest(name: String, settings: NoticeSettings) { coordinator.sendTest(name: name, settings: settings) }
+        /// Whether "needs input" may go out Time Sensitive: the build is signed for it and the person allows it
+        /// (`notifications::time_sensitive`).
+        private var timeSensitive: Bool { (notifier as? SystemNotifier)?.deliversTimeSensitive ?? false }
+
+        /// The test banner itself; `runTest` (`NoticeFeed+Test`) asks macOS first and says what came of it.
+        func sendTest(name: String, settings: NoticeSettings) {
+            coordinator.sendTest(name: name, settings: settings, timeSensitive: timeSensitive)
+        }
+
+        /// The test banner, throwing the system's refusal (`NoticeFeed+Test` shows it on the row).
+        func deliverTest(name: String, settings: NoticeSettings) async throws {
+            try await coordinator.deliverTest(name: name, settings: settings, timeSensitive: timeSensitive)
+        }
 
         /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
         func post(probe: String, subtitle: String, title: String, body: String) {
@@ -45,15 +64,41 @@
 
         /// The banners a test instance logged instead of posting, for the control folder's `notices`.
         var logged: [Notice] { (notifier as? LogNotifier)?.log ?? [] }
+        /// How many banners the log was handed in all, for `notice-count`.
+        var posted: Int { (notifier as? LogNotifier)?.posted ?? 0 }
 
         /// A look at the terminals now, and again whenever the workspace's state changes.
         private func follow() {
             let tabs = withObservationTracking { app.noticeTabs } onChange: { [weak self] in
                 Task { @MainActor in self?.follow() }
             }
-            let selected = app.hub.state.selected.map(Int64.init)
-            coordinator.look(tabs, settings: app.settingsNotice, appActive: NSApp.isActive)
-            if let selected { coordinator.dismiss(tab: selected) }
+            look(tabs)
+        }
+
+        /// The rules' look: a terminal that is selected in the key window of an active app is seen (core's `Seen`), and its
+        /// banner goes; one that is not keeps it.
+        private func look(_ tabs: [NoticeTab]) {
+            coordinator.look(tabs, settings: app.settingsNotice, appActive: NSApp.isActive, timeSensitive: timeSensitive)
+        }
+
+        /// The app coming forward and a window becoming key change who is looked at without changing any terminal, so each
+        /// is its own event (never a timer). The key window's own terminal is read after the notification, when it is key.
+        /// The same two events read macOS's permission again for the Notifications page (`rereadPermission`): the app
+        /// coming forward (back from System Settings) and the Settings window becoming key; the centre sends no event of
+        /// its own when the person changes it.
+        private func lookOnFocus() {
+            for name in [NSApplication.didBecomeActiveNotification, NSWindow.didBecomeKeyNotification] {
+                let token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                    let window = note.object as? NSWindow
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        self.look(self.app.noticeTabs)
+                        let settingsKey = window != nil && window === self.app.settingsController?.window
+                        if name == NSApplication.didBecomeActiveNotification || settingsKey { self.rereadPermission() }
+                    }
+                }
+                focusObservers.append(token)
+            }
         }
     }
 
@@ -76,6 +121,8 @@
                 let holder = session(holding: Int(terminal.session))
                 tab.selected = holder?.hub.state.selected.map(Int64.init) == terminal.session
                 tab.key = holder?.window?.isKeyWindow ?? false
+                // Told by the settings of the profile the terminal's window is in, not the shown profile's.
+                tab.settings = holder.map { NoticeSettingsMaker.settings(settingsBackend(of: $0).values) }
                 return tab
             }
         }
@@ -107,8 +154,7 @@
                 show(terminal: Int(tab))
                 session(holding: Int(tab))?.hub.send(.showPanelTab(.changes))
                 NSApp.activate()
-            case .reply(let tab, let text):
-                session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
+            case .reply(let tab, let text): typeReply(text, into: tab)
             }
         }
     }
@@ -153,5 +199,6 @@
         func sendTest(name: String, settings: NoticeSettings) {}
         func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
+        var posted: Int { 0 }
     }
 #endif

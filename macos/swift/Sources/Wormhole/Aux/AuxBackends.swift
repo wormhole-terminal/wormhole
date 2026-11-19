@@ -56,6 +56,8 @@ struct AuxBackends {
                     return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: profile, authenticator: authenticator)
                 } catch { fallback("project trust", error) } // text: names the part in a stderr line
             }
+            // A real window with no project: it says so, rather than showing a sample's commands.
+            if real, root == nil { return ClosedProjectTrust() }
         #endif
         return SampleTrustBackend()
     }
@@ -63,11 +65,32 @@ struct AuxBackends {
     func access(profile: String) -> (any AccessBackend)? {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeAccessBackend(profile: profile) } catch { fallback("agent access", error) } // text: names the part in a stderr line
+                do { return try AuxBridge.makeAccessBackend(profile: profile, resolver: accessResolver()) } catch { fallback("agent access", error) } // text: names the part in a stderr line
             }
         #endif
         return nil
     }
+
+    #if WITH_UNIFFI
+        /// What only the windows know for the agent access sheet: a terminal's row title and folder (any window's), and the
+        /// terminal a program runs in, by the core's walk up the process tree (`sheet.rs` `terminal_display`, `terminal_of`).
+        private func accessResolver() -> FFIAccessBackend.Resolver {
+            FFIAccessBackend.Resolver(
+                terminal: { [weak app] id in
+                    app?.sessions.lazy.compactMap { $0.hub.state.all.first { Int64($0.id) == id } }.first
+                        .map { .init(name: $0.title, folder: $0.folder) }
+                },
+                terminalOf: { [weak app] pid in
+                    guard let app else { return nil }
+                    for session in app.sessions {
+                        guard let core = (session.hub.store.hooks as? RustWorkspaceBackend)?.core, let id = core.terminalRunning(pid: pid)
+                        else { continue }
+                        if let found = session.hub.state.all.first(where: { Int64($0.id) == id }) { return found.title }
+                    }
+                    return nil
+                })
+        }
+    #endif
 
     func licenses() -> any LicenseSource {
         #if WITH_UNIFFI
@@ -142,15 +165,36 @@ struct AuxBackends {
                 let home = ProcessInfo.processInfo.environment["WORMHOLE_AGENT_HOME"].map { URL(fileURLWithPath: $0) } // text: an environment variable
                 do {
                     return try FFIOnboardingBackend(
-                        preferences: preferences, settingsKeys: "\u{2318},", agentHome: home, dataDir: app.dataDirectory,
-                        authenticator: authenticator,
+                        preferences: preferences, settingsKeys: "\u{2318},",
+                        recents: { [weak app] in (app.map { $0.recents.roots(of: $0.front.windows.profile) } ?? []).map { URL(fileURLWithPath: $0) } },
+                        agentHome: home, dataDir: app.dataDirectory, authenticator: authenticator,
                         // "How much to show" opens or closes the right panel of the window behind (the window's own, so not a setting).
                         panel: (
                             { [weak app] in app?.hub.state.panelVisible ?? false },
                             { [weak app] open in if let app, app.hub.state.panelVisible != open { app.hub.send(.togglePanel) } }
-                        )
-                    ) { [weak app] folder, _ in
-                        if let folder { app?.hub.send(.newTerminalIn(folder.path)) }
+                        ),
+                        // The project the trust card is about when no folder was picked: the front terminal's.
+                        frontProject: { [weak app] in app?.hub.panel.project.state.map { URL(fileURLWithPath: $0.root) } },
+                        // The primer's Start leaves the sidebar's "no agents" note, unless it was closed for good.
+                        onPrimer: { [weak app] in
+                            if !((try? noAgentsTipDismissed()) ?? false) { app?.hub.agentsTip = .note }
+                        },
+                        // Notes on in the window's own profile: the primer's words and its "Jot a note" line follow it.
+                        notesOn: { [weak app] in app.map { !$0.featuresOff($0.front).contains("notes") } ?? true },
+                        // The project is trusted as the window's own profile, which is not always the shown one.
+                        profile: { [weak app] in app?.front.windows.profile }
+                    ) { [weak app] folder, firstRun in
+                        // The untouched first terminal gives way to one in the folder, only while it is the window's only one and is
+                        // not there already (`window/onboarding_host.rs`).
+                        guard firstRun, let app, let folder else { return }
+                        let hub = app.hub
+                        guard hub.state.all.count == 1, let first = hub.state.all.first else { return }
+                        let there = first.folder.map { URL(fileURLWithPath: HomeFolder.expanding($0)).standardizedFileURL }
+                        guard there != folder.standardizedFileURL else { return }
+                        hub.send(.newTerminalIn(folder.path))
+                        // Closed as the GPUI window closes it, without the question a terminal with a program asks: the
+                        // person has not touched it.
+                        app.finishClosing(first.id, in: app.front)
                     }
                 } catch { fallback("welcome", error) }
             }
@@ -174,13 +218,14 @@ struct AuxBackends {
         func hostAttachments() -> [HostAttachmentRecord] {
             sessions.flatMap { session in
                 let core = session.hub.store.hooks as? RustWorkspaceBackend
-                return session.hub.state.sections.flatMap(\.rows).compactMap { row -> HostAttachmentRecord? in
-                    guard let hostID = session.hub.store.hosting(of: row.id)?.hostID else { return nil }
+                // Every terminal of the window, those in folded groups or filtered out of the list too (`host_attachments`).
+                return session.hub.state.all.compactMap { terminal -> HostAttachmentRecord? in
+                    guard let hostID = session.hub.store.hosting(of: terminal.id)?.hostID else { return nil }
                     var why: HostUnavailableKind?
-                    if case .unavailable(let kind)? = session.hub.store.hostProblem(of: row.id) { why = kind.record }
+                    if case .unavailable(let kind)? = session.hub.store.hostProblem(of: terminal.id) { why = kind.record }
                     return HostAttachmentRecord(
-                        hostId: hostID, window: Int64(session.id), title: row.terminal.title, link: core?.hostLink(of: row.id),
-                        unavailable: why, unavailableDetail: nil)
+                        hostId: hostID, window: Int64(session.id), title: terminal.title, link: core?.hostLink(of: terminal.id),
+                        unavailable: why, unavailableDetail: core?.unavailableDetail(of: terminal.id))
                 }
             }
         }
