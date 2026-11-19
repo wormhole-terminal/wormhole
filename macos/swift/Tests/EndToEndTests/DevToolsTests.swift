@@ -12,8 +12,9 @@ extension EndToEnd {
             app.expect(Date().timeIntervalSince(start) >= 0.3, "the batch waited")
             app.expect(await app.reply("delay soon"), contains: "error")
 
-            // `cmd2` with one window: the line acts on the window there is.
-            app.expect(await app.reply("state", window: 2), contains: "terminals=1")
+            // `cmd2` with one window: no such window, an error in that file and nothing done (never the window there is).
+            app.expect((await app.send(["state"], window: 2, awaitingWindow: true)).first ?? "", contains: "error: no window 2 (1 in sight)")
+            app.expect(await app.reply("state", window: 1), contains: "terminals=1")
             await app.send(["new-window"])
             await app.until("sessions") { $0.split(separator: "\n").count == 2 }
             // F6 in the second window moves its focus only.
