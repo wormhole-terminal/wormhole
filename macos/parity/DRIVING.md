@@ -386,6 +386,8 @@ screen: on a 1024-point display the terminal was 304 points wide, a split was re
 The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
 `a11y` lists SwiftUI's controls too (wave 13), so a button's or a row's spoken name is checked through it.
 
+`WORMHOLE_E2E_LONG_PROMPT=1` (a variable of the test process, not the app's): the suite's zsh prints the runner's 62-character host name as its prompt, so a pass on a Mac shows what a prompt that fills most of a line does to a scenario; the Mac's own host name is never changed. `Instance.size(window:)` puts a window opened later at the suite's size (it is otherwise as large as its screen lets it be: 944 points on the runner), and `Instance.unwrapped(screen)` joins the rows a long line wrapped over. The lines the app writes by itself (`exited terminal=…`, `saved-text-forgotten …`, `group-to-window …`) are left out of every answer.
+
 A session host of an older build: `Instance.with(hosts: true, hostFrom: Instance.oldHostProgram())`. It is made from the repository's
 own history, in the worktree's ignored `target/`: `git archive 1feca30ff^ | tar -x -C target/oldhost-src` (the commit before hosts could
 forget a terminal's history, protocol minor 1), then `CARGO_TARGET_DIR=$PWD/target/oldhost-target cargo build -p wormhole-host` in that
