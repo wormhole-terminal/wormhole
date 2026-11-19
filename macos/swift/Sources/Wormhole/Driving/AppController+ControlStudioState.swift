@@ -21,7 +21,7 @@ extension AppController {
         case .changed: "changed:\(document.update.changes.count)"
         }
         // The sheet up over the Studio: Update from… or Versions (`modal_word`).
-        return "\nstudio dirty=\(document.isDirty) asking=\(PendingQuestions.current != nil || session.renaming) subject=\(Self.subjectWord(document.subject)) "
+        return "\nstudio dirty=\(document.isDirty) asking=\(PendingQuestions.current?.isEmpty == false || session.renaming) subject=\(Self.subjectWord(document.subject)) "
             + "undo=\(document.undoDepth) redo=\(document.redoDepth) format=\(format) shown=\(document.shown ?? "-") update=\(update) "
             + "modal=\(session.showsUpdate ? "update" : session.showsVersions ? "versions" : "-") inuse=\(document.inUse) \(Self.tokenWord(document))"
     }
