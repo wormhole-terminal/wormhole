@@ -103,7 +103,7 @@ extension AppController {
         controller.snapsToGrid = { [weak session] in !(session?.dress.look.smoothResize ?? false) }
         controller.onState = { [weak self, weak session] active, seen in
             guard let session else { return }
-            session.hub.store.windowState(active: active, seen: seen)
+            session.hub.windowState(active: active, seen: seen)
             if active { self?.cameToFront(session) }
         }
         controller.onFrameChange = { [weak session] in session?.saver?.frameChanged() }

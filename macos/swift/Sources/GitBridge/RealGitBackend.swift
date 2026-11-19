@@ -13,6 +13,8 @@ public struct RealGitBackend: GitBackend {
     /// The setting `size_units` changed: sizes in a diff's words are KiB rather than KB.
     public func setBinarySizeUnits(_ binary: Bool) { git.setBinaryUnits(binary: binary) }
 
+    public func setSeen(_ seen: Bool) { git.setSeen(seen: seen) }
+
     public func root(of folder: String) async -> String? {
         await GitQueue.run { [git] in git.repositoryRoot(folder: folder) }
     }

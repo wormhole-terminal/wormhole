@@ -55,6 +55,9 @@ public final class PanelController {
         }
     }
 
+    /// Whether the window can be seen: the git tabs' own reads wait while it cannot (`GitBackend.setSeen`).
+    public func windowSeen(_ seen: Bool) { git.setSeen(seen) }
+
     /// The folder every path the git tabs hand out (Copy Path, Open, Reveal, a submodule's terminal, the diff's open icons) is
     /// joined to: the repository's root, as git's paths are relative to it and not to the terminal's folder; the folder
     /// itself until git has answered or outside a repository.

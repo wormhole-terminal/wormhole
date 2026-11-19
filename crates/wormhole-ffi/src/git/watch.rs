@@ -4,6 +4,10 @@
 //! debounce's deadline, then calls the listener once. When the watch cannot start (a network volume, a
 //! folder that is no repository yet) or is quiet for a long time, a slow poll calls it anyway, as core's
 //! rules ask of every watched fact: a watch can drop events.
+//!
+//! A window nobody sees is told nothing by its watch (`set_seen`): what git would say changes nothing anyone sees
+//! (the GPUI app's `window/repo/state.rs` `Sight`, core's `workspace::git_feed` for the rows). What came meanwhile is
+//! one call owed, made the moment the window is seen again; the backstops stay, the fast one at core's unseen rate.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,6 +25,8 @@ use super::error::GitBackendError;
 const POLL_LIVE: Duration = Duration::from_secs(30);
 /// The same while no watch runs: the panel's fast backstop rate.
 const POLL_DOWN: Duration = Duration::from_secs(3);
+/// The same in a window nobody sees: core's rate for an unseen terminal (`git_feed::state::rates`, 25 ticks of 0.4 s).
+const POLL_DOWN_UNSEEN: Duration = Duration::from_secs(10);
 /// How long after a watch failed to start another try is made.
 const RETRY: Duration = Duration::from_secs(60);
 
@@ -34,6 +40,8 @@ pub trait GitListener: Send + Sync {
 enum Msg {
     /// The strongest thing a batch meant, and whether the ignored list may be stale.
     Batch(Relevance, bool),
+    /// Whether the window that reads this repository can be seen.
+    Seen(bool),
     Stop,
 }
 
@@ -66,6 +74,12 @@ impl GitWatch {
     /// Whether the OS's events are being followed, rather than only the slow poll.
     pub fn is_live(&self) -> bool {
         self.live.load(Ordering::Acquire)
+    }
+
+    /// The window that reads this repository can be seen, or cannot: unseen, a change is not told until it is seen
+    /// again (one call for everything that came meanwhile). Seen until told otherwise.
+    pub fn set_seen(&self, seen: bool) {
+        let _ = self.queue.send(Msg::Seen(seen));
     }
 
     /// End the watch and its thread. Also what dropping it does.
@@ -101,28 +115,45 @@ impl Worker {
         let mut tried = Instant::now();
         let mut debounce = Debounce::new();
         let mut rules = false;
+        // Whether the window can be seen, and whether a change came while it could not.
+        let (mut seen, mut owed) = (true, false);
+        // A change is told: the ignored paths are listed again first when the rules may have moved.
+        let tell = |rules: &mut bool, started: &Option<Started>| {
+            if std::mem::take(rules)
+                && let Some(started) = started
+            {
+                relist(started);
+            }
+            self.listener.changed();
+        };
         loop {
             let live = started.is_some();
             self.live.store(live, Ordering::Release);
             let wait = match debounce.deadline() {
                 Some(due) => due.saturating_duration_since(Instant::now()),
                 None if live => POLL_LIVE,
-                None => POLL_DOWN,
+                None if seen => POLL_DOWN,
+                None => POLL_DOWN_UNSEEN,
             };
             match self.inbox.recv_timeout(wait) {
                 Ok(Msg::Batch(found, stale)) => {
                     debounce.event(Instant::now());
                     rules |= found == Relevance::Rules || stale;
                 }
+                Ok(Msg::Seen(now)) => {
+                    seen = now;
+                    if seen && std::mem::take(&mut owed) {
+                        tell(&mut rules, &started);
+                    }
+                }
                 Ok(Msg::Stop) | Err(RecvTimeoutError::Disconnected) => return,
                 Err(RecvTimeoutError::Timeout) if debounce.pending() => {
                     if debounce.take(Instant::now()) {
-                        if std::mem::take(&mut rules)
-                            && let Some(started) = &started
-                        {
-                            relist(started);
+                        if seen {
+                            tell(&mut rules, &started);
+                        } else {
+                            owed = true;
                         }
-                        self.listener.changed();
                     }
                 }
                 // Quiet for the whole wait: the backstop, and a new try at a watch that failed.
@@ -131,7 +162,8 @@ impl Worker {
                         started = self.begin();
                         tried = Instant::now();
                     }
-                    self.listener.changed();
+                    owed = false;
+                    tell(&mut rules, &started);
                 }
             }
         }

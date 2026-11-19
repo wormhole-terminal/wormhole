@@ -83,6 +83,7 @@ extension EndToEnd {
             try app.scratch.git(repo, "commit", "-q", "-m", "third commit", "-m", body)
             let first = await app.terminal(in: repo)
             guard let a = first.selected else { return }
+            await app.seeWindow()
             await app.send(["tab history"])
             await app.until("history-state") { $0.contains("commits=3") }
 

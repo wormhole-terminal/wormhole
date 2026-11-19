@@ -22,6 +22,7 @@ extension EndToEnd {
             for path in ["README.md", "src/a/one.rs", "src/a/two.rs"] { try app.scratch.write(repo, path, "changed\n") }
             for name in ["x.txt", "y.txt"] { try app.scratch.write(repo, "new/\(name)", "new\n") }
             await app.terminal(in: repo)
+            await app.seeWindow()
 
             // The defaults: a tree, untracked apart.
             let tree = await Self.changeRows(app, files: 5) { $0.first("changes-rows")?.words == ["tree", "grouped"] }
@@ -62,6 +63,7 @@ extension EndToEnd {
             let repo = try app.scratch.repository("badge-repo", files: ["a.txt": "a\n", "b.txt": "b\n"])
             try app.scratch.write(repo, "a.txt", "a\nA\n")
             await app.terminal(in: repo)
+            await app.seeWindow()
             await app.until("changes") { $0.contains("phase=loaded") && $0.contains("files=1 ") }
             let one = Readout(await app.until("panel-tabs") { Readout($0).line("tab", "changes")?["badge"] == "1" })
             app.expect(Instance.plain(one.line("tab", "changes")?["spoken"] ?? "").contains("1"), "VoiceOver hears the count:\n\(one.text)")

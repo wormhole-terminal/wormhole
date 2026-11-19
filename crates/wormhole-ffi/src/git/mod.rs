@@ -11,6 +11,7 @@ mod problem;
 mod records;
 mod service;
 mod shown;
+mod sight;
 mod watch;
 mod worktrees;
 

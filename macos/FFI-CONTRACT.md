@@ -696,6 +696,9 @@ gitNextAgeChange(times: [Int64]) -> UInt64?        // ms until the earliest age 
 // GitWatch: one thread per watch; listener.changed() once per debounced burst (150 ms quiet, 1 s cap, 1 s gap)
 GitWatch.start(folder, listener: GitListener) throws -> GitWatch;  isLive();  stop()   // drop also stops
 // a slow poll calls changed() when the OS watch is quiet 30 s (3 s while it could not start; retried every 60 s)
+// Git.watch(folder, listener) -> GitWatch: the same, in the sight of the window the reader serves (`Git.setSeen(seen)`, told with every
+// change of the window's key/on-screen state): while unseen a watch tells nothing (a burst is owed, one call when seen again;
+// the quiet backstops stay, the one without an OS watch at 10 s). A reader nobody told is seen.
 
 // WorktreeService (the one write; ONLY on these calls, never forced, hooks off)
 WorktreeService(base: String?, cloneBuildFolders: Bool) throws;  setOptions(base, cloneBuildFolders)

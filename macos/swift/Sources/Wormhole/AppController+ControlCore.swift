@@ -28,7 +28,7 @@ extension AppController {
         case "window-state":
             let flags = argument.split(separator: " ").map { $0 == "on" }
             guard flags.count == 2 else { reply("error: usage window-state <active on|off> <seen on|off>"); return true }
-            hub.store.windowState(active: flags[0], seen: flags[1])
+            hub.windowState(active: flags[0], seen: flags[1])
             reply("window-state active=\(flags[0]) seen=\(flags[1])")
         default: return false
         }

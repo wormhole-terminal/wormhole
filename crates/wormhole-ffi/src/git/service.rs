@@ -50,6 +50,8 @@ pub struct Git {
     kept: Mutex<Kept>,
     /// Sizes read as git writes them (KiB) rather than as Finder does (KB).
     binary_units: AtomicBool,
+    /// Whether the window this reader serves can be seen, and the watches it started.
+    pub(super) sight: super::sight::Sight,
 }
 
 #[uniffi::export]
@@ -58,7 +60,11 @@ impl Git {
     #[uniffi::constructor]
     pub fn new() -> Result<Arc<Self>, GitBackendError> {
         crate::isolation::require()?;
-        Ok(Arc::new(Self { kept: Mutex::default(), binary_units: AtomicBool::new(false) }))
+        Ok(Arc::new(Self {
+            kept: Mutex::default(),
+            binary_units: AtomicBool::new(false),
+            sight: super::sight::Sight::default(),
+        }))
     }
 
     /// `size_units` of the settings: sizes in a diff's words are KiB when true.

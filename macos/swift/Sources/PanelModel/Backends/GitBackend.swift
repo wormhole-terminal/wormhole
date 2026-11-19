@@ -29,6 +29,9 @@ public protocol GitBackend: Sendable {
     func revs(in folder: String, forHistory: Bool) async throws -> [Rev]
     /// Fires when something that matters to `git status` changed (the debounced watch of `git/watch`).
     func changes(in folder: String) -> AsyncStream<Void>
+    /// Whether the window these reads are for can be seen. A window nobody sees is not told of changes until it is seen
+    /// again, then once if any came (GPUI: `window/repo/state.rs` `Sight`). A requirement, as `root(of:)` is.
+    func setSeen(_ seen: Bool)
     /// The repository root of `folder`, nil outside a repository. A requirement, so a call through `any GitBackend`
     /// reaches the real backend and not the default below.
     func root(of folder: String) async -> String?
@@ -63,6 +66,9 @@ extension GitBackend {
 extension GitBackend {
     /// The repository root of `folder`, nil outside a repository (and from a backend that knows none).
     public func root(of folder: String) async -> String? { nil }
+
+    /// A backend with no watch has nothing to hold back.
+    public func setSeen(_ seen: Bool) {}
 
     /// A backend that cannot ask says yes, so the branch stays.
     public func isOn(_ sha: String, rev: Rev, in folder: String) async -> Bool { true }
