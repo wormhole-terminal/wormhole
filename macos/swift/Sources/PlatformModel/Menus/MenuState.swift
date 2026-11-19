@@ -36,7 +36,9 @@ public struct MenuState: Equatable, Sendable {
     public struct ProjectAction: Equatable, Sendable {
         public var id: String
         public var title: String
-        public init(id: String, title: String) { (self.id, self.title) = (id, title) }
+        /// The action's own key (`actions.json` `key`), which runs it from the window in front.
+        public var key: KeySpec?
+        public init(id: String, title: String, key: KeySpec? = nil) { (self.id, self.title, self.key) = (id, title, key) }
     }
 
     public init() {}

@@ -1,7 +1,9 @@
 // What a pane's header says about its terminal, and what the pane area asks the window to do.
 
+import SwiftUI
 import CoreGraphics
 import PanesModel
+import SidebarUI
 import WorkspaceModel
 
 /// A pane's terminal as its header shows it.
@@ -34,6 +36,16 @@ public struct PaneActions {
     public var refusal: (DraggedTerminal, PaneID, Zone) -> Refusal?
     /// The area was laid out at this size.
     public var areaChanged: (CGSize) -> Void
+    /// A pane's tile as the terminal's row in the list draws it (the agent's logo, the status light); nil draws the plain tile.
+    public var tile: ((PaneID, CGFloat) -> TerminalStatusTile?)?
+    /// The key the keymap has now for an action (`splitRight`, `splitDown`, `zoomPane`, `closeTerminal`), as a menu item binds it and
+    /// as a tooltip says it ("⇧⌘↩"); nil when it has none. Without the window's keymap the menu and tooltips show no key.
+    public var shortcut: (String) -> KeyboardShortcut? = { _ in nil }
+    public var keyText: (String) -> String? = { _ in nil }
+    /// The core's rule for a split's opening motion; nil (the sample) draws a split as it lands.
+    public var splitMotion: (any SplitMotion)?
+    /// The terminal the window's last split opened, if any: only its coming plays the opening (a drop or a join is a cut).
+    public var splitCame: () -> PaneID? = { nil }
 
     public init(
         close: @escaping (PaneID) -> Void = { _ in }, split: @escaping (SplitAxis) -> Void = { _ in },

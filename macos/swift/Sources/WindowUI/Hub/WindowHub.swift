@@ -33,6 +33,10 @@ public final class WindowHub {
     public var exampleBand: ExampleBand?
     /// The sidebar's note after a first run without agents (`FirstRun::agents_note`).
     public var agentsTip = AgentsTip.off
+    /// Asks the tab bar to open its group switcher, each time it counts up (the control folder's `switcher open`).
+    public var switcherAsk = 0
+    /// What the group switcher's search field holds while the switcher is on screen; nil while it is not (`switcher`).
+    @ObservationIgnored public var switcherOnScreen: String?
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
     /// The Project tab's "View all N…": the app opens the window of the project's commands.
@@ -50,6 +54,10 @@ public final class WindowHub {
     public var zenActive = false
     /// The title row's order of giving way: the core's where the FFI is linked, else every part at its natural width.
     public var rowFitting: any RowFitting = NaturalFit()
+    /// The core's rule for a split's opening motion, where the FFI is linked; without it a split lands at once.
+    public var splitMotion: (any SplitMotion)?
+    /// The terminal the last split opened (`opensSplit`): the one layout change the pane area plays the opening for.
+    @ObservationIgnored var splitCame: PaneID?
     /// The right panel's state over the backends the app hands in (the core's git where the FFI is linked, else the
     /// sample). An opened diff or file is laid over the terminals (`.terminalArea`, hosted by `TerminalColumn`).
     public let panel: PanelController
@@ -69,7 +77,23 @@ public final class WindowHub {
         connect(host)
         notices.onAct = { [unowned self] in noticeActed($0) }
         notices.onBar = { [unowned self] in sayInBar($0, detail: $1) }
+        actions.pickBranch = { [unowned self] in pickBranch(of: $0) }
         followGauges()
+        followTabs()
+    }
+
+    /// The tab on show leaves when it is no longer offered, panel open or not, and also for a layout restored with one that
+    /// is not (the GPUI app does it on the window's tick, `panel.rs`).
+    private func followTabs() {
+        withObservationTracking {
+            _ = (panelTabs, state.panelTab)
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.leaveMissingTab()
+                self?.followTabs()
+            }
+        }
+        leaveMissingTab()
     }
 
     /// A gauge goes once the shell has its terminal back, so the agent's next run starts without the last one's numbers.
@@ -78,6 +102,7 @@ public final class WindowHub {
             Task { @MainActor in self?.followGauges() }
         }
         gauges.forgetGone(all)
+        panel.keep(terminals: Set(all.map(\.id)), folders: Set(all.compactMap(\.readPath)))
     }
 
     public var state: WorkspaceState { store.state }
@@ -93,13 +118,17 @@ public final class WindowHub {
             return
         }
         guard case .showPanelTab(let tab) = action else {
+            let before = Self.opensSplit(action) ? Set(state.live) : nil
             _ = store.send(action)
+            if let before { splitCame = state.live.first { !before.contains($0) } }
             return
         }
-        // A tab that is not on offer (Usage without an agent) is gone, as in the GPUI app's `show_tab`.
-        let shown = panelTabs.contains(tab) ? tab : .changes
-        if shown == .usage, state.panelTab != .usage { tabBeforeUsage = state.panelTab }
-        _ = store.send(.showPanelTab(shown))
+        // A tab that is not on offer (Usage without an agent, a feature that is off) does nothing: its action is bound only while
+        // the tab is offered (`bind_features`).
+        guard panelTabs.contains(tab) else { return }
+        if tab == .usage, state.panelTab != .usage { tabBeforeUsage = state.panelTab }
+        // Zen mode keeps the panel off the screen: the tab changes for when it comes back, and the panel is not revealed.
+        _ = store.send(zenActive ? .setPanelTab(tab) : .showPanelTab(tab))
     }
 }
 
@@ -124,6 +153,12 @@ public struct HubActions {
     public var revealSetting: @MainActor (String) -> Void = { _ in }
     /// Whether this window's profile is the one Settings shows: a window of another profile cannot arrange its title row.
     public var editsSettings: @MainActor () -> Bool = { true }
+    /// The title row's own menu writes the setting (`title_row`) of the window's own profile, as GPUI's does (`title/parts.rs`):
+    /// a part shown or hidden by the core's rule, and the row put back. Every window, Settings and the next launch follow.
+    public var showTitlePart: @MainActor (String, Bool) -> Void = { _, _ in }
+    public var resetTitleRow: @MainActor () -> Void = {}
+    /// The person's own row as the window's profile stores it, which the menu ticks under Zen mode (`settings_without_zen`).
+    public var ownTitleRow: @MainActor () -> [String]? = { nil }
     /// A menu the keys opened (⌃↩), under `frame` (in the window's content, from its top left): shown, or kept in a test instance.
     public var showKeyMenu: @MainActor (NSMenu, CGRect) -> Void = { _, _ in }
     /// The native context menu of a terminal's grid, built when it is asked for.

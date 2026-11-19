@@ -12,7 +12,7 @@ import WorkspaceModel
 
 public struct WorkspaceRootView: View {
     let hub: WindowHub
-    let look: WindowLook
+    let dress: WindowDress
     @State private var widths = PaneLayout()
     @State private var facts = WindowFacts()
     @State private var sidebarSlide: ColumnSlide
@@ -32,14 +32,18 @@ public struct WorkspaceRootView: View {
         var extent: CGFloat
     }
 
-    public init(hub: WindowHub, look: WindowLook = WindowLook()) {
+    public init(hub: WindowHub, look: WindowLook = WindowLook()) { self.init(hub: hub, dress: WindowDress(look)) }
+
+    /// A window whose look can change under it (it follows the profile the window is in).
+    public init(hub: WindowHub, dress: WindowDress) {
         self.hub = hub
-        self.look = look
+        self.dress = dress
         _sidebarSlide = State(initialValue: ColumnSlide(open: hub.state.sidebarVisible))
         _panelSlide = State(initialValue: ColumnSlide(open: hub.state.panelVisible))
     }
 
     public var body: some View {
+        let look = dress.look
         WindowBody(
             hub: hub, widths: $widths, facts: facts,
             sidebarSlide: sidebarSlide, panelSlide: panelSlide, drag: $drag, animates: !reduceMotion
@@ -55,9 +59,17 @@ public struct WorkspaceRootView: View {
         // diff in the terminal's place need it with the panel shut.
         .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, _ in followTerminal() }
         // What a tab keeps per terminal (compare branch, comments, open commit, tree) changes hands with the selection.
-        .onChange(of: hub.state.selected) { _, _ in followTerminal() }
+        .onChange(of: hub.state.selected) { _, _ in
+            followTerminal()
+            hub.focus.followSelection()
+        }
+        // Nothing of a folder is listed or watched while the Files tab is hidden or its feature is off.
+        .onChange(of: filesShown, initial: true) { _, now in hub.panel.files.setShown(now) }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
+        // A diff line's comment being written: the window's, so a reload of the diff under it leaves it up (`diff/review.rs`).
+        // Inside the window's environment, for its theme and code font.
+        .commentSheet(hub.panel.changes)
         .coordinateSpace(name: PaneSpace.name)
         .environment(look)
         .environment(\.codeFont, look.codeFont)
@@ -65,18 +77,17 @@ public struct WorkspaceRootView: View {
         .environment(hub.focus)
         .environment(\.windowFront, hub.focus.front)
         .environment(\.cardGlass, look.glassOn)
-        .themed()
+        // The window's own profile's theme, which is the app's one store for a window of the profile Wormhole is in.
+        .themed(look.themes)
         .worktreeSheets(hub.panel.worktrees)
         .ignoresSafeArea()
     }
 
-    private func followTerminal() {
-        hub.panel.follow(folder: Self.expanded(hub.state.selectedTerminal?.folder), terminal: hub.state.selected)
+    private var filesShown: Bool {
+        hub.state.panelVisible && hub.state.panelTab == .files && hub.panelTabs.contains(.files)
     }
 
-    /// The sidebar's folder is written with `~`; the panel reads real paths.
-    private static func expanded(_ folder: String?) -> String? {
-        guard let folder else { return nil }
-        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
+    private func followTerminal() {
+        hub.panel.follow(folder: hub.state.selectedPath, terminal: hub.state.selected)
     }
 }

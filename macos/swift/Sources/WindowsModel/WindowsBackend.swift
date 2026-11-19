@@ -65,4 +65,7 @@ public protocol WindowsBackend: AnyObject {
     func keepChanges(_ keep: Bool)
     /// The smallest window content: the sidebar beside a usable terminal.
     var minSize: CGSize { get }
+    /// How a terminal window opens and closes: the system's document animation with the Motion feature on, none under Reduce
+    /// Motion, the default for a test instance and for a torn-off window (core `window_animation::behaviour`).
+    func windowAnimation(motion: Bool, reduceMotion: Bool, background: Bool, grows: Bool) -> WindowAnimation
 }

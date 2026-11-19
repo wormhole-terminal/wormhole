@@ -23,11 +23,16 @@ struct MenuFacts {
     var flagsOn: Set<String> = []
     /// The selected terminal has a fold: Show Hidden Lines has something to show.
     var hasFolds = false
+    /// The selected terminal's shell has integration: the command blocks' items have blocks to act on.
+    var hasBlocks = false
     /// The profiles' names, in the order of the list, and the one Wormhole is in.
     var profiles: [String] = []
     var currentProfile: Int?
     /// The one this window is in (the odd window of another profile is not the one Wormhole is in).
     var windowProfile: Int?
+    /// The panel's tabs on offer now (nil: all); a Show action of one that is not is hidden or greyed, as the GPUI app binds a
+    /// tab's action only while the tab is offered.
+    var offeredTabs: [PanelTab]?
 }
 
 enum MenuStateMaker {
@@ -61,6 +66,10 @@ enum MenuStateMaker {
         menu.split = facts.isSplit
         // Quit and End All Terminals and Session Hosts are for persistent terminals (`persistent_only`).
         menu.persistent = facts.flagsOn.contains("persistent_terminals")
+        // The Developer menu (Inspector) is a debug build's.
+        #if DEBUG
+            menu.debug = true
+        #endif
 
         menu.disabled.formUnion(keymap.entries.filter { $0.isLive && !facts.implemented.contains($0.id) }.map(\.id))
         if selected == nil { menu.disabled.formUnion(["closeTerminal", "pinTerminal", "splitRight", "splitDown"]) }
@@ -76,9 +85,19 @@ enum MenuStateMaker {
             if preset.current { menu.checked.insert(id) }
             if !preset.enabled { menu.disabled.insert(id) }
         }
+        // A tab's action only while the tab is offered: Show Usage is hidden without an agent, Show Project is greyed without a
+        // folder, and a tab whose feature is off is not in the menu at all.
+        if let offered = facts.offeredTabs {
+            for tab in PanelTab.allCases where !offered.contains(tab) {
+                let featureOff = state.layout?.tabs.first { $0.tab == tab }.map { !$0.enabled } ?? false
+                if featureOff || tab == .usage { menu.hidden.insert(tabAction(tab)) } else { menu.disabled.insert(tabAction(tab)) }
+            }
+        }
         // Actions whose feature flag is off are not in the menus at all.
         menu.hidden.formUnion(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
         if !facts.hasFolds { menu.disabled.insert("showHiddenLines") }
+        // Without blocks (no shell integration yet) their items are greyed, as GPUI binds them only then (`has_blocks`).
+        if !facts.hasBlocks { menu.disabled.formUnion(blockActions) }
 
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)
@@ -87,7 +106,10 @@ enum MenuStateMaker {
         return menu
     }
 
-    private static func tabAction(_ tab: PanelTab) -> ActionID {
+    /// Edit's command block items: they act on the blocks a shell's integration marks.
+    private static let blockActions: Set<ActionID> = ["previousPrompt", "nextPrompt", "selectOutput", "copyOutput", "copyCommand", "rerunCommand"]
+
+    static func tabAction(_ tab: PanelTab) -> ActionID {
         switch tab {
         case .changes: "showChanges"
         case .history: "showHistory"

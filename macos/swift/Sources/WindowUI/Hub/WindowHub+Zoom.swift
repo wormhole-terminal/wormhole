@@ -8,7 +8,7 @@ import TerminalMetal
 extension WindowHub {
     /// What the size chip of each pane in sight says (the control folder's `size-chip`): `id: text`, or `none` before it has spoken.
     public var sizeChips: [String] {
-        state.panes.shown.map(\.id).map { id in "\(id): \(overlay(for: id)?.size.text ?? "none")" }
+        state.panes.shown.map(\.id).map { id in "\(id): \(overlay(for: id)?.size.text ?? "none")" } // text: a control reply
     }
 
     /// A point bigger (`1`) or smaller (`-1`); `nil` is the size in Settings.

@@ -69,15 +69,14 @@ extension RustWorkspaceBackend {
 
     private func connected(_ id: TerminalID, token: Int, _ done: Connected) {
         guard book.connecting[id] == token else {
-            // Closed or started again meanwhile: what started is nobody's (closing ends its host, as dropping a hosted `Pty` does).
-            done.terminal?.close()
+            // Closed meanwhile: what started is nobody's, and closing ends its host and forgets its row, as the person asked.
+            // Started again meanwhile: the terminal stays, so its row (notes, tasks, text) does too.
+            if live.contains(id) { done.terminal?.endKeepingRow() } else { done.terminal?.close() }
             return
         }
         book.connecting[id] = nil
-        if book.quitting {
-            _ = done.terminal?.detach()
-            return
-        }
+        // After the quit the desk let go of it or ended it (`HostedTerminals.finish`); a terminal in the app ends with it.
+        if book.quitting { return }
         if let fallback = done.fallback { told("host-fallback", .hostFallback(fallback)) }
         if let terminal = done.terminal {
             register(id, terminal, relay: relays[id])
@@ -87,7 +86,7 @@ extension RustWorkspaceBackend {
             terminal.setVisible(visible: Set(core.shown().map(Int.init)).contains(id))
         } else if let unavailable = done.unavailable {
             let quiet = unavailable.why.isTransient && book.retried.insert(id).inserted
-            book.unavailable[id] = (unavailable.why, unavailable.host, !quiet)
+            book.unavailable[id] = (unavailable.why, unavailable.host, unavailable.detail, !quiet)
             if quiet { retryAfter(id) }
         } else if let failure = done.failure {
             failed[id] = failure
@@ -99,10 +98,11 @@ extension RustWorkspaceBackend {
         onWake?()
     }
 
-    /// Every terminal of the launch has its host (or its bar): the rows the last run left under other ids are forgotten.
+    /// Every terminal of the launch has its host (or its bar): the rows the last run left under other ids are forgotten, never
+    /// one the window lists (an attach that failed, a program that fell back to the app's process keeps its notes and text).
     private func finishRestore() {
         book.restoring = false
-        try? hosted?.desk.finishRestore()
+        try? hosted?.desk.finishRestore(listed: live.map { Int64($0) })
     }
 
     /// The terminal's program is running: the workspace feeds its row from it, and the view that waited for it draws it.
@@ -157,16 +157,29 @@ extension RustWorkspaceBackend {
     /// Fill an empty window from its record (the protocol's `restore`).
     public func restore() { restoreSaved() }
 
-    /// `endHosts`: every terminal ends with its host. Otherwise each is let go of and its program runs on, after the
-    /// screens are saved for a host that will not be there.
+    /// `endHosts`: every host ends and the terminals stay, to start again above their text at the next launch. Otherwise each
+    /// is let go of and its program runs on. Either way the screens are saved first, for a host that will not be there.
     public func finishQuit(endHosts: Bool) {
+        beginQuit(endHosts: endHosts)?()
+    }
+
+    /// Quit and End All: what `finishQuit(endHosts: true)` does, its seconds (the hosts still starting, each host's end)
+    /// handed back to run off the main actor (`window/windows.rs` `finish_quit`).
+    public func quitEndingHosts() -> (@Sendable () -> Void)? { beginQuit(endHosts: true) }
+
+    /// The quit's main-actor part (nothing more starts or is saved here, the app's own terminals' text is kept, every start
+    /// from now on is let go of or ended), then what is left for the session hosts.
+    private func beginQuit(endHosts: Bool) -> (@Sendable () -> Void)? {
         book.quitting = true
         book.saver?.cancel()
         // The terminals in the app's own process end with it: what they show is kept for the next launch.
         _ = core.saveTexts()
-        guard let desk = hosted?.desk else { return }
-        if !endHosts { _ = desk.saveTexts() }
-        desk.finish(endHosts: endHosts)
+        guard let desk = hosted?.desk else { return nil }
+        desk.quitting(endHosts: endHosts)
+        return {
+            _ = desk.saveTexts()
+            desk.finish(endHosts: endHosts)
+        }
     }
 
     /// "Restore terminal text after restart" went off: the profile's saved texts go; it, Persistent terminals or Restore
@@ -179,6 +192,25 @@ extension RustWorkspaceBackend {
     public func programName(of id: TerminalID) -> String? {
         let name = core.programName(id: Int64(id))
         return name.isEmpty ? nil : name
+    }
+
+    public func shellName(of id: TerminalID) -> String? {
+        let name = core.shellName(id: Int64(id))
+        return name.isEmpty ? nil : name
+    }
+
+    public func spoken(attention name: String, since: UInt64) -> String? { core.spokenStatusAttention(name: name, sinceMs: since) }
+
+    public func spoken(count: Int, of activity: Activity) -> String? {
+        let kind: String
+        switch activity {
+        case .working: kind = "working"
+        case .needsInput: kind = "needs"
+        case .finished: kind = "done"
+        case .failed: kind = "failed"
+        case .idle, .exited: kind = "quiet"
+        }
+        return core.spokenStatusCount(activity: kind, count: UInt32(count))
     }
 
     public func waited(since: UInt64) -> WorkspaceModel.Waited? {
@@ -223,6 +255,8 @@ extension RustWorkspaceBackend {
 
     /// What terminal `id` starts with: the core's facts (the shell it was opened with, the profile, the text it showed when
     /// the app last quit), the program an action named or the setup's, the folder and the size until its view fits it.
+    /// The profile is the one the window is in now (the core's `facts`, which a move to another profile changes), the setup's
+    /// only where the core knows none: a moved window's new terminal never starts under the profile it left.
     func request(_ id: TerminalID, in folder: String?, old: String? = nil, text: String? = nil) -> HostedStart {
         let size = Self.startSize
         let facts = core.launchFacts(id: Int64(id))
@@ -230,6 +264,6 @@ extension RustWorkspaceBackend {
         return HostedStart(
             tab: Int64(id), shell: facts.shell, program: program?.0, args: program?.1 ?? [], cwd: folder,
             cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight,
-            oldHost: old, savedText: text ?? facts.savedText, profile: setup.profile ?? facts.profile)
+            oldHost: old, savedText: text ?? facts.savedText, profile: facts.profile ?? setup.profile)
     }
 }

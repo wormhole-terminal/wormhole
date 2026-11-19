@@ -7,10 +7,11 @@ private struct ContrastOutline<Outline: InsettableShape>: ViewModifier {
     let shape: Outline
     let color: (ThemeTokens) -> Color
     @Environment(\.tokens) private var tokens
+    @Environment(\.increaseContrast) private var increased
 
     func body(content: Content) -> some View {
         content.overlay {
-            if ThemeStore.shared.increaseContrast { shape.strokeBorder(color(tokens), lineWidth: tokens.metrics.borderWidth) }
+            if increased { shape.strokeBorder(color(tokens), lineWidth: tokens.metrics.borderWidth) }
         }
     }
 }

@@ -22,7 +22,8 @@ struct RightPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges)
+            PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges,
+                        spoken: { hub.spokenTab(named: $0.rawValue) }, tip: { controller.host.keyed($0.title, action: MenuStateMaker.tabAction($0).rawValue) })
                 // The Notes tab's one action sits in the strip beside the panel toggle (`stash_button`).
                 .overlay(alignment: .trailing) {
                     if tab == .notes { StashPromptButton(controller: controller).padding(.trailing, Chrome.panelToggleSlot) }
@@ -36,7 +37,6 @@ struct RightPanel: View {
         }
         .animation(Self.contentIn, value: tab)
         .onChange(of: tab) { before = tab }
-        .onChange(of: hub.panelTabs) { hub.leaveMissingTab() }
         .onAppear { before = tab }
     }
 
@@ -49,7 +49,8 @@ struct RightPanel: View {
 
     private var arrival: AnyTransition {
         guard !reduceMotion else { return .opacity }
-        let order = PanelTab.allCases
+        // By the strip's order, not the enum's.
+        let order = PanelTab.barOrder
         let from = before.flatMap(order.firstIndex(of:)) ?? 0
         let to = order.firstIndex(of: tab) ?? 0
         let start = to < from ? -Self.contentSlide : Self.contentSlide

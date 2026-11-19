@@ -1,6 +1,6 @@
 // What sits after a terminal's name and at its first line's end (`row/face.rs`): the pin, the lock and the worktree's fork after the name; at the end the
 // chain of a split whose other members are elsewhere, the open notes and tasks, and the files changed ("±N"). The
-// first line's end gives way to the × under the pointer, so these hide there.
+// first line's end gives way to the × under the pointer, so these hide there. Each is marked, so inspect mode finds it.
 
 import DesignSystem
 import SwiftUI
@@ -46,10 +46,11 @@ struct RowDetails: View {
                     LucideView(icon: .note, size: glyph)
                     Text("\(terminal.noteCount)")
                 }
+                .inspectSite("row.notes")
             }
-            if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)") }
+            if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)").inspectSite("row.changes") }
         }
-        .font(TextRole.caption.font.monospacedDigit())
+        .font(tokens.font(.caption).monospacedDigit())
         .foregroundStyle(quiet)
         .lineLimit(1)
         .fixedSize()

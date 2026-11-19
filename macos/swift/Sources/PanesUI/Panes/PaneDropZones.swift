@@ -52,7 +52,7 @@ struct PaneDropZones: View {
         return shape.fill(tokens.stateHighlight)
             .overlay { shape.strokeBorder(tokens.primary, lineWidth: PaneMetrics.dropLine) }
             .overlay {
-                Text(text).font(TextRole.caption.font.weight(.semibold)).lineLimit(1).fixedSize()
+                Text(text).font(tokens.font(.caption).weight(.semibold)).lineLimit(1).fixedSize()
                     .foregroundStyle(tokens.textOnPrimary)
                     .padding(.horizontal, Space._2).frame(height: Metric.controlSmall)
                     .background(tokens.primary, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))

@@ -5,6 +5,7 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
@@ -19,20 +20,24 @@ struct PaneHeader<Menu: View>: View {
     let focus: () -> Void
     let zoom: () -> Void
     let close: () -> Void
+    var tile: TerminalStatusTile?
+    /// The keys the keymap has for Zoom and Close, said in their tooltips.
+    var zoomKey: String?
+    var closeKey: String?
     @ViewBuilder let menu: () -> Menu
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         HStack(spacing: Space._2) {
-            TerminalTile(activity: info.activity)
+            if let tile { tile } else { TerminalTile(activity: info.activity) }
             AtMostWidth(width: PaneMetrics.nameMax) { Text(info.title).lineLimit(1).truncationMode(.tail) }
                 .layoutPriority(1)
             Text(info.folder.map { Elide.front($0, PaneMetrics.folderMax) } ?? "")
-                .font(TextRole.caption.font.weight(.regular)).foregroundStyle(tokens.textFaint)
+                .font(tokens.font(.caption).weight(.regular)).foregroundStyle(tokens.textFaint)
                 .lineLimit(1).truncationMode(.head).frame(maxWidth: .infinity, alignment: .leading)
             buttons
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .foregroundStyle(focused ? tokens.textPrimary : tokens.textMuted)
         .padding(.leading, gaps ? PaneMetrics.inset : Space._3)
         .padding(.trailing, Space._1)
@@ -60,20 +65,15 @@ struct PaneHeader<Menu: View>: View {
 
     private var zoomButton: some View {
         PaneButton(symbol: zoomed ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                   label: zoomed ? PanesText.unzoom : PanesText.zoom, key: "⇧⌘↩", action: zoom)
+                   label: zoomed ? PanesText.unzoom : PanesText.zoom, key: zoomKey, action: zoom)
     }
 
+    /// The pane menu (`icon_button(...).in_row()` with a menu): the shared button's face and hover round the menu.
     private var moreButton: some View {
-        SwiftUI.Menu(content: menu) {
-            Image(systemName: "ellipsis").font(.system(size: PaneMetrics.glyph))
-                .frame(width: PaneMetrics.button, height: PaneMetrics.button)
-        }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
-        .foregroundStyle(tokens.textMuted)
-        .help(PanesText.paneMenu).accessibilityLabel(PanesText.paneMenu)
+        IconMenuButton(symbol: "ellipsis", label: PanesText.paneMenu, items: menu).inRow()
     }
 
-    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: "⌘W", action: close) }
+    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: closeKey, action: close) }
 
     /// Without gaps a hairline under every header and the primary line under the focused one; with gaps the
     /// pane's own outline says which has the keyboard (`PaneFrame`).

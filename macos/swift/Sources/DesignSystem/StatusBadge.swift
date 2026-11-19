@@ -11,7 +11,13 @@ public struct StatusBadge: View {
     /// The tint behind the word (`STATUS_TINT_ALPHA`).
     private static let tint = 0.15
 
-    public init(text: String, color: Color) { (self.text, self.color) = (text, color) }
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
+
+    public init(text: String, color: Color, file: StaticString = #fileID, line: UInt = #line) {
+        (self.text, self.color, self.file, self.line) = (text, color, file, line)
+    }
 
     public var body: some View {
         Text(text).textRole(.caption).foregroundStyle(color)
@@ -19,6 +25,6 @@ public struct StatusBadge: View {
             .background(color.opacity(Self.tint), in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
             .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip), color: color)
             .fixedSize()
-            .marked("badge")
+            .marked("badge", style: "padding x _2 · min badgeHeight · radius chip · text caption", file: file, line: line)  // text: inspect mode's note, in the scales' names
     }
 }

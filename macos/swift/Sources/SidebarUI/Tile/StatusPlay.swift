@@ -92,7 +92,25 @@ private struct StatusPlayer: ViewModifier {
     }
 }
 
+/// A tile held `t` of the way through a change, its pose from the core's table and no clock: the gallery's caught frame.
+private struct StatusCaught: ViewModifier {
+    let shift: StatusShift
+    let variant: StatusMotion
+    let tile: CGFloat?
+    let t: Double
+    @Environment(\.tokens) private var tokens
+
+    func body(content: Content) -> some View {
+        content.modifier(StatusPoseEffect(t: t, shift: shift, variant: variant, size: tile, ring: tokens.agentAttention))
+    }
+}
+
 extension View {
+    /// The tile caught `t` of the way through a change (`tile` for a flare's ring, nil for a nudge of the row), for the gallery.
+    func statusCaught(_ shift: StatusShift, variant: StatusMotion, tile: CGFloat?, at t: Double) -> some View {
+        modifier(StatusCaught(shift: shift, variant: variant, tile: tile, t: t))
+    }
+
     /// The row moves aside and back when its terminal starts asking for input and the person chose Nudge.
     func statusNudge(_ shift: StatusShift?) -> some View { modifier(StatusPlayer(shift: shift, variant: .nudge, tile: nil)) }
 

@@ -1,5 +1,6 @@
-// A small icon button in a pane's header: a 22 pt face with a 14 pt glyph, a hover wash, a tooltip and a
-// VoiceOver name. `DesignSystem`'s `IconButton` is the 28 pt one for title rows; headers are tighter.
+// A small icon button in a pane's header or on a tab (`icon_button(...).in_row()`, `hit_area`): the shared icon button on a
+// row's 22 pt face with a 14 pt glyph, still clickable across the 28 pt hit, `band.hover` under the pointer. Its tooltip names
+// the key that does the same ("Zoom pane (⇧⌘↩)"); VoiceOver hears the words and the key as the hint.
 
 import DesignSystem
 import SwiftUI
@@ -10,20 +11,12 @@ struct PaneButton: View {
     /// The key that does the same, said in the tooltip ("Zoom pane (⇧⌘↩)").
     var key: String?
     let action: () -> Void
-    @State private var hovering = false
-    @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button(action: action) {
+        IconButton(label: key.map { "\(label) (\($0))" } ?? label, action: action) { _ in
             // Zoomed by the keys or by this button, the old corners shrink away as the new ones grow in.
-            IconSwap(key: symbol) { Image(systemName: $0).font(.system(size: PaneMetrics.glyph, weight: .regular)) }
-                .frame(width: PaneMetrics.button, height: PaneMetrics.button)
-                .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
-                .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
+            IconSwap(key: symbol) { Image(systemName: $0).font(.system(size: Metric.glyph, weight: .regular)) }
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(key.map { "\(label) (\($0))" } ?? label)
-        .accessibilityLabel(label)
+        .inRow()
     }
 }

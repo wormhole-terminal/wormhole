@@ -15,10 +15,11 @@ struct TerminalPanes: View {
     var body: some View {
         let state = hub.state
         PaneArea(
-            panes: state.panes, gaps: look.splitGaps, session: hub.drag, sidebarDrag: hub.terminalDrag, actions: hub.paneActions,
+            panes: state.panes, gaps: look.splitGaps, session: hub.drag, sidebarDrag: hub.terminalDrag, playsMotion: look.motionFeature,
+            actions: hub.paneActionsWithKeys(keys: .shared, appearance: look.sidebar),
             info: { info($0, in: state) }
         ) { id in
-            TerminalSurface(hub: hub, id: id).id(hub.restarts[id, default: 0])
+            TerminalSurface(hub: hub, id: id, restart: hub.restarts[id, default: 0]).id(hub.restarts[id, default: 0])
         }
         .onChange(of: state.live, initial: true) { _, ids in
             hub.terminals.retain(only: Set(ids))
@@ -37,6 +38,9 @@ struct TerminalPanes: View {
 struct TerminalSurface: View {
     let hub: WindowHub
     let id: TerminalID
+    /// Which start of the terminal this surface was made for (`WindowHub.restarts`): after a Restart the surface of the
+    /// start before lives on for a moment beside the new one.
+    let restart: Int
     @Environment(WindowLook.self) private var look
 
     var body: some View {
@@ -45,7 +49,10 @@ struct TerminalSurface: View {
             let minimap = look.minimap && overlay.hasScrollback ? MinimapGeometry.width : 0
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
-                    TerminalHost(views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity) { hub.actions.terminalMenu(id) }
+                    TerminalHost(
+                        views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity, menu: { hub.actions.terminalMenu(id) },
+                        isCurrent: { hub.restarts[id, default: 0] == restart },
+                        arrived: { hub.focus.focusTerminal() })
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     FoldMarkers(
                         markers: overlay.markers, geometry: overlay.blockGeometry ?? BlockGeometry(rows: 0, cellHeight: 0, gutter: 0),
@@ -58,7 +65,7 @@ struct TerminalSurface: View {
                     }
                     SizeReadoutChip(model: overlay.size)
                     PaneOverlays(
-                        state: overlay.bars, shell: hub.shell, exitCode: overlay.exitCode, hostLost: overlay.hostLost,
+                        state: overlay.bars, shell: overlay.shell ?? hub.shell, exitCode: overlay.exitCode, hostLost: overlay.hostLost,
                         gridWidth: proxy.size.width - minimap - 2 * MetalRenderer.padding, trailingInset: minimap, actions: overlay.actions)
                 }
             }

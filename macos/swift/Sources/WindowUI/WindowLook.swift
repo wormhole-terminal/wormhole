@@ -1,7 +1,9 @@
 // What the person chose about how the window itself looks, and what the system overrules: the settings that
 // are not theme tokens (`opacity`, `blur`, `liquid_glass`, the status bar, column dividers) beside Reduce
 // Transparency and Increase Contrast, which make every surface opaque whatever the settings say
-// (`settings::derive`, `platform::look`). One observable, owned by the app, read by every part of the window.
+// (`settings::derive`, `platform::look`). One observable per profile with windows on screen (the app's, and one for
+// each other profile a window is open in), read by every part of a window; it names the theme store its windows are
+// coloured from, so a window never draws with another profile's theme.
 
 import AppKit
 import DesignSystem
@@ -45,9 +47,14 @@ public final class WindowLook {
     /// Icons play their own drawing changing (`icon_animations`, on by default; the one setting every window's icons read, `\.iconAnimations`),
     /// here also the panel toggles' strip filling with its column; off, the strip is full or empty as soon as the column is wanted or not.
     public var iconAnimations: Bool {
-        get { ThemeStore.shared.iconAnimations }
-        set { ThemeStore.shared.iconAnimations = newValue }
+        get { themes.iconAnimations }
+        set { themes.iconAnimations = newValue }
     }
+    /// How a side column slides in and out (`motion.column`: `classic`, `soft-spring`, `content-after`).
+    public var columnMotion = "classic"
+    /// The Motion feature is on in this window's profile: the rows' and the status bar's motions, and the window's own
+    /// open and close, play only then (core `motion_in_force`, `window_animation`).
+    public var motionFeature = false
     /// What code is drawn in: the diff, the file viewer (`code_font_family`, else the terminal's; `code_font_size`).
     public var codeFont = CodeFont()
     /// The lines between the columns (the Column dividers setting).
@@ -60,9 +67,11 @@ public final class WindowLook {
     public var sidebar = SidebarAppearance()
     /// Reduce Transparency or Increase Contrast is on, as the theme store follows them live (it observes the
     /// system's own notifications), so a change redraws the window.
-    var systemOpaque: Bool { ThemeStore.shared.reduceTransparency || ThemeStore.shared.increaseContrast }
+    var systemOpaque: Bool { themes.reduceTransparency || themes.increaseContrast }
+    /// The theme its windows are coloured from: the profile's own picks, colours and interface font.
+    public let themes: ThemeStore
 
-    public init() {}
+    public init(themes: ThemeStore = .shared) { self.themes = themes }
 
     /// What is painted: the asked opacity, or 1 when the system wants windows opaque.
     var effectiveOpacity: CGFloat { systemOpaque ? 1 : opacity }

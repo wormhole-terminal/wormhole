@@ -63,6 +63,11 @@ public final class NoticeCoordinator {
         notifier.post(rules.testNotice(name: name, settings: settings, timeSensitive: timeSensitive))
     }
 
+    /// "Send test" as the Settings row has it: the same banner, and the system's refusal thrown to the caller.
+    public func deliverTest(name: String, settings: NoticeSettings = NoticeSettings(), timeSensitive: Bool = false) async throws {
+        try await notifier.deliver(rules.testNotice(name: name, settings: settings, timeSensitive: timeSensitive))
+    }
+
     func handle(_ response: NoticeResponse) {
         let (outcome, retract) = rules.respond(response)
         if let retract { notifier.remove(id: retract) }

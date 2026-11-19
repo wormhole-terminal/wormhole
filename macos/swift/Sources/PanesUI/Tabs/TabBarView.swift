@@ -35,14 +35,15 @@ public struct TabBarView: View {
                     rule
                 }
                 if model.showsSwitcher {
-                    GroupSwitcherButton(label: model.setLabel, alert: model.alert, open: $switcherOpen)
+                    GroupSwitcherButton(label: model.setLabel, alert: model.alert, alertKind: model.alertKind, open: $switcherOpen)
                         .popover(isPresented: $switcherOpen, arrowEdge: .bottom) {
                             GroupSwitcherView(model: model, actions: actions) { switcherOpen = false }
                         }
+                        .onChange(of: actions.switcherAsk) { switcherOpen = true }
                     rule
                 }
                 tabs
-                IconButton(symbol: "plus", label: LocalizedStringKey(PanesText.newTerminal)) { actions.newTerminal(currentGroup) }
+                IconButton(symbol: "plus", label: PanesText.newTerminal) { actions.newTerminal(model.currentGroup) }
                     .contextMenu { actions.newMenu() }
             }
             .padding(.horizontal, Metric.edgeInset)
@@ -56,7 +57,7 @@ public struct TabBarView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Space._1) {
                     ForEach(model.tabs) { tab in
-                        TerminalTabView(tab: tab, selected: tab.id == model.selected, hints: hints) { actions.close(tab.id) }
+                        TerminalTabView(tab: tab, selected: tab.id == model.selected, hints: hints, tile: actions.tile?(tab.id, TabMetrics.tile)) { actions.close(tab.id) }
                             .onTapGesture { actions.select(tab.id) }
                             .contextMenu { actions.tabMenu(tab.id) }
                             .id(tab.id)
@@ -75,6 +76,4 @@ public struct TabBarView: View {
     private var rule: some View {
         Rectangle().fill(tokens.border).frame(width: tokens.metrics.borderWidth, height: TabMetrics.ruleHeight)
     }
-
-    private var currentGroup: GroupID? { model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID }
 }

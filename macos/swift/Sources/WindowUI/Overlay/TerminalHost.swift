@@ -16,15 +16,23 @@ struct TerminalHost: NSViewRepresentable {
     /// The window's opacity (`WindowLook.effectiveOpacity`), passed in so a change of it updates the view.
     let opacity: CGFloat
     let menu: @MainActor () -> NSMenu?
+    /// False for the host of a start of the terminal that a Restart replaced: it is on its way out and takes no view.
+    var isCurrent: @MainActor () -> Bool = { true }
+    /// A pane made after its terminal was shown is in the window now (`Container.arrived`).
+    var arrived: @MainActor () -> Void = {}
 
     func makeNSView(context: Context) -> Container {
         let host = Container(overlay: overlay, menu: menu)
         host.setAccessibilityRole(.group)
         host.setAccessibilityLabel(Words.text("window-terminal", fallback: "Terminal"))
+        host.arrived = arrived
         return host
     }
 
     func updateNSView(_ host: Container, context: Context) {
+        // After a Restart the old start's host is updated once more before it is taken down, after the new start's host
+        // has the new view: it would take that view along, and its removal would leave the pane empty.
+        guard isCurrent() else { return }
         guard let wanted = views.view(for: id) else { return host.show(nil) }
         host.show(wanted, takesKeys: { views.takesKeys() })
         // The pane is painted at the window's opacity, as every surface is (`WindowLook.surface`).
@@ -36,6 +44,13 @@ struct TerminalHost: NSViewRepresentable {
     final class Container: NSView {
         private let overlay: TerminalOverlay
         private let contextMenu: @MainActor () -> NSMenu?
+        /// The terminal was shown before this container was in a window (a pane just made): it takes the keys on arrival.
+        private var keysOnArrival = false
+        /// Told when the container arrives in a window with a terminal waiting for the keys: the window gives them to the
+        /// selected terminal, which of several panes arriving together only it knows. Whatever had them before, as a terminal
+        /// shown in the window takes them: a window's first terminal is shown before its pane is in the window, and the keys
+        /// were then left where AppKit put them as the window came on screen (its first key view).
+        var arrived: @MainActor () -> Void = {}
 
         init(overlay: TerminalOverlay, menu: @escaping @MainActor () -> NSMenu?) {
             self.overlay = overlay
@@ -55,7 +70,15 @@ struct TerminalHost: NSViewRepresentable {
             view.contextMenu = { [weak self] in self?.contextMenu() }
             addSubview(view)
             // The keys go to the terminal that was just shown, not to whatever had focus (unless the sidebar's Space browses).
-            if takesKeys() { window?.makeFirstResponder(view) }
+            guard takesKeys() else { return }
+            if let window { window.makeFirstResponder(view) } else { keysOnArrival = true }
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard keysOnArrival, window != nil else { return }
+            keysOnArrival = false
+            arrived()
         }
 
         /// The terminal's right-click: the native menu of its grid.

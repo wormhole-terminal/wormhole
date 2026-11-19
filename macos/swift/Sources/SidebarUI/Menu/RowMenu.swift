@@ -40,7 +40,7 @@ struct RowMenu: View {
             Toggle(Words.text("sidebar-menu-hide-from-agents", fallback: "Hide from Agents"), isOn: Binding(get: { terminal.isAgentHidden }, set: { context.send(.setAgentHidden(id, $0)) }))
         }
         Divider()
-        let path = terminal.folder.map { NSString(string: $0).expandingTildeInPath }
+        let path = terminal.folder.map { HomeFolder.expanding($0) }
         Button(Words.text("files-row-reveal", fallback: "Reveal in Finder")) { if let path { context.hooks.revealFolder(path) } }
             .disabled(path == nil)
         Button(Words.text("title-row-path-copy", fallback: "Copy path")) { if let path { context.hooks.copyPath(path) } }

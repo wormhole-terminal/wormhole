@@ -36,6 +36,8 @@ public struct SidebarView: View {
     @State var drag: LiveDrag?
     /// Where a pane header dragged over the list would land (the list draws its mark), and which terminal it carries.
     @State var paneAim: DropAim?
+    /// When this list was first drawn (a split's bracket drawn in later is one just made).
+    @State var shownAt = Date()
     @State var paneDragReader = PaneHeaderDragReader()
     @State var shifts: [TerminalID: StatusShift] = [:]
     /// The list's frame in the window, and where a drag's pointer stands in it: what tells a drag over the list from one
@@ -103,18 +105,23 @@ public struct SidebarView: View {
                 .padding(.top, Space._1)
                 // At least the list's height, so a pane header can be let go below the rows (it leaves its split).
                 .frame(maxWidth: .infinity, minHeight: viewport.height, alignment: .top)
-                .animation(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })
+                // Rows changing order slide on the core's spring; under Reduce Motion they stand in their new places at once
+                // (the row plan measures nothing then).
+                .motionTurn(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })
                 .coordinateSpace(.named(DragLift.space))
                 .onPreferenceChange(DropFrames.self) { frames = $0 }
                 .onDrop(of: [.plainText], delegate: paneHeaderDrop(sections))
                 .overlay(alignment: .topLeading) { dragLayer(sections) }
             }
             .scrollIndicators(.automatic)
-            .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
+            .scrollEdge()
+            .onChange(of: cursor) { _, stop in if let stop { withAnimation(reduce ? nil : SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
         .environment(\.sidebarLook, appearance)
+        .environment(\.listRoom, drag?.aim?.room ?? ListRoom())
+        .environment(\.listShownAt, shownAt)
         .environment(\.rowChanges, RowChanges.counts(sections, scope: appearance.changesScope))
         .environment(\.showsHints, appearance.forcesHints || (appearance.showsCommandHints && hold.showing))
         .environment(\.keyedStop, focused && keysLead && windowFront ? cursor : nil)
@@ -123,12 +130,23 @@ public struct SidebarView: View {
         .focused($focused)
         .onKeyPress(phases: [.down, .repeat]) { press in handle(press, walk) }
         .simultaneousGesture(TapGesture().onEnded { keysLead = false })
-        .onChange(of: focused) { _, now in if now && cursor == nil { cursor = state.selected.map(SidebarStop.row) ?? walk.items.first?.stop } }
+        .onChange(of: focused) { _, now in if now { enter(walk) } }
         .onChange(of: statuses) { old, new in noteStatusChanges(from: old, to: new) }
         .onAppear { hold.start() }
         .onDisappear { hold.stop() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("sidebar-list", fallback: "Terminals"))
+    }
+
+    /// Coming into the list (F6, ⇥): the keys go back where they were, or onto the selected terminal (its group's head while it is
+    /// folded away, which the walk does not hold), or the first item (`sidebar/keys.rs` `enter`).
+    func enter(_ walk: SidebarWalk) {
+        let stops = Set(walk.items.map(\.stop))
+        if let cursor, stops.contains(cursor) { return }
+        let selected = state.selected
+        let group = selected.flatMap { id in state.all.first { $0.id == id }?.group }
+        cursor = [selected.map(SidebarStop.row), group.map(SidebarStop.group)].compactMap { $0 }.first { stops.contains($0) }
+            ?? walk.items.first?.stop
     }
 
     func context(_ sections: [SidebarSection]) -> SidebarContext {

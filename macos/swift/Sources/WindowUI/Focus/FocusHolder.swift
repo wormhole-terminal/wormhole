@@ -33,6 +33,10 @@ final class FocusHolderView: NSView {
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }
 
     override var acceptsFirstResponder: Bool { true }
+    /// Never AppKit's own choice (a window's first key view as it comes on screen, the key view loop): the keys come here
+    /// only from `WindowFocus.focus`, which says which area they are on. Chosen by AppKit, the holder had them for the title
+    /// row with nothing said, and a new window's terminal heard no key.
+    override var canBecomeKeyView: Bool { false }
     override var focusRingType: NSFocusRingType { get { .none } set {} }
 
     override func viewDidMoveToWindow() {

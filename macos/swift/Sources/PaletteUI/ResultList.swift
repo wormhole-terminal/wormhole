@@ -71,7 +71,7 @@ struct ResultList: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: TextRole.body.size))
+            .font(.system(size: tokens.size(.body)))
             .foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._4)
             .frame(maxWidth: .infinity, alignment: .leading)

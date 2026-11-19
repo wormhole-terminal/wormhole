@@ -4,25 +4,29 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
 struct TerminalCrumb: View {
     let plan: TitlePlan
+    /// The row's own tile (the agent's logo with its live status), when the window gives one.
+    var tile: TerminalStatusTile?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         let facts = plan.facts
         HStack(spacing: TitleMetrics.crumbGap) {
-            TerminalTile(activity: facts.activity, size: TitleMetrics.tile)
+            if let tile { tile } else { TerminalTile(activity: facts.activity, size: TitleMetrics.tile) }
             AtMostWidth(width: plan.fit.name) {
-                Text(facts.label).font(TextRole.label.font.weight(.medium)).foregroundStyle(tokens.textPrimary)
+                Text(facts.label).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                     .lineLimit(1).truncationMode(.tail)
                     .contentTransition(.interpolate)
             }
             if facts.hiddenFromAgents {
                 Image(systemName: "lock").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
                     .help(PanesText.hiddenFromAgents)
+                    .inspectSite("title.lock")
             }
         }
         .accessibilityElement(children: .combine)
@@ -35,7 +39,7 @@ struct StatusWords: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(words).font(TextRole.caption.font).foregroundStyle(colour)
+        Text(words).font(tokens.font(.caption)).foregroundStyle(colour)
             .lineLimit(1).fixedSize()
             .transition(.opacity)
     }

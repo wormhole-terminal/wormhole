@@ -70,4 +70,24 @@ final class SwatchMenuView: NSView {
     }
 
     override func accessibilityChildren() -> [Any]? { nil }
+
+    /// The dots' names, and a press of one as a click on it makes (the control folder's `menu-native`).
+    var names: [String] { row.swatches.map(\.name) }
+
+    func press(_ index: Int) {
+        guard row.swatches.indices.contains(index) else { return }
+        pick(row.command(index))
+    }
+}
+
+/// A kept menu's colour dots, for the control folder's `menu-native` to list and press.
+public enum SwatchMenuProbe {
+    @MainActor public static func dots(of item: NSMenuItem) -> [String]? { (item.view as? SwatchMenuView)?.names }
+
+    @MainActor @discardableResult
+    public static func press(dot index: Int, of item: NSMenuItem) -> Bool {
+        guard let view = item.view as? SwatchMenuView, view.names.indices.contains(index) else { return false }
+        view.press(index)
+        return true
+    }
 }

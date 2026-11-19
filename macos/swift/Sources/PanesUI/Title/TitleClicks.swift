@@ -33,6 +33,11 @@ public enum PathCardItem: CaseIterable, Sendable {
         }
     }
 
+    /// The item as the card's button; Copy path says "Copied" for a moment.
+    @MainActor func button(_ actions: TitleActions) -> PathCardButton {
+        PathCardButton(id: "\(self)", symbol: symbol, title: title, enabled: isOn(actions), copied: self == .copyPath ? PanesText.copied : nil) { perform(actions) }
+    }
+
     public func isOn(_ actions: TitleActions) -> Bool { self != .insertIntoTerminal || actions.canInsert }
 
     public func perform(_ actions: TitleActions) {

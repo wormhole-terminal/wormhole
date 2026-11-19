@@ -27,11 +27,12 @@ struct RowLines: View {
             HStack(spacing: Space._2) {
                 name
                 if terminal.isPinned {
-                    RowMark(icon: .pin, isSelected: isSelected).transition(.scale(scale: 0.4).combined(with: .opacity))
+                    RowMark(icon: .pin, isSelected: isSelected).inspectSite("row.pin").motionTransition(.scale(scale: 0.4).combined(with: .opacity))
                 }
-                if terminal.isAgentHidden { RowMark(icon: .lock, isSelected: isSelected, tip: SidebarText.hiddenFromAgents) }
+                if terminal.isAgentHidden { RowMark(icon: .lock, isSelected: isSelected, tip: SidebarText.hiddenFromAgents).inspectSite("row.lock") }
                 if let main = terminal.worktreeOf {
                     RowMark(icon: .gitFork, isSelected: isSelected, tip: SidebarText.worktree(terminal.title, of: main, at: terminal.folder))
+                        .inspectSite("row.worktree")
                 }
                 Spacer(minLength: 0)
                 trail
@@ -42,8 +43,8 @@ struct RowLines: View {
             }
         }
         .help(nameCut || detailCut ? SidebarText.cut(terminal.title, place: terminal.folder, detail: row.secondLine.text) : "")
-        .animation(SidebarMotion.hint, value: showsHints)
-        .animation(SidebarMotion.state, value: terminal.activity)
+        .motion(SidebarMotion.hint, value: showsHints)
+        .motion(SidebarMotion.state, value: terminal.activity)
     }
 
     @ViewBuilder private var name: some View {
@@ -51,7 +52,7 @@ struct RowLines: View {
             RenameField(name: terminal.title, rename: rename)
         } else {
             NameText(
-                name: terminal.title, font: TextRole.body.font.weight(isSelected || terminal.unread ? .semibold : .medium),
+                name: terminal.title, font: tokens.font(.body).weight(isSelected || terminal.unread ? .semibold : .medium),
                 color: isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary, reserve: hovering ? RowGeometry.closeRoom : 0,
                 cut: $nameCut)
         }

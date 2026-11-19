@@ -2,6 +2,7 @@
 // a provider written elsewhere (the Rust one over the FFI, a Probe later) answers in the same words.
 
 import Foundation
+import WorkspaceModel
 
 /// Where the picker was opened: what a provider may use to make sense of the typed text.
 public struct PickerContext: Sendable, Equatable {
@@ -9,7 +10,7 @@ public struct PickerContext: Sendable, Equatable {
     public var cwd: String
     public var home: String
     public var profile: String
-    public init(cwd: String, home: String = NSHomeDirectory(), profile: String = "default") {
+    public init(cwd: String, home: String = HomeFolder.path, profile: String = "default") {
         (self.cwd, self.home, self.profile) = (cwd, home, profile)
     }
 }

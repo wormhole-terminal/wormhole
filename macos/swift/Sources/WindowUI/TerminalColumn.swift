@@ -12,6 +12,7 @@ import PanesUI
 import SidebarUI
 import SwiftUI
 import TerminalUI
+import WorkspaceModel
 
 struct TerminalColumn: View {
     let hub: WindowHub
@@ -27,7 +28,7 @@ struct TerminalColumn: View {
     var body: some View {
         let cover = hub.panel.cover
         VStack(spacing: 0) {
-            TitleSlot {
+            PanesUI.TitleSlot {
                 CentreTitle(hub: hub)
             } coverTitle: {
                 PanelCoverTitle.carries(cover) ? PanelCoverTitle(controller: hub.panel) : nil
@@ -37,7 +38,10 @@ struct TerminalColumn: View {
             .padding(.leading, pads.leading)
             .padding(.trailing, pads.trailing)
             .frame(height: Chrome.titleHeight)
-            .overlay { TitleTintLine(color: hub.state.selectedGroupColor) }
+            // A group's colour (a named one or the person's own) tints the row: its soft parts step up to the text colour,
+            // and under Increase Contrast a line says the colour.
+            .environment(\.titleTinted, hub.state.selectedGroupHead.map { $0.color != nil || $0.customColor != nil } ?? false)
+            .overlay { TitleTintLine(group: hub.state.selectedGroupHead) }
             .background(WindowDragArea())
 
             if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints) }
@@ -63,15 +67,26 @@ struct TerminalColumn: View {
 private struct CentreTitle: View {
     let hub: WindowHub
     @Environment(WindowLook.self) private var look
+    /// How long the terminal has been in its state, as the core says it; read again when the words would read differently.
+    @State private var aged: (since: UInt64, waited: Waited)?
 
     var body: some View {
         if let terminal = hub.state.selectedTerminal {
+            let first = terminal.since.flatMap { hub.store.waited(since: $0) }
+            let waited = aged.flatMap { $0.since == terminal.since ? $0.waited : nil } ?? first
             let facts = TitleFactsMaker.facts(
                 for: terminal, row: hub.titleRow, statusBarOn: look.statusBar, gauge: hub.gauges.gauge(for: terminal),
-                extras: hub.state.title)
+                extras: hub.state.title, waited: waited)
             TitleRowView(
                 facts: facts, arrangement: hub.state.title.map { TitleArrangement($0, facts: facts) }, fitting: hub.rowFitting,
-                actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)
+                actions: hub.titleActions(for: terminal, appearance: look.sidebar), backend: hub.openIn, icon: SystemOpenIn.icon)
+                .modifier(TitleFileDrop { hub.terminals.existing(terminal.id)?.insertDropped($0) })
+                .task(id: waited) {
+                    guard !look.statusBar, let waited, let since = terminal.since else { return }
+                    // one-shot: the moment the words ("working · 4m") next read differently, as the core says
+                    try? await Task.sleep(for: waited.next)
+                    if !Task.isCancelled, let fresh = hub.store.waited(since: since) { aged = (since, fresh) }
+                }
         } else {
             Color.clear
         }

@@ -5,6 +5,7 @@
 
 import AppKit
 import Observation
+import PanelUI
 import SidebarUI
 import TerminalMetal
 import WorkspaceModel
@@ -140,9 +141,17 @@ public final class WindowFocus {
         announce()
     }
 
-    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the panel's list.
+    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the notes while they are on (the note being worked
+    /// on, else the first, else a new one, with the Notes tab and the panel shown: `window/shortcuts.rs`), else to the
+    /// panel's list.
     public func toggleTerminalAndPanel() {
-        if current() != .terminal { focusTerminal() } else if layout.panel { focus(FocusStop(.panelContent)) }
+        if current() != .terminal { return focusTerminal() }
+        if hub.panelTabs.contains(.notes) {
+            hub.send(.showPanelTab(.notes))
+            swiftUI { hub.panel.notes.focusIn() }
+        } else if layout.panel {
+            focus(FocusStop(.panelContent))
+        }
     }
 
     /// A list of SwiftUI takes the keyboard when asked, but only from the window's own view: the holder or the terminal
@@ -172,6 +181,16 @@ public final class WindowFocus {
         focusTerminal()
     }
 
+    /// The selected terminal changed while a terminal had the keys (a split's new pane, a pane focused by its key): the
+    /// keys go with it. Nothing else moved them: a split made by ⌘D left them in the pane it was made from, so what was
+    /// typed next went to the terminal that was not selected. Keys in a list or a field stay where they are.
+    public func followSelection() {
+        guard let id = hub.state.selected, let view = hub.terminals.existing(id), let window = view.window,
+            let had = window.firstResponder as? MetalTerminalView, had !== view
+        else { return }
+        window.makeFirstResponder(view)
+    }
+
     /// The keyboard back to the terminal on screen: where it goes when a list, a strip or an editor lets go of it.
     public func focusTerminal() {
         guard let id = hub.state.selected, let view = hub.terminals.existing(id) else { return }
@@ -194,6 +213,7 @@ public final class WindowFocus {
         let area = current()
         let find = hub.selectedOverlay?.find
         let detail = hub.panel.cover != nil || find?.isOpen == true
+        // `popup` is false as in GPUI (`window/focus/mod.rs`): a native menu is modal, so no key reaches here while one is open.
         switch Focus.rules.escape(terminal: area == .terminal, popup: false, detail: detail) {
         case .toShell, .closePopup:
             return false
@@ -241,8 +261,10 @@ public final class WindowFocus {
             hub.send(.showOverlay(nil))
             return true
         }
-        return event.type == .keyDown && event.keyCode == Key.escape && bare && window.firstResponder is MetalTerminalView
-            && escape()
+        // Also when nothing has the keys (the window is its own first responder): a diff or a file opened over the terminal
+        // takes the terminal's view out, and Esc must still close it (the GPUI app's ladder is the window's, whatever has focus).
+        return event.type == .keyDown && event.keyCode == Key.escape && bare
+            && (window.firstResponder is MetalTerminalView || window.firstResponder === window) && escape()
     }
 
     func detach() {

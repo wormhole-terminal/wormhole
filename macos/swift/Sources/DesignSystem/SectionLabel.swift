@@ -3,6 +3,7 @@
 import SwiftUI
 
 public struct SectionLabel: View {
+    @Environment(\.tokens) private var tokens
     public let title: String
     /// `nil`: not foldable, no chevron.
     public let isCollapsed: Bool?
@@ -19,13 +20,13 @@ public struct SectionLabel: View {
                     .font(.system(size: Metric.chevron, weight: .bold))
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                     .frame(width: Metric.lead)
-                    .motion(Motion.layout, value: isCollapsed)
+                    .motionTurn(Motion.layout, value: isCollapsed)
             }
             // A caption over a group of rows is capitals (`section_label`); a foldable band keeps its case.
-            Text(title).textCase(isCollapsed == nil ? .uppercase : nil).font(TextRole.caption.font.weight(.semibold))
+            Text(title).textCase(isCollapsed == nil ? .uppercase : nil).font(tokens.font(.caption).weight(.semibold))
             Spacer(minLength: 0)
         }
-        .foregroundStyle(Palette.textSecondary)
+        .foregroundStyle(tokens.textMuted)
         .frame(minHeight: Metric.control)
     }
 }

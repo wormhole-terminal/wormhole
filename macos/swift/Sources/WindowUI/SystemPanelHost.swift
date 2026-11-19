@@ -6,8 +6,10 @@ import AppKit
 import DesignSystem
 import PanelModel
 import PanesModel
+import PlatformModel
 import TerminalUI
 import WordsModel
+import WorkspaceModel
 
 @MainActor
 final class SystemPanelHost: PanelHost {
@@ -24,7 +26,7 @@ final class SystemPanelHost: PanelHost {
         var focus: () -> Void = {}
         var open: (String, String?) -> Void = { _, _ in }
         /// The chip of the window says `notice`.
-        var say: (Notice) -> Void = { _ in }
+        var say: (TerminalUI.Notice) -> Void = { _ in }
         /// The window of everything the project would run.
         var showCommands: () -> Void = {}
         /// The window's panel tab by name: show it, and whether it is offered.
@@ -37,7 +39,9 @@ final class SystemPanelHost: PanelHost {
     /// The app the Open in button opens files in (the window's choice); Finder is a reveal, so it names no editor.
     var chosenApp: () -> OpenInApp? = { nil }
     var editorName: String? { chosenApp().flatMap { $0 == .finder ? nil : $0.name } }
-    let homeFolder: String? = NSHomeDirectory()
+    let homeFolder: String? = HomeFolder.path
+
+    func keyed(_ words: String, action: String) -> String { Keymap.shared.withKey(words, ActionID(rawValue: action)) }
 
     func copy(_ text: String) {
         Pasteboard.setText(text)
@@ -53,7 +57,7 @@ final class SystemPanelHost: PanelHost {
 
     func copyPath(_ path: String) {
         guard !path.unicodeScalars.contains(where: { $0.properties.generalCategory == .control }) else {
-            notify(Notice.failed(.copyPath).words)
+            notify(TerminalUI.Notice.failed(.copyPath).words)
             return terminal.say(.failed(.copyPath))
         }
         copy(path)
@@ -63,8 +67,13 @@ final class SystemPanelHost: PanelHost {
 
     func reveal(_ path: String) {
         guard launches() else { return notify("Would reveal \(path)") }  // text: a test instance's log of what it did not do
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        // A name that is not text comes as a key (`DiskName`): the URL is of its bytes, never of the text cut short.
+        guard let url = DiskName.url(path) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
+
+    /// Quoted as the title row's card quotes a folder (`path_card.rs` `insert_text`).
+    func insertPath(_ path: String) { terminal.send(WindowHub.shellQuoted(path)) }
 
     /// The core runs the app's own way of taking a line. Finder, and an app that does not start, show the file: it
     /// is never handed to its default app, which for `x.command` or a folder named `x.app` is to run it.
@@ -125,7 +134,7 @@ final class SystemPanelHost: PanelHost {
 
 extension PanelCopied {
     /// What the chip says for a copy from the panel.
-    var notice: Notice.Copied {
+    var notice: TerminalUI.Notice.Copied {
         switch self {
         case .error: .error
         case .objectId: .objectId
@@ -140,7 +149,7 @@ extension PanelCopied {
 }
 
 extension PanelFailed {
-    var notice: Notice.Failed {
+    var notice: TerminalUI.Notice.Failed {
         switch self {
         case .copyCommit: .copyCommit
         case .renameName: .renameName

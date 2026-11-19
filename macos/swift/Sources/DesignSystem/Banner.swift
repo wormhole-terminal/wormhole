@@ -13,8 +13,13 @@ public struct Banner<Actions: View>: View {
     let actions: Actions
     @Environment(\.tokens) private var tokens
 
-    public init(kind: BannerKind, text: String, @ViewBuilder actions: () -> Actions) {
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
+
+    public init(kind: BannerKind, text: String, file: StaticString = #fileID, line: UInt = #line, @ViewBuilder actions: () -> Actions) {
         (self.kind, self.text, self.actions) = (kind, text, actions())
+        (self.file, self.line) = (file, line)
     }
 
     public var body: some View {
@@ -30,7 +35,7 @@ public struct Banner<Actions: View>: View {
         .frame(minHeight: Self.minHeight)
         .background(fill, in: shape)
         .contrastOutline(shape, color: border)
-        .marked("banner")
+        .marked("banner", style: "padding leading _3 trailing _2 · min height 40 · gap _3 · radius control · text label", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .accessibilityElement(children: .contain)
         .accessibilityLabel(text)
     }
@@ -73,5 +78,7 @@ public struct Banner<Actions: View>: View {
 }
 
 extension Banner where Actions == EmptyView {
-    public init(kind: BannerKind, text: String) { self.init(kind: kind, text: text) { EmptyView() } }
+    public init(kind: BannerKind, text: String, file: StaticString = #fileID, line: UInt = #line) {
+        self.init(kind: kind, text: text, file: file, line: line) { EmptyView() }
+    }
 }

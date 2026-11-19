@@ -12,8 +12,8 @@ struct ShortcutLine: View {
 
     var body: some View {
         HStack(spacing: Space._2) {
-            Text(MarkedText.title(row.label, ranges: row.hit.map { [$0] } ?? [], mark: tokens.primary, size: TextRole.label.size))
-                .font(.system(size: TextRole.label.size))
+            Text(MarkedText.title(row.label, ranges: row.hit.map { [$0] } ?? [], mark: tokens.primary, size: tokens.size(.label)))
+                .font(.system(size: tokens.size(.label)))
                 .lineLimit(1)
             Spacer(minLength: 0)
             HStack(spacing: Space._1) { caps }
@@ -32,7 +32,7 @@ struct ShortcutLine: View {
         if row.isRun {
             if let first = row.keys.first { KeyCap(text: first.glyphs) }
             if row.keys.count > 1, let last = row.keys.last {
-                Text("…").font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint)
+                Text("…").font(.system(size: tokens.size(.caption))).foregroundStyle(tokens.textFaint)
                 KeyCap(text: last.glyphs)
             }
         } else {

@@ -68,6 +68,7 @@ public struct PaletteView: View {
 
     public var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { clock in content(now: clock.date) }
+            .onAppear { sources.opened() }
     }
 
     private func content(now: Date) -> some View {

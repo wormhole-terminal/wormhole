@@ -48,6 +48,10 @@ public final class WorkspaceStore {
     /// How long ago `since` was (`TerminalSummary.since`), in words.
     public func waited(since: UInt64) -> Waited? { backend.waited(since: since) }
     public func programName(of id: TerminalID) -> String? { backend.programName(of: id) }
+    public func shellName(of id: TerminalID) -> String? { backend.shellName(of: id) }
+    /// The core's spoken sentences for VoiceOver (`Backend.spoken`).
+    public func spoken(attention name: String, since: UInt64) -> String? { backend.spoken(attention: name, since: since) }
+    public func spoken(count: Int, of activity: Activity) -> String? { backend.spoken(count: count, of: activity) }
     /// What is wrong with terminal `id`'s session host, while something is (the bar over its pane).
     public func hostProblem(of id: TerminalID) -> HostProblem? { backend.hostProblem(of: id) }
     public func reconnect(_ id: TerminalID) { backend.reconnect(id) }
@@ -58,6 +62,8 @@ public final class WorkspaceStore {
 
     /// The app is quitting (`WorkspaceBackend.finishQuit`).
     public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }
+    /// Quit and End All, its seconds handed back (`WorkspaceBackend.quitEndingHosts`).
+    public func quitEndingHosts() -> (@Sendable () -> Void)? { backend.quitEndingHosts() }
     /// Fill this (empty) window from what it was saved with.
     public func restore() {
         backend.restore()
@@ -83,6 +89,9 @@ public final class WorkspaceStore {
     /// What dropping a terminal here would do, for the line shown while it is still held.
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { backend.dropPlan(dragged: dragged, over: over) }
 
+    /// Which part of a line the pointer is over (the core's edges, held by hysteresis while `previous` is given).
+    public func dropPart(fraction: Double, previous: DropPart?) -> DropPart { backend.dropPart(fraction: fraction, previous: previous) }
+
     /// Where dropping a group here would put it, for the line shown while it is still held.
     public func groupDropPlan(group: GroupID, over: DropOver) -> Landing? { backend.groupDropPlan(group: group, over: over) }
 
@@ -92,11 +101,20 @@ public final class WorkspaceStore {
     /// The folder to offer a group that has none before a terminal opens in it.
     public func groupFolderOffer(group: GroupID) -> String? { backend.groupFolderOffer(group: group) }
 
+    /// How many of the group's terminals would leave it if it kept only `folder`'s.
+    public func groupFolderLeaving(group: GroupID, folder: String) -> Int { backend.groupFolderLeaving(group: group, folder: folder) }
+
     /// Whether the group's fence lets the terminal in (a menu greys the group that refuses).
     public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { backend.groupAdmits(group, terminal: terminal) }
 
     /// The terminal last selected in a group (nil: the ones in no group).
     public func lastSelected(in group: GroupID?) -> TerminalID? { backend.lastSelected(in: group) }
+
+    /// What VoiceOver hears for each tab of one set, in the bar's order; nil where no core words them.
+    public func tabLabels(of ids: [TerminalID]) -> [String]? { backend.tabLabels(of: ids) }
+
+    /// The tab bar's sets as the core lists them; nil where there is no core (the sample).
+    public func tabSets() -> TabSetFacts? { backend.tabSets() }
 
     private func woke() {
         backend.drain()

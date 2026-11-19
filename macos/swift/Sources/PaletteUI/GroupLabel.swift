@@ -17,12 +17,12 @@ struct GroupLabel: View {
     var body: some View {
         HStack(alignment: .lastTextBaseline, spacing: Space._2) {
             Text(title)
-                .font(.system(size: TextRole.caption.size, weight: .semibold))
+                .font(.system(size: tokens.size(.caption), weight: .semibold))
                 .foregroundStyle(tokens.textMuted)
             if trusted { StatusBadge(text: Words.text("settings-projects-trusted", fallback: "Trusted"), color: tokens.statusSuccessText) }
             if let count {
                 Text(String(count))
-                    .font(.system(size: TextRole.caption.size, weight: .medium))
+                    .font(.system(size: tokens.size(.caption), weight: .medium))
                     .monospacedDigit()
                     .foregroundStyle(tokens.textFaint)
             }

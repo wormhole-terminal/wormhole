@@ -27,7 +27,7 @@ public struct WorkspaceSetup: Sendable {
     public var paneHeaderHeight: Double = 34
 
     public init(
-        program: String? = nil, arguments: [String] = [], profile: String? = nil, home: String? = NSHomeDirectory(),
+        program: String? = nil, arguments: [String] = [], profile: String? = nil, home: String? = HomeFolder.path,
         numbersFollowList: Bool = false, hosting: HostingSetup? = nil
     ) {
         (self.program, self.arguments, self.home, self.numbersFollowList) = (program, arguments, home, numbersFollowList)
@@ -79,8 +79,10 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         case .off?, nil: (hosted, disposable) = (nil, nil)
         }
         let wake = WakeRelay()
+        // No start folder of the workspace's own: a terminal with no selected one to take a folder from is asked for none, so
+        // its profile's start folder applies, and the home without one (core `apply_profile`, `launch`), as in the GPUI app.
         let config = WorkspaceConfig(
-            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home,
+            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: nil,
             paneHeaderHeight: Float(setup.paneHeaderHeight))
         core = windows.map { Workspace.inWindow(windows: $0, window: Int64(window), config: config, listener: wake) }
             ?? Workspace(config: config, listener: wake)
@@ -117,6 +119,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             syncVisibility()
         }
         if case .newTerminalIn(let folder) = action { folderOfNext = folder }
+        if case .newTerminalWithShellIn(_, let folder) = action { folderOfNext = folder }
         if case .newTerminalRunning(let program, let arguments) = action { programOfNext = (program, arguments) }
         return handle(core.apply(action: WormholeBindings.Action(action)))
     }
@@ -154,6 +157,14 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     private static let bootVolume =
         (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"  // text: the fallback of the name macOS gives the startup volume
 
+    public func dropPart(fraction: Double, previous: DropPart?) -> DropPart {
+        switch dropPartAt(fraction: Float(fraction), previous: previous.map(WormholeBindings.Part.init)) {
+        case .top: .top
+        case .middle: .middle
+        case .bottom: .bottom
+        }
+    }
+
     public func dropPlan(dragged: TerminalID, over: DropOver) -> WorkspaceModel.DropPlan? {
         core.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)
     }
@@ -167,8 +178,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     }
 
     public func groupFolderOffer(group: GroupID) -> String? { core.groupFolderOffer(group: group) }
+    public func groupFolderLeaving(group: GroupID, folder: String) -> Int { Int(core.groupFolderLeaving(group: group, folder: folder)) }
     public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { core.groupAdmits(group: group, id: Int64(terminal)) }
     public func lastSelected(in group: GroupID?) -> TerminalID? { core.lastSelectedIn(group: group).map(Int.init) }
+    public func tabLabels(of ids: [TerminalID]) -> [String]? { core.tabLabels(ids: ids.map(Int64.init)) }
+    public func tabSets() -> TabSetFacts? { TabSetFacts(core.tabSets()) }
 
     /// What the core says happened: start the program of a terminal opened, forget one closed; a refusal is the answer.
     func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {

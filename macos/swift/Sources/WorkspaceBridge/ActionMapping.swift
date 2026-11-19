@@ -11,7 +11,7 @@ extension WormholeBindings.Action {
         case .selectStep(let delta): self = .selectStep(Int32(delta))
         case .selectNumber(let number): self = .selectNumber(UInt32(number))
         case .newTerminal, .newTerminalIn, .newTerminalRunning: self = .newTerminal
-        case .newTerminalWithShell(let key): self = .newTerminalWithShell(key)
+        case .newTerminalWithShell(let key), .newTerminalWithShellIn(let key, _): self = .newTerminalWithShell(key)
         case .newTerminalInGroup(let group): self = .newTerminalInGroup(group)
         case .newTerminalInNewGroup: self = .newTerminalInNewGroup
         case .close(let id): self = .close(Int64(id))
@@ -69,6 +69,7 @@ extension WormholeBindings.Action {
         case .toggleSidebar: .toggleSidebar
         case .togglePanel: .togglePanel
         case .showPanelTab(let tab): .showPanelTab(TabId(tab))
+        case .setPanelTab(let tab): .setPanelTab(TabId(tab))
         case .search(let text): .search(text)
         case .showOverlay(let overlay): .showOverlay(overlay.map(WormholeBindings.Overlay.init))
         case .setWindowWidth(let width): .setWindowWidth(Float(width))
