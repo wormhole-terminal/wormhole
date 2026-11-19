@@ -138,7 +138,19 @@ extension EndToEnd {
             // A read is asked about only where the person can see the terminal (the key window: `ReadGate`, `reportOnScreen`),
             // and a test instance's window is never key: `clipboard-front on` says it is. Without it the read is refused
             // with an empty answer, which `cat` writes back as a copy of nothing.
-            await app.send(["delay 4500", "clipboard-front on"])
+            await app.send(["delay 4500"])
+            // Not on screen: no question, an empty answer at once, nothing of the pasteboard in it and the pasteboard as it was.
+            // (The answer is typed to `cat`, whose terminal echoes it: `^[]52;c;^G`, where the clipboard's "bye" would read
+            // `^[]52;c;Ynll^G`. The line is then dropped, so `cat` never writes it back.)
+            // (The screen is cleared first: the echo of the earlier copy of "bye" is on it.)
+            await app.clearScreen()
+            await app.emit("\(e)]52;c;?\(b)")
+            let unseen = await app.screen { $0.contains("]52;c;^G") || $0.contains("Ynll") }
+            app.expect(unseen.contains("]52;c;^G") && !unseen.contains("Ynll"), "an unseen read is answered empty:\n\(unseen)")
+            app.expect(!(await app.reply("pane-bar")).hasPrefix("question"), "and nobody is asked")
+            await app.discardLine()
+            app.expect(await app.reply("pasteboard"), contains: #"pasteboard "bye""#)
+            await app.send(["clipboard-front on"])
             await app.emit("\(e)]52;c;?\(b)")
             await app.until("pane-bar") { $0.hasPrefix("question") }
             await app.emit("\(e)]52;c;b2s=\(b)")
