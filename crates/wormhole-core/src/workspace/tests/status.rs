@@ -353,6 +353,22 @@ fn the_shell_ending_is_exited_and_nothing_brings_it_back() {
 }
 
 #[test]
+fn a_terminal_started_again_after_its_shell_ended_is_idle_and_follows_its_new_program() {
+    let mut m = model(2);
+    feed(&mut m, 2, StatusEvent::Exited, 1_000);
+    assert_eq!(state(&m, 2).0, Status::Exited);
+    assert_eq!(m.started_again(2, 2_000), [Event::Listing]);
+    assert_eq!(state(&m, 2), (Status::Idle, RowState::Idle));
+    assert_eq!(m.facts(2).map(|f| f.since), Some(2_000));
+    // The new program is followed like any other.
+    hook(&mut m, 2, "UserPromptSubmit", None, 3_000);
+    assert_eq!(state(&m, 2).0, Status::Busy);
+    // A terminal whose program runs is not touched: no event, the status as it was.
+    assert!(m.started_again(2, 4_000).is_empty());
+    assert_eq!(state(&m, 2).0, Status::Busy);
+}
+
+#[test]
 fn a_title_that_keeps_changing_renames_at_a_steady_pace_with_one_timer() {
     let mut m = model(2);
     feed(&mut m, 2, StatusEvent::Title("⠋ 1%".into()), 1_000);

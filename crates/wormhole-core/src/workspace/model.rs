@@ -229,6 +229,7 @@ impl WorkspaceModel {
                 });
             }
             Action::ShowPanelTab(tab) => self.show_panel_tab(tab),
+            Action::SetPanelTab(tab) => self.set_panel_tab(tab),
             Action::SetWindowWidth(width) => self.chrome_change(|c| c.window_width = width.max(0.0)),
             Action::DragEdge { edge, extent } => self.chrome_change(|c| {
                 let width = c.width();
@@ -244,7 +245,15 @@ impl WorkspaceModel {
             Action::SetFeature { feature, on } => self.set_feature(feature, on),
             Action::Search(text) => self.search(text),
             Action::ShowOverlay(overlay) => self.chrome_change(|c| c.overlay = overlay),
-            Action::SetPaneArea { width, height } => self.pane_area = (width.max(0.0), height.max(0.0)),
+            Action::SetPaneArea { width, height } => {
+                // The room for a split and the layouts that fit are answers about the area: a view that reads the chrome only when
+                // its revision moves would keep what the area before said (a title row's Split right off at a window's new size).
+                let before = self.layout_info();
+                self.pane_area = (width.max(0.0), height.max(0.0));
+                if self.layout_info() != before {
+                    self.emit(Event::Chrome);
+                }
+            }
         }
         self.out.take()
     }

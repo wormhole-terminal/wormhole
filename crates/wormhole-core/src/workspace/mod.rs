@@ -65,8 +65,8 @@ pub use saved::SavedLayout;
 pub use snapshot::{
     AgentInfo, ChromeSnapshot, ColumnLimits, DividerInfo, EdgeDrag, GroupHead, LayoutInfo, MemberTile,
     PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep, PresetInfo, SidebarRow, SidebarSection,
-    SidebarSnapshot, SplitInfo, TerminalCounts, TerminalSummary, TerminalsSnapshot, TitleSlot, TitleSnapshot,
-    TitleTerminal,
+    SidebarSnapshot, SplitInfo, TabSetView, TabSetsView, TerminalCounts, TerminalSummary, TerminalsSnapshot,
+    TitleSlot, TitleSnapshot, TitleTerminal,
 };
 pub use status::{Ask, Context, ForegroundLook, Front, StatusEvent, StatusMachine, status_of};
 pub use tile::{TileGlyph, glyph_of};

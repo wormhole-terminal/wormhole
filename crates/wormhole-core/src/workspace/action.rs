@@ -214,6 +214,9 @@ pub enum Action {
     TogglePanel,
     /// Asking for a tab is asking to see it.
     ShowPanelTab(TabId),
+    /// Switch the panel's tab without showing the panel: under Zen mode, which keeps it off the screen, a tab is chosen
+    /// for when the panel comes back (a tab whose feature is off is refused, as `ShowPanelTab` refuses it).
+    SetPanelTab(TabId),
     Search(String),
     ShowOverlay(Option<Overlay>),
     /// The area the panes share, in points; a zero is "not laid out yet", where nothing is refused

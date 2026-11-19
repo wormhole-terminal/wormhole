@@ -39,6 +39,10 @@ pub struct TitleTerminal {
     pub folder: Option<String>,
     pub cwd: Option<String>,
     pub branch: Option<String>,
+    /// In a repository with no branch (a detached HEAD): the row says "detached".
+    pub detached: bool,
+    /// For a submodule, whose it is ("in terminal").
+    pub superproject: Option<String>,
     pub message: Option<String>,
 }
 
@@ -106,7 +110,8 @@ impl WorkspaceModel {
         let pull_request = self.pull_request_of(session.id).cloned();
         let present = |part: TitlePart| match part {
             TitlePart::Folder | TitlePart::OpenIn => facts.cwd.is_some(),
-            TitlePart::Branch | TitlePart::BranchStatus => facts.branch.is_some(),
+            TitlePart::Branch => facts.branch.is_some() || facts.repo.is_some(),
+            TitlePart::BranchStatus => facts.branch.is_some(),
             TitlePart::Terminal | TitlePart::Splits => true,
             TitlePart::TerminalStatus => facts.told() || facts.command.is_some(),
             TitlePart::Ports => !ports.is_empty(),
@@ -125,6 +130,8 @@ impl WorkspaceModel {
                 folder: folder.clone(),
                 cwd: facts.cwd.as_ref().map(|cwd| cwd.to_string_lossy().into_owned()),
                 branch: facts.branch.clone(),
+                detached: facts.branch.is_none() && facts.repo.is_some(),
+                superproject: facts.superproject.clone(),
                 message: facts.message.clone(),
             }),
             left: self.slots(&left, present),

@@ -15,6 +15,8 @@ use super::AgentInfo;
 pub struct TerminalSummary {
     pub id: i64,
     pub name: String,
+    /// The name the person (or a project's layout) gave it, which the title row's program name never changes.
+    pub custom_name: Option<String>,
     /// ⌘1 to ⌘9; a terminal folded away has none.
     pub number: Option<u32>,
     pub selected: bool,
@@ -115,6 +117,7 @@ impl WorkspaceModel {
         TerminalSummary {
             id: session.id,
             name: session.name(),
+            custom_name: session.custom_name.clone(),
             number: number.map(|n| n as u32),
             selected: self.selected == Some(session.id),
             pinned: session.pinned,

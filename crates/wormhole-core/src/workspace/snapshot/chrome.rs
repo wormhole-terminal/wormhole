@@ -169,16 +169,23 @@ impl WorkspaceModel {
                     selected: tab == chrome.panel_tab,
                 })
                 .collect(),
-            layout: LayoutInfo {
-                presets: self.preset_infos(),
-                can_split_row: self.selected_index().is_some_and(|ix| self.can_split(ix, Axis::Row)),
-                can_split_column: self.selected_index().is_some_and(|ix| self.can_split(ix, Axis::Column)),
-                pane_count: split.map_or(1, |split| split.layout.len() as u32),
-                zoomed: split.is_some_and(|split| split.layout.zoomed().is_some()),
-            },
+            layout: self.layout_info(),
             selected: self.selected,
             zoomed: split.and_then(|split| split.layout.zoomed()),
             numbers_follow_list: self.cfg.numbers == SidebarNumbers::List,
+        }
+    }
+
+    /// What the panes can do now: the presets and whether the focused pane has room to split.
+    pub(in crate::workspace) fn layout_info(&self) -> LayoutInfo {
+        let split =
+            self.selected_index().and_then(|ix| self.sessions[ix].split).and_then(|id| self.split_of(id));
+        LayoutInfo {
+            presets: self.preset_infos(),
+            can_split_row: self.selected_index().is_some_and(|ix| self.can_split(ix, Axis::Row)),
+            can_split_column: self.selected_index().is_some_and(|ix| self.can_split(ix, Axis::Column)),
+            pane_count: split.map_or(1, |split| split.layout.len() as u32),
+            zoomed: split.is_some_and(|split| split.layout.zoomed().is_some()),
         }
     }
 

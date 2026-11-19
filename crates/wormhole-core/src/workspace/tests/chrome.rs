@@ -223,3 +223,19 @@ fn the_title_rows_last_chip_names_what_runs_not_what_the_person_called_it() {
     assert_eq!(name(&m).as_deref(), Some("zsh"), "the program's name, as the GPUI row's chip is");
     assert_eq!(m.sidebar_snapshot(0).sections[0].rows[0].name, "api", "the list keeps the person's");
 }
+
+#[test]
+fn a_new_pane_area_that_changes_the_room_to_split_moves_the_chromes_revision() {
+    let mut m = model(1);
+    m.apply(Action::SetPaneArea { width: 300.0, height: 500.0 });
+    let tight = m.chrome_snapshot();
+    assert!(!tight.layout.can_split_row);
+    // The window grows: Split right has room again, and a reader that pulls on a changed revision learns it.
+    let events = m.apply(Action::SetPaneArea { width: 874.0, height: 854.0 });
+    assert!(events.contains(&Event::Chrome), "the room changed: {events:?}");
+    let roomy = m.chrome_snapshot();
+    assert!(roomy.layout.can_split_row && roomy.revision > tight.revision);
+    // The same answers at another size say nothing.
+    let events = m.apply(Action::SetPaneArea { width: 900.0, height: 860.0 });
+    assert!(!events.contains(&Event::Chrome), "no answer changed: {events:?}");
+}

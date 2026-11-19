@@ -6,6 +6,7 @@
 mod chrome;
 mod panes;
 mod sidebar;
+mod tabs;
 mod terminals;
 mod title;
 
@@ -16,6 +17,7 @@ use super::tile::TileGlyph;
 use super::words::SecondLine;
 
 pub use chrome::{ChromeSnapshot, ColumnLimits, EdgeDrag, LayoutInfo, PanelTab, PresetInfo};
+pub use tabs::{TabSetView, TabSetsView};
 pub use terminals::{TerminalCounts, TerminalSummary, TerminalsSnapshot};
 pub use title::{PathFolder, PathStep, TitleSlot, TitleSnapshot, TitleTerminal};
 
