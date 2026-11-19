@@ -47,15 +47,17 @@ extension AppController {
         let first = hub.state.selected.flatMap { hub.terminals.view(for: $0) }
         if first == nil, !hub.state.live.isEmpty { return false }
         // A fixed grid is a measuring mode: the window fits it. The title row and the status bar sit above and below the
-        // terminal: 38 + 24 pt. Otherwise the GPUI app's default window (1320 x 820): both columns open leave the
-        // terminal the room its title row needs.
+        // terminal: 38 + 24 pt. A window with a place (a saved one, a cascaded one) is made at its size, as the GPUI app opens a
+        // window at its bounds: made at the default and moved, its terminal was told the default's size first (69 columns) and then
+        // its own, which a shell redrew its prompt for. Otherwise the GPUI app's default window (1320 x 820): both columns open
+        // leave the terminal the room its title row needs.
         let size = options.grid.flatMap { grid in
             first.map { view in
                 let terminal = view.renderer.pointSize(forGrid: grid.cols, grid.rows)
                 let pad = 2 * MetalRenderer.padding
                 return CGSize(width: terminal.width + pad, height: terminal.height + pad + 62)
             }
-        } ?? CGSize(width: 1320, height: 820)
+        } ?? frame.map { CGSize(width: $0.width, height: $0.height) } ?? CGSize(width: 1320, height: 820)
         let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)") // text: a stderr line
         let controller = WorkspaceWindowController(
             title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, dress: session.dress))

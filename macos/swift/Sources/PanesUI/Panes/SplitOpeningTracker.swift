@@ -37,6 +37,9 @@ final class SplitOpeningTracker {
 
     private var seen: PanesState?
     private var change = Change.none
+    /// The area's size as the last body saw it, and whether it moved since a layout was last taken in.
+    private var lastArea: CGSize?
+    private var areaMoved = false
     /// The split's pane the last layout change was weighed against: a split opens one layout change at most.
     private var weighed: PaneID?
 
@@ -45,14 +48,27 @@ final class SplitOpeningTracker {
     /// `area`: the size the layout is for, when the caller has one. Every rectangle is in points, so a new size of the area is a
     /// new layout; it lands at once, as a window's resize does: animated, it would size each terminal at every step of the
     /// motion (and the shell of each would be told, 30 times in half a second).
+    ///
+    /// The area's size may move more than once before the panes follow (a window that grows is first as wide as the window less
+    /// its sidebar, then as wide as the pane the panel leaves): the layout the core answers lands after the last of them, and is a
+    /// cut whichever size it was laid for. A layout that adds or removes a pane, or zooms, is not that.
     func observe(_ panes: PanesState, motion: (any SplitMotion)?, plays: Bool, split: PaneID?, area: CGSize? = nil) -> Change {
+        if let area {
+            if let last = lastArea, last != area { areaMoved = true }
+            lastArea = area
+        }
         guard panes != seen else { return change }
         let before = seen
         seen = panes
         change = .none
-        if let area, let before, !Self.fills(before, area), Self.fills(panes, area) {
-            change = .cut
-            return change
+        let followsArea = areaMoved
+        areaMoved = false
+        if let area, let before {
+            let samePanes = before.order == panes.order && before.zoomed == panes.zoomed
+            if (followsArea && samePanes) || (!Self.fills(before, area) && Self.fills(panes, area)) {
+                change = .cut
+                return change
+            }
         }
         // The same pane coming again later (it left the split and was dropped back) is a drop, not this split.
         let asked = split == weighed ? nil : split

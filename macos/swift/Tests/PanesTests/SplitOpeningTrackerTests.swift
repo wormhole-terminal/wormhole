@@ -79,4 +79,19 @@ final class SplitOpeningTrackerTests: XCTestCase {
         _ = tracker.observe(lone, motion: Always(), plays: true, split: nil, area: area)
         guard case .plays = tracker.observe(two, motion: Always(), plays: true, split: 2, area: area) else { return XCTFail("a split of the area's panes plays") }
     }
+
+    func testALayoutThatLandsAfterTheAreaMovedTwiceIsCutWhicheverSizeItWasLaidFor() {
+        let tracker = SplitOpeningTracker()
+        let small = CGSize(width: 100, height: 50)
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil, area: small)
+        // The window grew: the area was 300 wide for a body, then 260 once the panel took its share; the core answered for 300.
+        let for300 = PanesState(shown: [PanePlace(1, PaneRect(0, 0, 300, 120))], focused: 1)
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil, area: CGSize(width: 300, height: 120))
+        XCTAssertTrue(tracker.observe(for300, motion: Always(), plays: true, split: nil, area: CGSize(width: 260, height: 120)).isCut, "laid for the size before")
+        // The next split is its own opening: the area has not moved since.
+        let back = PanesState(shown: [PanePlace(1, PaneRect(0, 0, 100, 50))], focused: 1)
+        _ = tracker.observe(back, motion: Always(), plays: true, split: nil, area: small)
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil, area: small)
+        guard case .plays = tracker.observe(two, motion: Always(), plays: true, split: 2, area: small) else { return XCTFail("a split after the area settled plays") }
+    }
 }
