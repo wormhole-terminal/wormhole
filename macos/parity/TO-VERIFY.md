@@ -2080,3 +2080,10 @@ Written and run: every scenario listed passed three runs in a row on the build o
 | S06 (TO-VERIFY line 183) | `ListFindTests/findFromTheList` | with the keys in the terminal list (F6) ⌘F opens the selected terminal's find bar | - |
 | T07 (TO-VERIFY line 18) | `AlternateCopyPasteTests/alternateCopyAndPasteKeys` | ⇧⌘V pastes the instance's clipboard into the terminal; ⌥⌘C copies the selected cells | the app keys that stay the menus' (⇧⌘E …) |
 | ST02 | `SettingsLooksPageTests/fontsPageClicked` | on Fonts, clicked: the ligatures switch is written and reaches the terminals' font (off, then on again); Open folder asks for the instance's own fonts folder (recorded, nothing is opened) | the font fields and their size steppers, line height, the Settings text size |
+
+### wave 13 (cover, second round)
+
+| row | scenario | what it proves | still unproven of the row |
+|---|---|---|---|
+| T16, PL03 | `HookOrderTests/hookOnAnAgentSticks` | a needs-input hook for a terminal that runs an agent, sent the moment the terminal exists (before the app could have seen the agent), is applied at once (the row says needs input), makes the banner "codex needs input" for that terminal, and the row still says it after the looks at the process that follow | - |
+| T16, PL03 | `HookOrderTests/hookOnAPlainTerminalIsUndoneByTheLook` | the same hook for a terminal whose process is no agent and whose shell holds it is applied at once and made a banner (not dropped, not late); the next look at the process hands the status back (idle). That is core's rule (`status/front.rs` `refresh_agent`, written from the GPUI app's `terminal_view/status.rs` `refresh_foreground_agent`: "forget it only once the shell is back"); the GPUI app does the same. What the first round saw as a hook "undone before a banner" was this look | the look's timing on a loaded Mac |
