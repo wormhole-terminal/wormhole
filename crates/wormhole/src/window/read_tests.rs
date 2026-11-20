@@ -532,8 +532,16 @@ fn what_a_terminal_prints_is_told_to_those_who_may_read_it_with_the_ids(cx: &mut
         wait_until(cx, "the second terminal's output", |_| {
             while let Next::Event(published) = all.next(Duration::ZERO) {
                 if let Body::Output { lines: told, .. } = &published.event.body {
-                    assert_eq!((published.event.window, published.event.terminal), (Some(1), Some(2)));
-                    lines.extend(told.iter().cloned());
+                    assert_eq!(published.event.window, Some(1));
+                    // The first terminal's line comes twice, from the tty and then from `cat`: the
+                    // second may be told only now, and it is told under its own id.
+                    match published.event.terminal {
+                        Some(2) => lines.extend(told.iter().cloned()),
+                        other => assert!(
+                            other == Some(1) && told.iter().all(|line| !line.contains("from the second")),
+                            "terminal {other:?} told {told:?}"
+                        ),
+                    }
                 }
             }
             lines.iter().any(|line| line.contains("from the second"))
