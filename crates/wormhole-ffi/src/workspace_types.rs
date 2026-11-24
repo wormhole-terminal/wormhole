@@ -324,6 +324,7 @@ pub struct SecondLine {
     pub tone: Tone,
     pub mono: bool,
     pub trail: Option<String>,
+    pub place: Option<String>,
 }
 
 #[uniffi::remote(Record)]

@@ -88,6 +88,7 @@ extension WorkspaceModel.SecondLine {
         case .done: .done
         case .failed: .failed
         }
-        self.init(text: core.text ?? "", tone: tone, isCommand: core.mono, trail: core.trail)
+        // A place comes whole (`place`) beside the text the core cut to a number of characters: the row cuts by its width.
+        self.init(text: core.place ?? core.text ?? "", tone: tone, isCommand: core.mono, trail: core.trail, isPlace: core.place != nil)
     }
 }

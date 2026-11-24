@@ -154,11 +154,15 @@ public struct SecondLine: Sendable, Equatable {
     public var tone: SecondLineTone
     public var isCommand: Bool
     public var trail: String?
+    /// The words are where the terminal is, the whole path: the row cuts it at its front by the room it has, so the end that
+    /// tells two folders apart stays.
+    public var isPlace: Bool
 
-    public init(text: String, tone: SecondLineTone = .plain, isCommand: Bool = false, trail: String? = nil) {
+    public init(text: String, tone: SecondLineTone = .plain, isCommand: Bool = false, trail: String? = nil, isPlace: Bool = false) {
         self.text = text
         self.tone = tone
         self.isCommand = isCommand
         self.trail = trail
+        self.isPlace = isPlace
     }
 }

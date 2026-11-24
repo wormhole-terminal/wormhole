@@ -10,7 +10,7 @@ final class MappingTests: XCTestCase {
         WormholeBindings.SidebarRow(
             id: id, name: "t\(id)", number: UInt32(id), keycap: "⌘\(id)", selected: id == 1, pinned: true, state: state,
             agent: agent, message: "Approve?", branch: "main", folder: "~/app", unread: true, bell: false, failureCode: nil,
-            changes: 3, notes: 2, secondLine: SecondLine(text: "cargo test", tone: .failed, mono: true, trail: "0:05"),
+            changes: 3, notes: 2, secondLine: SecondLine(text: "cargo test", tone: .failed, mono: true, trail: "0:05", place: nil),
             split: split ?? SplitInfo(id: nil, bracket: nil, chain: false, onScreen: false, members: 0), position: 2, of: 5,
             spoken: "t\(id), idle, 2 of 5", repo: "/Users/ref/app", dirty: true, ahead: 2, behind: 1, repoFiles: 4,
             glyph: .terminal(unread: true), agentHidden: true, forgetText: true, worktree: "/Users/ref/main")
@@ -32,6 +32,12 @@ final class MappingTests: XCTestCase {
         XCTAssertEqual(mapped.secondLine, WorkspaceModel.SecondLine(text: "cargo test", tone: .failed, isCommand: true, trail: "0:05"))
         XCTAssertEqual(mapped.position, 2)
         XCTAssertEqual(mapped.spoken, "t7, idle, 2 of 5")
+    }
+
+    func testAPlaceComesWholeAndIsCutByTheRowNotByTheCore() {
+        let core = SecondLine(text: "…/services/gateway", tone: .plain, mono: false, trail: nil, place: "~/clients/acme/services/gateway")
+        XCTAssertEqual(
+            WorkspaceModel.SecondLine(core), WorkspaceModel.SecondLine(text: "~/clients/acme/services/gateway", isPlace: true))
     }
 
     func testARowCarriesGitAndTheMenuChecksAndTheTilesGlyph() {

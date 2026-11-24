@@ -55,6 +55,25 @@ fn an_idle_agent_and_a_bare_shell_say_where_they_are_or_what_they_are() {
 }
 
 #[test]
+fn a_place_comes_whole_beside_the_text_cut_to_a_budget() {
+    let deep = "/Users/me/Projects/clients/acme-corporation/internal-tooling/services/authentication-gateway";
+    let mut m =
+        WorkspaceModel::new(ModelConfig { home: Some(PathBuf::from("/Users/me")), ..Default::default() });
+    m.apply(Action::NewTerminal);
+    m.update_facts(1, |f| f.cwd = Some(PathBuf::from(deep)));
+    let place = line(&m, 0);
+    assert!(place.text.as_deref().is_some_and(|text| text.starts_with("…/") && text.chars().count() <= 38));
+    assert_eq!(
+        place.place.as_deref(),
+        Some(&deep.replacen("/Users/me", "~", 1)[..]),
+        "the whole path, for a view that cuts by width"
+    );
+    m.update_facts(1, |f| f.command = Some("cargo test".into()));
+    assert_eq!(line(&m, 0).place, None, "a command is not a place");
+    assert_eq!(line(&model(1), 0).place, None, "nor is a line with no folder behind it");
+}
+
+#[test]
 fn a_command_runs_with_its_clock_and_a_failed_one_says_how_it_ended() {
     let m = one(|f| {
         f.command = Some("cargo test".into());

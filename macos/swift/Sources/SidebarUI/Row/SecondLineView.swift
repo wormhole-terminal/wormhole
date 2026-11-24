@@ -22,7 +22,7 @@ struct SecondLineView: View {
             Text(line.text)
                 .font(font)
                 .foregroundStyle(color)
-                .lineLimit(1)
+                .lineLimit(1).truncationMode(line.isPlace ? .head : .tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .cutProbe(line.text, font: font, cut: $cut)
                 .id(rolling ? rollKey : "")

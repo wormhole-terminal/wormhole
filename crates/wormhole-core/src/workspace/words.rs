@@ -6,12 +6,13 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};
-use crate::view::sidebar::wording::{agent_detail, ago, clock, place_detail, until_next};
+use crate::view::sidebar::wording::{agent_detail, ago, clock, display_path, place_detail, until_next};
 use crate::view::sidebar::{RowState, SplitMarks};
 
 use super::facts::{Millis, TerminalFacts};
 
-/// How many characters of a path fit on a row's second line before it is cut from the front.
+/// How many characters of a path the second line's `text` keeps before it is cut from the front. A shell that draws
+/// with a width of its own cuts `place` (the whole path) by that width instead.
 const PLACE_CHARS: usize = 38;
 
 /// What the second line's words mean, for the colour a shell gives them.
@@ -31,6 +32,9 @@ pub struct SecondLine {
     pub tone: Tone,
     pub mono: bool,
     pub trail: Option<String>,
+    /// The folder as the line says it when the line is where the terminal is (`text` is this, cut from the front to
+    /// [`PLACE_CHARS`] characters): the whole path, `~` for home, for a view that cuts by the room it has.
+    pub place: Option<String>,
 }
 
 fn since(now: Millis, at: Millis) -> Duration {
@@ -40,15 +44,23 @@ fn since(now: Millis, at: Millis) -> Duration {
 /// The second line of a regular row: what the terminal has to report comes first; a quiet one says
 /// where it is, and where even that is unknown it says what it is, so no row is a single line.
 pub(super) fn second_line(facts: &TerminalFacts, now: Millis, home: Option<&Path>) -> SecondLine {
-    let line = |text: Option<String>, tone, mono, trail| SecondLine { text, tone, mono, trail };
+    let line = |text: Option<String>, tone, mono, trail| SecondLine { text, tone, mono, trail, place: None };
     let whereabouts = || place_detail(facts.cwd.as_deref(), home, PLACE_CHARS);
+    // Where the terminal is, else `fallback` (the line of a row that has neither a report nor a folder).
+    let place_line = |fallback: &str| SecondLine {
+        text: Some(whereabouts().unwrap_or_else(|| fallback.to_string())),
+        tone: Tone::Plain,
+        mono: false,
+        trail: None,
+        place: facts.cwd.as_deref().map(|cwd| display_path(cwd, home)),
+    };
     let state = facts.row_state();
     if facts.told() {
         // An agent's, or a program's own report: its state in words.
         return match agent_detail(state, facts.message.as_deref(), since(now, facts.since)) {
             Some(text) => line(Some(text), tone_of(state), false, None),
             // text: the line of a row that has neither a report nor a folder.
-            None => line(Some(whereabouts().unwrap_or_else(|| "Idle".to_string())), Tone::Plain, false, None),
+            None => place_line("Idle"),
         };
     }
     let running = facts.running_since.map(|at| since(now, at));
@@ -64,9 +76,7 @@ pub(super) fn second_line(facts: &TerminalFacts, now: Millis, home: Option<&Path
             };
             line(Some(text), Tone::Failed, true, Some(ago(since(now, failure.at))))
         }
-        (None, None) => {
-            line(Some(whereabouts().unwrap_or_else(|| "Shell".to_string())), Tone::Plain, false, None)
-        }
+        (None, None) => place_line("Shell"),
     }
 }
 
