@@ -48,10 +48,15 @@ struct SettingsNav: View {
     }
 
     private var groupRows: some View {
-        ForEach(groups, id: \.title) { group in
+        // One search for the whole list: `hitCounts` searches the index each time it is read, and read for every page's
+        // badge and again for its dimming it searched twice per page whenever the list was drawn.
+        let counts = model.isSearching ? model.hitCounts : [:]
+        return ForEach(groups, id: \.title) { group in
             Section(group.title) {
                 ForEach(group.sections) { section in
-                    row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section))
+                    row(
+                        id: section.id, title: section.title, badge: Self.badge(section, searching: model.isSearching, counts: counts),
+                        dim: model.isSearching && counts[section.id] == nil, attention: attention(section))
                 }
             }
         }
@@ -77,12 +82,15 @@ struct SettingsNav: View {
             .tag(id)
     }
 
-    /// The Preview tag, or while a search runs the page's result count.
-    private func badge(_ section: SettingsSchema.Section) -> String? { Self.badge(section, model) }
-
-    static func badge(_ section: SettingsSchema.Section, _ model: SettingsModel) -> String? {
-        if model.isSearching { return model.hitCounts[section.id].map(String.init) }
+    /// The Preview tag, or while a search runs the page's result count (`counts`: the search's results per page).
+    static func badge(_ section: SettingsSchema.Section, searching: Bool, counts: [String: Int]) -> String? {
+        if searching { return counts[section.id].map(String.init) }
         return section.preview ? SettingsText.previewTag : nil
+    }
+
+    /// The same for one page alone, for the control folder's `settings-page`.
+    static func badge(_ section: SettingsSchema.Section, _ model: SettingsModel) -> String? {
+        badge(section, searching: model.isSearching, counts: model.isSearching ? model.hitCounts : [:])
     }
 
     /// Coding agents wears a mark while an installed agent's hooks (or a profile's login of it) are only partly there.
@@ -94,8 +102,6 @@ struct SettingsNav: View {
         let records = model.host.panelRecords()
         return records.agents.contains { $0.state == .needsRepair } || records.logins.contains { $0.state == .needsRepair }
     }
-
-    private func dims(_ section: SettingsSchema.Section) -> Bool { model.isSearching && model.hitCounts[section.id] == nil }
 
     /// The sections in nav order under their heading; the profile and changed pages have a place of their own.
     private var groups: [(title: String, sections: [SettingsSchema.Section])] {
