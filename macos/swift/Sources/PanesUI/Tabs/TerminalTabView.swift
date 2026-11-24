@@ -53,15 +53,12 @@ struct TerminalTabView: View {
         .accessibilityAction(named: PanesText.closeTerminal, close)
     }
 
-    /// The end of a name that does not fit fades out instead of ending in an ellipsis.
-    @ViewBuilder private var fade: some View {
-        if cut {
-            HStack(spacing: 0) {
-                Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: Space._4)
-            }
-        } else {
+    /// The end of a name that does not fit fades out instead of ending in an ellipsis. One view whose gradient is as wide as the
+    /// fade or nothing, not two branches: the mask keeps its identity when the name starts or stops fitting.
+    private var fade: some View {
+        HStack(spacing: 0) {
             Rectangle()
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: cut ? Space._4 : 0)
         }
     }
 
