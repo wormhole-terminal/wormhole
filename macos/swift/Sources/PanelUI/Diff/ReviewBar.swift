@@ -10,14 +10,14 @@ struct ReviewBar: View {
 
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
-            Text(review.review.summary).font(tokens.font(.body)).foregroundStyle(tokens.textMuted).lineLimit(1)
+            Text(review.review.summary).font(tokens.font(.body)).foregroundStyle(tokens.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
             NoticeButton(title: panelText("review-clear", "Clear"), action: review.clear)
             NoticeButton(title: panelText("review-paste", "Paste into Terminal"), primary: true, action: review.paste)
                 .help(panelText("review-paste-help", "Paste the comments into the terminal's prompt, for you to send"))
         }
         .padding(.leading, Space._4).padding(.trailing, Space._3)
-        .frame(height: 40)
+        .frame(minHeight: 40)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
         .motionTransition(.move(edge: .bottom).combined(with: .opacity))
     }

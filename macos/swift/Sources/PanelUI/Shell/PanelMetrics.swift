@@ -22,8 +22,6 @@ enum PanelMetrics {
     static let bandGlyph: CGFloat = 16
     /// The kind letter's column, so the line counts above each other line up (`KIND_LETTER_W`).
     static let kindLetter: CGFloat = 12
-    /// The share of a row a file name may take before it truncates in the middle (`FILE_NAME_MAX`).
-    static let fileNameShare: CGFloat = 0.55
     /// Space left under the last card so its last row can scroll clear of the edge.
     static let tail: CGFloat = 16
     /// The checkbox of a next step, and its mark (`style/checkbox.rs`).

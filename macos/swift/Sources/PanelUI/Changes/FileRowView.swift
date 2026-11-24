@@ -1,5 +1,5 @@
 // One changed file as the Changes and History lists draw it (`style::file_row`): its icon in the lead column,
-// the name (at most 55 % of the row, cut in the middle), its folder in muted caption text cut at the front,
+// the name (cut in the middle, and only when the row has no more room: the folder gives way first), its folder in muted caption text cut at the front,
 // then on the right the line counts and the kind letter in its status colour. A renamed file shows where it
 // came from before the new name, a moved one a mark. Each tree level steps in by 24. Selected: the tint, the
 // name semibold in the tint's text colours.
@@ -19,7 +19,6 @@ struct FileRowView: View {
     var menu: [String]?
     var onDisk: Bool?
     let action: () -> Void
-    @State private var width: CGFloat = 0
     @Environment(\.tokens) private var tokens
     @Environment(\.panelHost) private var host
     @Environment(\.panelRoot) private var root
@@ -36,8 +35,7 @@ struct FileRowView: View {
                     .font(tokens.font(.body).weight(lit ? .semibold : .regular))
                     .foregroundStyle(lit ? tokens.sidebarRowSelectedText : tokens.textPrimary)
                     .lineLimit(1).truncationMode(.middle)
-                    .frame(maxWidth: max(width, 1) * PanelMetrics.fileNameShare, alignment: .leading)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
                 if !inTree && !file.folder.isEmpty {
                     Text(file.folder).font(tokens.font(.caption)).foregroundStyle(muted)
                         .lineLimit(1).truncationMode(.head)
@@ -59,7 +57,6 @@ struct FileRowView: View {
             .padding(.leading, PanelMetrics.inset + CGFloat(depth) * Metric.indent)
             .padding(.trailing, PanelMetrics.inset)
             .frame(minHeight: Metric.row)
-            .onGeometryChange(for: CGFloat.self, of: { $0.size.width - PanelMetrics.inset * 2 }) { width = $0 }
         }
         .marked("file.row")
         .panelRowFrame("file:\(file.path)")
@@ -73,7 +70,7 @@ struct FileRowView: View {
 
     private func renamed(_ from: String) -> some View {
         HStack(spacing: Space._1) {
-            Text(from).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1)
+            Text(from).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1).truncationMode(.middle)
             PanelIcon("arrow.right", size: 12).foregroundStyle(muted)
         }
     }

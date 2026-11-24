@@ -20,7 +20,7 @@ struct TrustNotice: View {
         HStack(spacing: PanelMetrics.gap) {
             PanelIcon("checkmark.shield", size: Metric.glyph).foregroundStyle(tokens.statusSuccessText)
                 .frame(width: Metric.lead, height: Metric.lead)
-            Text(state.trustedLine).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(2)
+            Text(state.trustedLine).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
             NoticeButton(title: panelText("settings-projects-revoke-trust", "Revoke trust"), action: store.revoke)
         }
