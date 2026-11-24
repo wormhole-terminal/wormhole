@@ -74,11 +74,10 @@ struct RevPicker: View {
         }
         .font(tokens.font(.caption).weight(.medium))
         .padding(.leading, Space._2).padding(.trailing, Space._1)
-        .frame(height: 24).frame(maxWidth: 160)
+        .frame(height: 24)
         .background(hovering ? tokens.stateHover : .clear, in: shape)
         .overlay { shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth) }
         .contentShape(shape)
-        .fixedSize()
     }
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: tokens.metrics.radius, style: .continuous) }

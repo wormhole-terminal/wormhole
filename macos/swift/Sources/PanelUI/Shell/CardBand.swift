@@ -20,7 +20,8 @@ struct CardBand<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
-            toggle
+            // The title is what the band is: what stands beside it (a picker, the count) gives way first.
+            toggle.layoutPriority(1)
             HStack(spacing: Space._1) {
                 trailing
                 if let count { CountBadge(text: count) }
