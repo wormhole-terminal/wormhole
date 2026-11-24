@@ -1,6 +1,7 @@
 // Where the traffic lights are drawn: 12 pt in from the left, centred in the 38 pt title row, as the GPUI
 // app places them (`style/lights.rs`). AppKit centres them in its own, shorter bar, so the bar's container is
-// grown to the row's height, and the three buttons are moved to the 12 pt line keeping their own spacing.
+// grown to the row's height, and the three buttons are moved to the 12 pt line keeping their own spacing and
+// to the row's middle: a bar that grows keeps them where they were from its bottom (macOS 27).
 
 import AppKit
 
@@ -15,9 +16,9 @@ enum TrafficLights {
         container.frame.size.height = Chrome.titleHeight
         container.frame.origin.y = window.frame.height - Chrome.titleHeight
         let shift = Chrome.lightsX - close.frame.minX
-        guard shift != 0 else { return }
-        for kind in kinds {
-            window.standardWindowButton(kind)?.frame.origin.x += shift
+        for button in kinds.compactMap(window.standardWindowButton) {
+            button.frame.origin.x += shift
+            if let bar = button.superview { button.frame.origin.y = ((bar.bounds.height - button.frame.height) / 2).rounded() }
         }
     }
 
