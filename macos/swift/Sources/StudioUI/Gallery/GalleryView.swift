@@ -26,7 +26,9 @@ struct GalleryView<Extras: View>: View {
                         column(shown.filter { $0.column == .left }, context)
                         column(shown.filter { $0.column == .right }, context)
                     }
-                    column(shown.filter { $0.column == .both }, context)
+                    // The wide specimens are the page's own rows, not a column inside one row: a lazy stack builds the first
+                    // views of a lazy stack it holds to estimate its height, which built two of these far below the window.
+                    ForEach(shown.filter { $0.column == .both }) { SpecimenFrame(specimen: $0, context: context, extras: extras) }
                 }
                 .padding(Space._4)
                 .environment(\.tokenMarks, TokenMarks(drawn: drawn, spoken: StudioWords.gallerySelected))
