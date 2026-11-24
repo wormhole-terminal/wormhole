@@ -61,22 +61,26 @@ public struct StatusDot: View {
         }
     }
 
-    /// The working drawing: a dot that breathes, still under Reduce Motion.
+    /// How faint a working dot gets at the end of a breath, and how far the halo swells.
+    private static let faint = 0.35
+    private static let swell = 1.3
+
+    /// The working drawing: a dot that breathes, still under Reduce Motion. The breath is Core Animation's (`LayerDrawing`).
     @ViewBuilder private func working(_ colour: Color) -> some View {
         if reduceMotion {
             dot.foregroundStyle(colour)
         } else {
-            dot.foregroundStyle(colour)
-                .phaseAnimator([1.0, 0.35]) { view, opacity in view.opacity(opacity) } animation: { _ in Motion.breath }
+            LayerDrawing(key: colour) { [.breathing(colour, in: $0, faint: Self.faint)] }
+                .frame(width: Metric.statusDot, height: Metric.statusDot)
         }
     }
 
     @ViewBuilder private var halo: some View {
-        let ring = Circle().fill(tokens.agentAttention.opacity(0.25)).padding(-Metric.statusHalo)
+        let colour = tokens.agentAttention.opacity(0.25)
         if reduceMotion {
-            ring
+            Circle().fill(colour).padding(-Metric.statusHalo)
         } else {
-            ring.phaseAnimator([1.0, 1.3]) { view, scale in view.scaleEffect(scale) } animation: { _ in Motion.breath }
+            LayerDrawing(key: colour) { [.swelling(colour, in: $0, scale: Self.swell)] }.padding(-Metric.statusHalo)
         }
     }
 }

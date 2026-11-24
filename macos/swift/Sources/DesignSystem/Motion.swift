@@ -21,7 +21,9 @@ public enum Motion {
     /// What replaces movement when Reduce Motion is on.
     public static let fade = Animation.easeOut(duration: seconds("fade"))
     /// One breath of a status glyph; it repeats for as long as the state lasts.
-    public static let breath = Animation.easeInOut(duration: seconds("breath"))
+    public static let breath = Animation.easeInOut(duration: breathSeconds)
+    /// A breath's length, for the breaths Core Animation plays (`LayerDrawing`).
+    public static let breathSeconds = seconds("breath")
     /// How far a pressed control sinks.
     public static let pressScale: CGFloat = 0.98
 }
