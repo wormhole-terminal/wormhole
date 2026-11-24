@@ -44,7 +44,10 @@ struct TerminalColumn: View {
             .overlay { TitleTintLine(group: hub.state.selectedGroupHead) }
             .background(WindowDragArea())
 
-            if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints) }
+            if look.tabsOnTop {
+                TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints)
+                    .environment(\.columnMargins, look.margins)
+            }
 
             TerminalStage {
                 TerminalPanes(hub: hub)

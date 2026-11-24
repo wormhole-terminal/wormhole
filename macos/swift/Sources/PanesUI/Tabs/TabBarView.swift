@@ -19,6 +19,7 @@ public struct TabBarView: View {
     @State private var switcherOpen = false
     @Environment(\.tokens) private var tokens
     @Environment(\.reduceMotion) private var reduceMotion
+    @Environment(\.columnMargins) private var margins
 
     public init(
         model: TabBarModel, profiles: [ProfileChoice] = [], profileActions: ProfileActions = ProfileActions(),
@@ -46,8 +47,11 @@ public struct TabBarView: View {
                 IconButton(symbol: "plus", label: PanesText.newTerminal) { actions.newTerminal(model.currentGroup) }
                     .contextMenu { actions.newMenu() }
             }
-            .padding(.horizontal, Metric.edgeInset)
+            // With the one distance the strip is a row of cards above the terminal's: its first tab and the + stand on the
+            // card's sides, and the card starts one distance below the tabs.
+            .padding(.horizontal, margins.value(own: Metric.edgeInset))
             .frame(height: TabMetrics.height)
+            .padding(.bottom, margins.value(own: 0))
             .transition(.opacity)
         }
     }
