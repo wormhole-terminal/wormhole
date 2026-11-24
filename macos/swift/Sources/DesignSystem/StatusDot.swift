@@ -72,6 +72,7 @@ public struct StatusDot: View {
         } else {
             LayerDrawing(key: colour) { [.breathing(colour, in: $0, faint: Self.faint)] }
                 .frame(width: Metric.statusDot, height: Metric.statusDot)
+                .allowsHitTesting(false)
         }
     }
 
@@ -81,6 +82,7 @@ public struct StatusDot: View {
             Circle().fill(colour).padding(-Metric.statusHalo)
         } else {
             LayerDrawing(key: colour) { [.swelling(colour, in: $0, scale: Self.swell)] }.padding(-Metric.statusHalo)
+                .allowsHitTesting(false)
         }
     }
 }
