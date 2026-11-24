@@ -68,6 +68,8 @@ sha2 = "0.11"
 tar = { version = "0.4", default-features = false }
 tiny_http = "0.12"
 wormhole-term = { path = "../wormhole-term", features = ["test-support"] }
+# `with_front_end`: the rows only the Swift app shows are tested as the Swift app.
+wormhole-core = { path = "../wormhole-core", features = ["test-support"] }
 
 # A workspace of its own (this crate and its bindings generator), so that nothing here reaches the app's
 # `Cargo.lock`, `cargo deny`, `licenses.json` or `scripts/structure.py` yet: the root `Cargo.toml` lists this

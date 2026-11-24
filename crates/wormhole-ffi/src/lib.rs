@@ -30,6 +30,7 @@ mod fonts;
 mod frame;
 mod frame_colors;
 mod frame_extras;
+mod front_end;
 mod git;
 mod hook_server;
 mod hosting;

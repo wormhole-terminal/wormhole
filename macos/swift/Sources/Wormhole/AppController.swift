@@ -139,6 +139,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         PlatformSetup.install(options, launchLog: options.background ? opened : nil)
         // Before anything opens a file in the data folder: a folder from before the rename is moved (never in an experiment folder).
         LegacyLaunch.moveDataFolder(dataDirectory)
+        // The core is told which app this is before anything reads a settings row.
+        LaunchFrontEnd.start()
         // Then the log files and the panic record, and the data folder's older files made owner-only.
         LaunchLogging.start()
         windowsHost = try WindowsHost.make(options)

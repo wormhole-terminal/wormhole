@@ -254,6 +254,21 @@ fn search_finds_rows_by_core_rules() {
 }
 
 #[test]
+fn the_one_background_row_is_the_swift_apps_to_search_and_to_list_as_changed() {
+    use wormhole_core::platform::front_end::{FrontEnd, with_front_end};
+    let fx = Fixture::new();
+    assert_eq!(fx.values()["one_background"], json!(true), "on by default");
+    fx.set("one_background", json!(false)).expect("sets");
+    let found = || fx.handle.search("one background".into()).iter().any(|hit| hit.entry == "one-background");
+    let listed = || fx.handle.changed_rows().iter().any(|row| row.entry == "one-background");
+    with_front_end(FrontEnd::Swift, || {
+        assert!(found(), "the search finds it");
+        assert!(listed(), "and it is a changed row once off");
+    });
+    with_front_end(FrontEnd::Gpui, || assert!(!found() && !listed(), "the GPUI app shows nothing of it"));
+}
+
+#[test]
 fn the_host_lists_come_from_core() {
     let fx = Fixture::new();
     let shells = fx.handle.shell_options();

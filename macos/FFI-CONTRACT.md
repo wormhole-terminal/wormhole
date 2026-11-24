@@ -1601,3 +1601,12 @@ All additive; the core decides, Swift asks.
 - `cli_is_command(arguments) -> bool` (wave 13): whether the core answers the command line itself (`ipc::command`: `hook`, `statusline`,
   `welcome`, a control verb, a leading `--help` or `-h`). The Swift `main` asks it for a first word with a dash, so `wh --help` is the
   control line's usage and the app keeps no list of verbs; `cli_exit_code` then runs it.
+
+## One background (`front_end.rs`, `settings_dump`; additive)
+
+- `front_end_start()`: tells core once, at launch, that this process is the Swift app (`platform::front_end`), before the first window reads
+  the settings. Core hides a settings row that only the Swift app paints from the GPUI app by this fact (`Entry::with_needs`); the first
+  answer stays, so a call after something asked leaves the row hidden and logs an error. The Swift `AppController` calls it before
+  `LaunchLogging.start()`.
+- The schema (`settingsSchemaJson`) gained the row `one-background` (key `one_background`, a switch, on by default) under Appearance's Window
+  group; `SettingsHandle.search` and `changedRows` list it only in a process that called `front_end_start()`.

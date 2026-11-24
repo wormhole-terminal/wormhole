@@ -290,6 +290,19 @@
               }
             },
             {
+              "id": "one-background",
+              "label": "One background for the whole window",
+              "description": "The sidebar, the terminal's column, the right panel and the status bar share one colour, with no lines between them. Off, each uses its own colour from the theme. Increase Contrast keeps the lines",
+              "keywords": "fill colour color flat single uniform columns sidebar panel status bar tint seams lines dividers",
+              "keys": [
+                "one_background"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
               "id": "translucent",
               "label": "Also translucent",
               "description": "Use the opacity and blur above for these windows too",
@@ -2708,6 +2721,7 @@
     "opacity": 0.8,
     "blur": true,
     "liquid_glass": false,
+    "one_background": true,
     "settings_translucent": true,
     "studio_translucent": true,
     "hosts_translucent": true,
