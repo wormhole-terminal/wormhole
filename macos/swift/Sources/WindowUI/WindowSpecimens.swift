@@ -17,6 +17,8 @@ public enum WindowSpecimens {
         case "statusbar": SampleWindow { StatusBarSample() }
         case "icontabs": SampleWindow { PanelTabBar(tab: .changes, select: { _ in }, badges: [.changes: 3, .usage: 2]) }
         case "resize": ResizeSample()
+        case "symbol.toggle-sidebar": PanelGlyphSample(side: .left)
+        case "symbol.toggle-panel": PanelGlyphSample(side: .right)
         default: EmptyView()
         }
     }
@@ -63,6 +65,19 @@ private struct ResizeSample: View {
             ResizeReadout(text: "430 · max", pointer: -Space._2, pointerY: Space._2)
             ResizeReadout(text: "350", pointer: -Space._2, pointerY: Space._2)
             ResizeReadout(text: "Close", pointer: -Space._2, pointerY: Space._2)
+        }
+    }
+}
+
+/// A title row's toggle as it is drawn today, with its column in and out, for the SF Symbols page to set a symbol beside.
+private struct PanelGlyphSample: View {
+    let side: PanelGlyph.Side
+    @Environment(\.chrome) private var colours
+
+    var body: some View {
+        HStack(spacing: Space._3) {
+            PanelGlyph(side: side, fill: 1, color: colours.text)
+            PanelGlyph(side: side, fill: 0, color: colours.text)
         }
     }
 }

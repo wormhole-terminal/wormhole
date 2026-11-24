@@ -4,7 +4,8 @@
 
 import SwiftUI
 
-enum Glyph: Sendable {
+/// The sidebar's own small drawings: the tile's terminal and the badges' marks, the row's chevron, plus and close.
+public enum Glyph: Sendable {
     case terminal, needsYouBar, check, failed, bell, chevron, plus, close
 
     /// The box the drawing was made in.
@@ -62,11 +63,15 @@ enum Glyph: Sendable {
 }
 
 /// A glyph drawn at `size` points, stroked in the foreground colour with its SVG's line width scaled to fit.
-struct GlyphView: View {
+public struct GlyphView: View {
     let glyph: Glyph
     let size: CGFloat
 
-    var body: some View {
+    /// `glyph` drawn in a square of `size` points.
+    public init(glyph: Glyph, size: CGFloat) { (self.glyph, self.size) = (glyph, size) }
+
+    /// The glyph's strokes.
+    public var body: some View {
         GlyphShape(glyph: glyph)
             .stroke(style: StrokeStyle(lineWidth: glyph.lineWidth * size / glyph.box, lineCap: .round, lineJoin: .round))
             .frame(width: size, height: size)
@@ -79,10 +84,14 @@ struct GlyphShape: Shape {
 }
 
 /// The "!" of a needs-you badge: a bar and a dot, drawn rather than set in a font, whose "!" sits on its own bearings.
-struct NeedsYouMark: View {
+public struct NeedsYouMark: View {
     let size: CGFloat
 
-    var body: some View {
+    /// The mark in a square of `size` points.
+    public init(size: CGFloat) { self.size = size }
+
+    /// The bar and the dot.
+    public var body: some View {
         ZStack {
             GlyphView(glyph: .needsYouBar, size: size)
             Circle().frame(width: 3.5 * size / 16, height: 3.5 * size / 16).offset(y: 5 * size / 16)

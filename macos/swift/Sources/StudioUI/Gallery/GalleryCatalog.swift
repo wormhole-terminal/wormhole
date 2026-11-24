@@ -20,6 +20,7 @@ enum GalleryCatalog {
         Specimen("drops", "Drag and drop", "a drop that makes a split, a drop between two cards, the chain mark", area: .sidebar, column: .left),
         Specimen("find", "Find", "the find bar, matches and the current one", area: .chrome, column: .left),
         Specimen("panes", "Panes", "pane headers, focused and not, the dividers, a pane as a terminal is dragged over it", area: .chrome, column: .left),
+        Specimen("symbols", "SF Symbols", "every drawn icon beside the symbol that could replace it, and motions A to D to pick from", area: .chrome, column: .both),
         Specimen("chips", "Tabs and chips", "the title row's chips and path, the context meter, badges, key caps", area: .chrome, column: .left),
         Specimen("labels", "Labels", "titles, section labels, empty notes, toolbars", area: .chrome, column: .left),
         Specimen("shape", "Shape", "radii, the focus ring, everything chip-shaped", area: .chrome, column: .left),

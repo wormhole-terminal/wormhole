@@ -37,6 +37,7 @@ enum SpecimenContent {
         case "tiles": TilesSpecimen()
         case "find": FindSpecimen()
         case "panes": PaneSpecimen()
+        case "symbols": SymbolsSpecimen(sidebar: extras("symbol.toggle-sidebar"), panel: extras("symbol.toggle-panel"))
         case "chips": ChipsSpecimen()
         case "labels": LabelsSpecimen()
         case "buttons": ButtonsSpecimen()
