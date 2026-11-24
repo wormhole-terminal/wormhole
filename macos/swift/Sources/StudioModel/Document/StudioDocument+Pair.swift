@@ -28,6 +28,7 @@ extension StudioDocument {
 
     /// The sheet's rows: what changed in the source since the base was copied.
     public func updateRows() -> UpdateCheck? {
+        coreCalls.updateChecks += 1
         guard let files = environment.files, let check = try? files.updateCheck(file.json(), shown: shown), check.state == .changed else { return nil }
         update = check
         return check

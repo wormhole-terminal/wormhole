@@ -37,6 +37,8 @@ public final class StudioDocument {
     @ObservationIgnored var shownPick = ""
     /// What the file looked like on disk when it was read or last written: a write over another is asked about.
     @ObservationIgnored var disk: String?
+    /// How often the core was asked since the draft was opened (`studio-perf`).
+    @ObservationIgnored public internal(set) var coreCalls = StudioCoreCalls()
     @ObservationIgnored var history: UndoStack
     @ObservationIgnored var theme: Theme
     @ObservationIgnored let workspace: DraftWorkspace
@@ -54,6 +56,7 @@ public final class StudioDocument {
             resolver: environment.resolver, folder: environment.folder, editing: subject.url,
             look: environment.library.defaultLook)
         let first = try workspace.resolve(file, version: version, increaseContrast: contrast)
+        coreCalls.resolves = 1
         let tokens = first.tokens(increaseContrast: contrast)
         (self.file, saved, self.subject, self.disk, self.shown) = (file, file, subject, disk, version)
         (self.environment, self.store, self.workspace) = (environment, store, workspace)
@@ -76,9 +79,13 @@ public final class StudioDocument {
 
     /// Resolves again, because something outside the file changed (Increase Contrast, a version shown).
     public func refresh() {
-        if let resolved = try? workspace.resolve(file, version: shown, increaseContrast: store.increaseContrast) {
-            apply(resolved)
-        }
+        if let resolved = try? resolve(file) { apply(resolved) }
+    }
+
+    /// What `file` works out to as the window shows it (the version shown, the contrast in force); throws core's reason.
+    func resolve(_ file: ThemeFile) throws -> Theme {
+        coreCalls.resolves += 1
+        return try workspace.resolve(file, version: shown, increaseContrast: store.increaseContrast)
     }
 
     func apply(_ resolved: Theme) {
@@ -91,6 +98,7 @@ public final class StudioDocument {
 
     /// Asks core for every pair of the draft and the ones that fall short; none without the core (a test).
     func refreshContrast() {
+        coreCalls.contrasts += 1
         contrast = (try? environment.files?.contrast(file.json(), shown: shown, increaseContrast: store.increaseContrast)) ?? ContrastReport()
     }
 
@@ -102,6 +110,7 @@ public final class StudioDocument {
         let key = file.baseSource(in: shown).map { "\($0.from)|\($0.copied ?? "")|\(shown ?? "")" }  // text: a key to compare, never shown
         guard key != updateKey else { return }
         updateKey = key
+        coreCalls.updateChecks += 1
         update = key == nil ? UpdateCheck() : ((try? environment.files?.updateCheck(file.json(), shown: shown)) ?? UpdateCheck())
     }
 }

@@ -7,7 +7,7 @@
 //   `agent-script <hold|deny|session|quit|always>`   what answers questions from now on (`hold`: they wait for `agent-ask`)
 //   `agent-grant scripts [quit|always]`        let Scripts in, as an answer to its question does
 //   `menubar-icons [prefix]`  the status item's icon in every state, as TIFFs in the control folder
-// and the `studio-*` family (`AppController+ControlStudioFamily`). None of it is reachable from the control socket.
+// and the `studio-*` family (`AppController+ControlStudioFamily`) with `studio-perf` (`AppController+ControlStudioPerf`). None of it is reachable from the control socket.
 
 import AppKit
 import AuxModel
@@ -25,6 +25,7 @@ extension AppController {
         case "detach", "reattach": reply(runHosted(command))
         case "agents", "agent-ask", "agent-script", "agent-grant": reply(runAgents(command, argument.trimmingCharacters(in: .whitespaces)))
         case "menubar-icons": reply(saveStatusIcons(prefix: argument))
+        case "studio-perf": await runStudioPerf(argument)
         default: return await runStudioFamily(command: command, argument: argument)
         }
         return true

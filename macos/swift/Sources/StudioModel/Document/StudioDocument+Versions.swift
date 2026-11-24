@@ -48,7 +48,7 @@ extension StudioDocument {
     /// Shows a saved version in every window (the file as it is now for `nil`).
     public func preview(_ row: VersionRow) {
         let target = row.id == nil ? file : row.file
-        if let target, let resolved = try? workspace.resolve(target, version: shown, increaseContrast: store.increaseContrast) {
+        if let target, let resolved = try? resolve(target) {
             store.preview = resolved
         }
     }

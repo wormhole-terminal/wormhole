@@ -79,6 +79,7 @@ extension StudioDocument {
     /// What core offers at UTF-8 offset `caret` of `text` typed for `token`: nothing for a metric (a number) or without the core.
     public func completions(_ text: String, caret: Int, for token: String) -> FieldCompletions? {
         guard !token.hasPrefix("metrics.") else { return nil }
+        coreCalls.completions += 1
         return environment.files?.completions(text, caret: caret, target: token)
     }
 

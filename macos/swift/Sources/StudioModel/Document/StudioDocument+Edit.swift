@@ -30,7 +30,7 @@ extension StudioDocument {
         var candidate = file
         candidate.set(token, value, version: shown, group: group(of: token))
         do {
-            _ = try workspace.resolve(candidate, version: shown, increaseContrast: store.increaseContrast)
+            _ = try resolve(candidate)
             fieldError = nil
         } catch {
             fieldError = FieldError(token: token, text: text, message: (error as? LocalizedError)?.errorDescription ?? "\(error)")
@@ -71,7 +71,7 @@ extension StudioDocument {
         var candidate = file
         change(&candidate)
         guard candidate != file else { return }
-        let resolved = try workspace.resolve(candidate, version: shown, increaseContrast: store.increaseContrast)
+        let resolved = try resolve(candidate)
         file = candidate
         notice = nil
         history.record(label, candidate, merging: merging)
@@ -93,6 +93,6 @@ extension StudioDocument {
     private func load(_ file: ThemeFile) {
         self.file = file
         fieldError = nil
-        if let resolved = try? workspace.resolve(file, version: shown, increaseContrast: store.increaseContrast) { apply(resolved) }
+        if let resolved = try? resolve(file) { apply(resolved) }
     }
 }
