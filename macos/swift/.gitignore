@@ -3,3 +3,5 @@
 /WormholeFFI.xcframework
 /Sources/WormholeBindings/
 /out/
+# What Xcode keeps for itself when it opens the package; the shared scheme beside it is tracked.
+/.swiftpm/xcode/package.xcworkspace/
