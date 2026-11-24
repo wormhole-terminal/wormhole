@@ -54,10 +54,3 @@ struct SymbolGroup: Identifiable {
 
     var id: String { title }
 }
-
-extension SymbolMotion {
-    /// A symbol and its filled variant: the fill arrives, the way a state turns on.
-    static let state: [SymbolMotion] = [.replace(.magic), .replace(.downUp), .replace(.offUp), .draw(.whole)]
-    /// A symbol with nothing to change into: it draws itself.
-    static let drawn: [SymbolMotion] = [.draw(.whole), .draw(.byLayer), .draw(.individually)]
-}

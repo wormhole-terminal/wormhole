@@ -11,18 +11,23 @@ import SwiftUI
 struct SymbolsSpecimen<Window: View>: View {
     let sidebar: Window
     let panel: Window
+    /// Each motion held still at 0, a half and 1, instead of played: the geometry of a mask or a strip, seen.
+    @State private var frames = false
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._4) {
-            Text("Click a symbol under A to D to play its motion; a motion that changes the symbol into another plays back on the next click. Symbols are drawn in the weight that matches the drawing's lines: regular unless the row says.")
-                .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            VStack(alignment: .leading, spacing: Space._2) {
+                Text("Click a symbol under A or B to play its motion; a motion that turns a state over (a strip, a chevron) plays back on the next click. Symbols are drawn in the weight that matches the drawing's lines: regular unless the row says.")
+                    .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                Segmented([("Play", false), ("At 0, ½ and 1", true)], selection: $frames)
+            }
             ForEach(SymbolProposals.groups) { group in
                 VStack(alignment: .leading, spacing: Space._1) {
                     Text(group.title).textCase(.uppercase).font(TextRole.caption.font.weight(.semibold)).foregroundStyle(tokens.textMuted)
                         .padding(.top, Space._2)
                     ForEach(group.rows) { row in
-                        SymbolRowView(proposal: row, window: row.id == "toggle-sidebar" ? sidebar : panel)
+                        SymbolRowView(proposal: row, window: row.id == "toggle-sidebar" ? sidebar : panel, frames: frames)
                     }
                 }
             }
@@ -35,6 +40,7 @@ struct SymbolsSpecimen<Window: View>: View {
 struct SymbolRowView<Window: View>: View {
     let proposal: SymbolProposal
     let window: Window
+    let frames: Bool
     @Environment(\.tokens) private var tokens
 
     private static var letters: [String] { ["A", "B", "C", "D"] }
@@ -42,20 +48,24 @@ struct SymbolRowView<Window: View>: View {
     var body: some View {
         HStack(spacing: Space._3) {
             Text(proposal.id).font(TextRole.caption.font.monospaced()).foregroundStyle(tokens.textPrimary)
-                .frame(width: Metric.row * 5, alignment: .leading).lineLimit(1)
+                .frame(width: Metric.row * 4, alignment: .leading).lineLimit(1)
             VStack(alignment: .leading, spacing: 0) {
                 Text(proposal.meaning).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1)
-                ForEach(detail, id: \.self) { Text($0).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(1) }
+                ForEach(detail, id: \.self) { Text($0).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(2) }
             }
-            .frame(width: Metric.row * 14, alignment: .leading)
-            today.frame(width: Metric.row * 2.5, alignment: .leading)
-            proposed.frame(width: Metric.row * 2.5, alignment: .leading)
-            HStack(spacing: Space._1) {
+            .frame(width: Metric.row * 11, alignment: .leading)
+            today.frame(width: Metric.row * 2, alignment: .leading)
+            proposed.frame(width: Metric.row * 2, alignment: .leading)
+            HStack(spacing: Space._2) {
                 ForEach(Array(proposal.motions.enumerated()), id: \.offset) { index, motion in
                     VStack(spacing: 0) {
-                        SymbolPlayer(
-                            symbol: proposal.symbol ?? "", alternate: proposal.alternate, motion: motion, size: proposal.size.points,
-                            weight: proposal.weight, letter: Self.letters[index])
+                        if frames {
+                            SymbolFrames(symbol: proposal.symbol ?? "", alternate: proposal.alternate, motion: motion, size: proposal.size.points, weight: proposal.weight)
+                        } else {
+                            SymbolPlayer(
+                                symbol: proposal.symbol ?? "", alternate: proposal.alternate, motion: motion, size: proposal.size.points,
+                                weight: proposal.weight, letter: Self.letters[index])
+                        }
                         Text(Self.letters[index]).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
                     }
                 }
@@ -67,13 +77,12 @@ struct SymbolRowView<Window: View>: View {
         .accessibilityLabel(proposal.id)
     }
 
-    /// The lines under the meaning: the symbol's name and weight, what A to D are, or why the drawing stays.
+    /// The lines under the meaning: the symbol's name and weight, what A and B are, or why the drawing stays.
     private var detail: [String] {
         guard let symbol = proposal.symbol else { return ["keeps its drawing: \(proposal.reason ?? "")"] }
         let weight = proposal.weight == .regular ? "" : " · \(proposal.weightName)"
         let names = symbol + (proposal.alternate.map { " / \($0)" } ?? "") + weight
-        let motions = proposal.motions.enumerated().map { "\(Self.letters[$0]) \($1.short)" }.joined(separator: " · ")
-        return motions.isEmpty ? [names] : [names, motions]
+        return [names] + proposal.motions.enumerated().map { "\(Self.letters[$0]) \($1.title)" }
     }
 
     @ViewBuilder private var today: some View {
