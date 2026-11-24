@@ -167,7 +167,7 @@ struct SetCardView: View {
 
     /// The name opens the group's popover under it (`switcher.rs` `on_label`); "Ungrouped" has none.
     @ViewBuilder private var name: some View {
-        let label = Text(card.label).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+        let label = CutText(card.label).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary)
         if let group = set.groupID, let popover = actions.groupPopover {
             label.contentShape(Rectangle())
                 .onTapGesture { editing = true }

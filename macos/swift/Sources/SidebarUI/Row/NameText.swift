@@ -4,6 +4,7 @@
 // An invisible, tail-truncating copy of the name takes the room the layout gives it (so the pin after it stays beside
 // a short name); `cutProbe` says whether the name was cut, for the row's tooltip.
 
+import DesignSystem
 import SwiftUI
 
 struct NameText: View {

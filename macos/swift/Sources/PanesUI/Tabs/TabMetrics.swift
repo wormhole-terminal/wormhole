@@ -14,17 +14,15 @@ enum TabMetrics {
     static let hintWidth: CGFloat = 28
     /// The gap between the bar's parts and the hairlines that part them (`PART_RULE_H`).
     static let ruleHeight: CGFloat = 16
-    /// The group switcher: its height, its longest name, the amber dot's ring (`SWITCHER_H`, `SWITCHER_NAME_MAX`, `ALERT_RING`).
+    /// The group switcher: its height and the amber dot's ring (`SWITCHER_H`, `ALERT_RING`).
     static let switcherHeight: CGFloat = 26
-    static let switcherName: CGFloat = 160
     static let alertRing: CGFloat = 2
     /// The switcher's popover: its width and the gap between cards (`POPOVER_W`, `CARD_GAP`).
     static let popoverWidth: CGFloat = 340
     static let cardGap: CGFloat = 6
-    /// The profile chip: its height, its avatar, the longest name it shows whole, the menu's width.
+    /// The profile chip: its height, its avatar, the menu's width.
     static let chipHeight: CGFloat = 24
     static let avatar: CGFloat = 16
-    static let chipName: CGFloat = 120
     static let menuWidth: CGFloat = 280
     /// The tab bar sits in the title row's height and a gap above the terminal's surface (`TAB_GAP`).
     static let gap: CGFloat = 8

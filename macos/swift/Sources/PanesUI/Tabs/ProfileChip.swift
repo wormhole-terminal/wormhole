@@ -65,8 +65,7 @@ public struct ProfileChip: View {
             Menu { ProfileMenuItems(choices: choices, actions: actions) } label: {
                 HStack(spacing: Space._2) {
                     ProfileAvatar(choice: current, size: TabMetrics.avatar)
-                    Text(current.name).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
-                        .lineLimit(1).frame(maxWidth: TabMetrics.chipName, alignment: .leading).fixedSize()
+                    CutText(current.name).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                     Image(systemName: "chevron.up.chevron.down").font(.system(size: Metric.chevron, weight: .semibold)).foregroundStyle(tokens.textMuted)
                 }
                 .padding(.leading, Space._1).padding(.trailing, Space._2)

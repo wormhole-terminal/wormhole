@@ -18,6 +18,7 @@ struct GroupHeadView: View {
     let mark: Color?
     let context: SidebarContext
     @State private var hovering = false
+    @State private var nameCut = false
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
     @Environment(\.sidebarLook) private var look
@@ -99,10 +100,13 @@ struct GroupHeadView: View {
                 context.hooks.focusTerminal()
             })
         } else {
+            // The name keeps its room and the folder beside it gives way first; a name that is cut says itself whole.
             Text(head.name).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                .cutProbe(head.name, font: tokens.font(.label), cut: $nameCut)
+                .layoutPriority(1)
                 .contentShape(Rectangle())
                 .onTapGesture { context.openPopover(head.id) }
-                .help(head.folder ?? "")
+                .help(nameCut ? [head.name, head.folder].compactMap { $0 }.joined(separator: "\n") : head.folder ?? "")
                 .accessibilityLabel(Words.text("sidebar-group-edit-spoken", ["group": .text(head.name)], fallback: "Edit group \(head.name)"))
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { context.openPopover(head.id) }
@@ -118,7 +122,7 @@ struct GroupHeadView: View {
 
     private func folderText(_ folder: String) -> some View {
         // Said in the head's own words.
-        Text(folder).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
+        CutText(folder, at: .start).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             .accessibilityHidden(true)
     }
 }

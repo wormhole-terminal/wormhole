@@ -24,13 +24,9 @@ enum PaneMetrics {
     static let grabber: CGFloat = 32
     /// The pane being dragged by its header stays in place, lifted (`DRAG_LIFT_OPACITY`).
     static let dragLift: Double = 0.4
-    /// A header's name is at most this wide (`TITLE_TAB_MAX_W`).
-    static let nameMax: CGFloat = 220
     /// The drop line round the zone the pointer is on (`DROP_LINE_W`).
     static let dropLine: CGFloat = 2
     /// A divider lights after the pointer rests on it this long, so crossing it doesn't flash it
     /// (`RESIZE_HANDLE_HOVER_DELAY`, 150 ms).
     static let hoverDelay: Duration = .milliseconds(150)
-    /// The folder in a header keeps this many characters, cut from the front (a sidebar row's second line).
-    static let folderMax = 38
 }

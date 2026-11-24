@@ -30,11 +30,11 @@ struct PaneHeader<Menu: View>: View {
     var body: some View {
         HStack(spacing: Space._2) {
             if let tile { tile } else { TerminalTile(activity: info.activity) }
-            AtMostWidth(width: PaneMetrics.nameMax) { Text(info.title).lineLimit(1).truncationMode(.tail) }
-                .layoutPriority(1)
-            Text(info.folder.map { Elide.front($0, PaneMetrics.folderMax) } ?? "")
+            // The name keeps the room it needs and the folder, which tells less, gives way first, at its front.
+            CutText(info.title).layoutPriority(1)
+            CutText(info.folder ?? "", at: .start)
                 .font(tokens.font(.caption).weight(.regular)).foregroundStyle(tokens.textFaint)
-                .lineLimit(1).truncationMode(.head).frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             buttons
         }
         .font(tokens.font(.caption).weight(.medium))

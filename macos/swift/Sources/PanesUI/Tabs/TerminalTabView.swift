@@ -1,7 +1,7 @@
 // A tab: a box of its own on the terminal's colour, the open one filled most, with no edge on either so
 // switching tabs moves nothing. Its tile (the row's own, with the agent's logo and the status mark, when the window gives one), its name (one weight for every tab: a bolder one on the open tab
-// would change how much of it fits), the ⌘N keycap while ⌘ is held, and a × on hover. A long name fades out
-// over its end rather than ending in an ellipsis.
+// would change how much of it fits), the ⌘N keycap while ⌘ is held, and a × on hover. A name that does not fit the
+// room the tab gives it fades out over its end rather than ending in an ellipsis; one that fits is not touched.
 
 import DesignSystem
 import PanesModel
@@ -15,6 +15,7 @@ struct TerminalTabView: View {
     var tile: TerminalStatusTile?
     let close: () -> Void
     @State private var hovering = false
+    @State private var cut = false
     @Environment(\.tokens) private var tokens
     @Environment(\.cardGlass) private var glass
 
@@ -24,12 +25,14 @@ struct TerminalTabView: View {
             if let tile { tile } else { TerminalTile(activity: tab.activity, size: TabMetrics.tile) }
             // The name takes the room the tab has (the keycap's included) and is cut by the fade, never pushing the keycap out.
             Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .cutProbe(tab.name, font: tokens.font(.label).weight(.medium), cut: $cut)
                 .overlay(alignment: .leading) {
                     Text(tab.name).font(tokens.font(.label).weight(.medium))
                         .foregroundStyle(selected ? tokens.textPrimary : tokens.textMuted)
                         .lineLimit(1).fixedSize()
                 }
                 .mask { fade }
+                .help(cut ? tab.name : "")
             if hints, let number = tab.number { keycap(number) }
         }
         .padding(.horizontal, Space._2)
@@ -51,10 +54,14 @@ struct TerminalTabView: View {
     }
 
     /// The end of a name that does not fit fades out instead of ending in an ellipsis.
-    private var fade: some View {
-        HStack(spacing: 0) {
+    @ViewBuilder private var fade: some View {
+        if cut {
+            HStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: Space._4)
+            }
+        } else {
             Rectangle()
-            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: Space._4)
         }
     }
 
