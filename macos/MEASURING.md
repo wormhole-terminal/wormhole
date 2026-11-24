@@ -64,6 +64,27 @@ the load average is printed with each run, and the processes using more than a f
 core are listed. Where the machine was not quiet, the result says so. A number goes in a table
 only with the method above.
 
+## The Theme Studio's window
+
+The Studio is SwiftUI, so what a person waits for there is the main thread: a step of work in the document, then SwiftUI
+evaluating again what the step invalidated, then the draw. The control folder's `studio-perf <interaction> [n]`
+(`AppController+ControlStudioPerf.swift`) does one step per sample and times those three parts as wall time on the main
+thread (`model`, `update`, `draw`; `total` is their sum), with the main thread's CPU time over the sample and the 50 ms
+after it (`cpu`). The interactions: `open`, `set` (the selected colour changed as a drag in the colour picker changes
+it), `type`, `select`, `area`, `filter`, `undo`, `appearance`, `resize`, `scroll`, and `idle [seconds]`, which times the
+window left alone (`main_cpu` per second, and how late the main thread came back from a 5 ms wait). Each line goes to
+`studio-perf.txt` as medians and maxima, with how often the step asked the core.
+
+- An edit's cost follows the token: `primary` reaches a few colours, `surface.window` most of the window (53 ms and
+  104 ms for one change in the same run). Say which token was selected.
+- A main thread that never rests runs the same step faster than one woken for it: with the gallery's animations worked
+  out by SwiftUI for every frame a typed key measured 5 ms, with them stilled (`reduce-motion on`) 9 ms, same code. To
+  compare two builds of which one animates, still both.
+- The numbers are a window behind others on a machine that does other things: they move by a few milliseconds from run
+  to run, and by far more while something builds. Compare two builds back to back, alternating, and print the load.
+- Not in them: the render server's and the GPU's work, and a window in front (what the display's refresh asks of
+  SwiftUI's own animations there was not measured).
+
 ## Visual comparison (looks)
 
 `macos/scripts/visual-run.sh <scratch dir>` starts a devctl build of the GPUI app and the Swift app as background
