@@ -44,6 +44,9 @@ public enum TitleMetrics {
     public static let gaugeModelMax = 96.0
     public static let statusDot = 6.0
     public static let chipGap = 8.0
+    /// Room the plan keeps back when it hands what is left to the texts that were cut: the widths are measured, the row draws
+    /// them, and a margin of one point was not enough for the name to stay whole.
+    public static let planSlack = 8.0
 }
 
 /// One end of the row: its parts in order, each with whether a chevron comes before it.

@@ -19,7 +19,7 @@ struct TitlePartView: View {
         case .branchStatus: facts.branchStatus.map { BranchStatusMark(status: $0, action: actions.showChanges) }
         case .terminal: TerminalCrumb(plan: plan, tile: actions.tile?(facts.terminalID, TitleMetrics.tile))
         case .terminalStatus: facts.words.map { StatusWords(words: $0, activity: facts.activity) }
-        case .agentGauge: facts.gauge.map(GaugeChip.init)
+        case .agentGauge: facts.gauge.map { GaugeChip(gauge: $0, modelMax: plan.modelMax) }
         case .ports: PortChips(ports: facts.ports, step: plan.fit.portsStep)
         case .pullRequest: facts.pullRequest.map(PullRequestChip.init)
         case .openIn, .splits: buttons

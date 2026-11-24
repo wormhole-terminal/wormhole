@@ -1,4 +1,4 @@
-// What a coding agent runs and how full its context window is: the model's name (at most 96 pt) and a
+// What a coding agent runs and how full its context window is: the model's name (cut at the room the title row planned) and a
 // 28 × 4 meter with the share used, whichever the agent reported, in muted caption type. The meter fills in
 // the primary, or the warning colour from 80 % on, which is early enough to compact.
 
@@ -8,6 +8,8 @@ import SwiftUI
 
 struct GaugeChip: View {
     let gauge: GaugeFact
+    /// The most the model's name takes: what the title row's plan found room for.
+    var modelMax = TitleMetrics.gaugeModelMax
     @Environment(\.tokens) private var tokens
 
     /// The meter's height (`METER_H`).
@@ -16,7 +18,7 @@ struct GaugeChip: View {
     var body: some View {
         HStack(spacing: TitleMetrics.extraGap) {
             if let model = gauge.model {
-                Text(model).lineLimit(1).truncationMode(.tail).frame(maxWidth: TitleMetrics.gaugeModelMax, alignment: .leading).fixedSize()
+                Text(model).lineLimit(1).truncationMode(.tail).frame(maxWidth: modelMax, alignment: .leading).fixedSize()
             }
             if let percent = gauge.percent {
                 meter(share: (gauge.context ?? 0) / 100)

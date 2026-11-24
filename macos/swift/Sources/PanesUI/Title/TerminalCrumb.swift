@@ -19,8 +19,7 @@ struct TerminalCrumb: View {
         HStack(spacing: TitleMetrics.crumbGap) {
             if let tile { tile } else { TerminalTile(activity: facts.activity, size: TitleMetrics.tile) }
             AtMostWidth(width: plan.fit.name) {
-                Text(facts.label).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
-                    .lineLimit(1).truncationMode(.tail)
+                CutText(facts.label).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                     .contentTransition(.interpolate)
             }
             if facts.hiddenFromAgents {

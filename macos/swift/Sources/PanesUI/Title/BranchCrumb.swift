@@ -20,7 +20,7 @@ struct BranchCrumb: View {
                     HStack(spacing: Space._1) {
                         LucideView(icon: .gitBranch, size: Metric.chevron + 3)
                             .frame(width: TitleMetrics.extraIcon)
-                        if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
+                        if showsText { CutText(branch ?? PanesText.detached) }
                     }
                     .font(tokens.font(.caption).weight(.medium))
                     .modifier(BranchChip(detached: detached, showsText: showsText, width: width))
