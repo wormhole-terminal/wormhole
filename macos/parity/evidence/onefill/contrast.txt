@@ -1,0 +1,29 @@
+=== 1. opaque, fill = surface.window: 4070 changed measurements; lower than today and below the pair's minimum: 71 in 25 themes (0 light); of those already below the minimum today: 0
+  status.danger.text on state.selected over surface.panel (min 4.5): 36, worst nord/normal 4.53 -> 4.000
+  status.success.text on state.selected over surface.panel (min 4.5): 9, worst nord/highContrast 4.62 -> 4.136
+  trust.command on banner.warning.background over surface.panel (min 4.5): 8, worst gruvbox_dark/normal 4.53 -> 4.126
+  text.faint on band over sidebar.background (min 3.0): 7, worst one_dark/normal 3.03 -> 2.787
+  text.faint on card over sidebar.background (min 3.0): 5, worst one_dark/normal 3.12 -> 2.869
+  status.warning.text on state.selected over surface.panel (min 4.5): 4, worst solarized_dark/normal 4.53 -> 4.289
+  agent.done.text on card over sidebar.background (min 4.5): 1, worst gruvbox_dark/normal 4.90 -> 4.456
+  agent.working on card over sidebar.background (min 3.0): 1, worst gruvbox_dark/highContrast 3.30 -> 2.996
+  below their minimum with this fill, whatever they were: 71; lower than today but at or above the minimum: 2169 (0 light themes)
+  tightest of those: github_dark/normal text.faint on card: 3.089 -> 3.003 (min 3.0)
+=== 1. opaque, fill = sidebar.background: 2640 changed measurements; lower than today and below the pair's minimum: 0 in 0 themes (0 light); of those already below the minimum today: 0
+  below their minimum with this fill, whatever they were: 0; lower than today but at or above the minimum: 418 (19 light themes)
+  tightest of those: wormhole_volt.light/normal text.link on surface.window: 4.946 -> 4.530 (min 4.5)
+
+=== 2. default look (opacity 0.8, blur), fill = surface.window: lower than today and below the minimum: 152
+  text.muted: 28 themes, worst nord 4.53 -> 4.05 (min 4.5)
+  text.faint: 35 themes, worst nord 3.03 -> 2.71 (min 3.0)
+  git.branch: 33 themes, worst nord 4.53 -> 4.12 (min 4.5)
+  sidebar.row.selected.text: 25 themes, worst nord 4.53 -> 4.10 (min 4.5)
+  sidebar.row.selected.muted: 31 themes, worst nord 4.53 -> 4.10 (min 4.5)
+=== 2. default look (opacity 0.8, blur), fill = sidebar.background: lower than today and below the minimum: 0
+
+=== 3. card vs the fill around it, opaque, fill = surface.window: higher than today 0, equal 110, lower 0
+=== 3. card vs the fill around it, at 0.8, fill = surface.window: higher than today 0, equal 55, lower 0
+=== 3. card vs the fill around it, opaque, fill = sidebar.background: higher than today 108, equal 2, lower 0
+=== 3. card vs the fill around it, at 0.8, fill = sidebar.background: higher than today 53, equal 1, lower 1 (matrix: 1.0059 -> 1.0016)
+    wormhole.dark: card vs surface.window 1.0000 opaque / 1.0075 at 0.8; vs sidebar.background 1.0260 / 1.0231
+    wormhole.light: card vs surface.window 1.0000 opaque / 1.0019 at 0.8; vs sidebar.background 1.0917 / 1.0556

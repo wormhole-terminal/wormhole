@@ -1,0 +1,252 @@
+=== 1. opaque, fill = surface.window: 4070 changed measurements; lower than today and below the pair's minimum: 71 in 25 themes (0 light); of those already below the minimum today: 0
+  status.danger.text on state.selected over surface.panel (min 4.5): 36, worst nord/normal 4.53 -> 4.000
+      nord                           normal        4.53 -> 4.000
+      nord                           highContrast  4.53 -> 4.051
+      monokai_pro                    normal        4.53 -> 4.095
+      dracula                        normal        4.53 -> 4.099
+      monokai_pro                    highContrast  4.53 -> 4.133
+      dracula                        highContrast  4.53 -> 4.135
+      gruvbox_dark                   normal        4.53 -> 4.145
+      one_dark                       normal        4.53 -> 4.165
+      gruvbox_dark                   highContrast  4.53 -> 4.171
+      one_dark                       highContrast  4.53 -> 4.190
+      everforest_dark                highContrast  4.53 -> 4.210
+      kanagawa_wave                  normal        4.53 -> 4.225
+      kanagawa_wave                  highContrast  4.53 -> 4.238
+      tokyo_night                    highContrast  4.53 -> 4.274
+      solarized_dark                 normal        4.53 -> 4.289
+      solarized_dark                 highContrast  4.53 -> 4.293
+      catppuccin_mocha               highContrast  4.60 -> 4.297
+      rose_pine                      highContrast  4.53 -> 4.300
+      wormhole_volt.dark             normal        4.53 -> 4.321
+      wormhole_volt.dark             highContrast  4.53 -> 4.330
+      soltari.dark                   highContrast  4.53 -> 4.345
+      wormhole_acid_cyan.dark        highContrast  4.53 -> 4.347
+      borealis                       highContrast  4.53 -> 4.353
+      wormhole_white.dark            normal        4.53 -> 4.365
+      wormhole_white.dark            highContrast  4.53 -> 4.367
+      wormhole_sky.dark              highContrast  4.53 -> 4.375
+      nebula                         highContrast  4.53 -> 4.379
+      solar_flare                    highContrast  4.53 -> 4.383
+      solar_flare                    normal        4.53 -> 4.386
+      wormhole_vivid_blue.dark       highContrast  4.53 -> 4.386
+      everforest_dark                normal        4.77 -> 4.410
+      cyberpunk                      highContrast  4.53 -> 4.437
+      event_horizon                  highContrast  4.53 -> 4.441
+      wormhole.dark                  highContrast  4.61 -> 4.444
+      matrix                         highContrast  4.53 -> 4.464
+      rose_pine                      normal        4.74 -> 4.493
+  status.success.text on state.selected over surface.panel (min 4.5): 9, worst nord/highContrast 4.62 -> 4.136
+      nord                           highContrast  4.62 -> 4.136
+      gruvbox_dark                   normal        4.53 -> 4.145
+      gruvbox_dark                   highContrast  4.53 -> 4.171
+      kanagawa_wave                  normal        4.53 -> 4.225
+      kanagawa_wave                  highContrast  4.53 -> 4.238
+      solarized_dark                 normal        4.53 -> 4.289
+      rose_pine                      normal        4.53 -> 4.292
+      solarized_dark                 highContrast  4.53 -> 4.293
+      rose_pine                      highContrast  4.53 -> 4.300
+  trust.command on banner.warning.background over surface.panel (min 4.5): 8, worst gruvbox_dark/normal 4.53 -> 4.126
+      gruvbox_dark                   normal        4.53 -> 4.126
+      gruvbox_dark                   highContrast  4.53 -> 4.126
+      kanagawa_wave                  normal        4.53 -> 4.224
+      kanagawa_wave                  highContrast  4.53 -> 4.224
+      solarized_dark                 normal        4.53 -> 4.304
+      solarized_dark                 highContrast  4.53 -> 4.304
+      github_dark                    normal        4.53 -> 4.378
+      github_dark                    highContrast  4.53 -> 4.378
+  text.faint on band over sidebar.background (min 3.0): 7, worst one_dark/normal 3.03 -> 2.787
+      one_dark                       normal        3.03 -> 2.787
+      nord                           normal        3.19 -> 2.788
+      everforest_dark                normal        3.03 -> 2.806
+      solarized_dark                 normal        3.03 -> 2.871
+      tokyo_night                    normal        3.06 -> 2.886
+      github_dark                    normal        3.03 -> 2.942
+      gruvbox_dark                   normal        3.29 -> 2.986
+  text.faint on card over sidebar.background (min 3.0): 5, worst one_dark/normal 3.12 -> 2.869
+      one_dark                       normal        3.12 -> 2.869
+      nord                           normal        3.31 -> 2.898
+      everforest_dark                normal        3.13 -> 2.900
+      solarized_dark                 normal        3.10 -> 2.940
+      tokyo_night                    normal        3.15 -> 2.982
+  status.warning.text on state.selected over surface.panel (min 4.5): 4, worst solarized_dark/normal 4.53 -> 4.289
+      solarized_dark                 normal        4.53 -> 4.289
+      solarized_dark                 highContrast  4.53 -> 4.293
+      kanagawa_wave                  highContrast  4.78 -> 4.474
+      gruvbox_dark                   highContrast  4.87 -> 4.484
+  agent.done.text on card over sidebar.background (min 4.5): 1, worst gruvbox_dark/normal 4.90 -> 4.456
+      gruvbox_dark                   normal        4.90 -> 4.456
+  agent.working on card over sidebar.background (min 3.0): 1, worst gruvbox_dark/highContrast 3.30 -> 2.996
+      gruvbox_dark                   highContrast  3.30 -> 2.996
+  below their minimum with this fill, whatever they were: 71; lower than today but at or above the minimum: 2169 (0 light themes)
+  tightest of those: github_dark/normal text.faint on card: 3.089 -> 3.003 (min 3.0)
+=== 1. opaque, fill = sidebar.background: 2640 changed measurements; lower than today and below the pair's minimum: 0 in 0 themes (0 light); of those already below the minimum today: 0
+  below their minimum with this fill, whatever they were: 0; lower than today but at or above the minimum: 418 (19 light themes)
+  tightest of those: wormhole_volt.light/normal text.link on surface.window: 4.946 -> 4.530 (min 4.5)
+
+=== 2. default look (opacity 0.8, blur), fill = surface.window: lower than today and below the minimum: 152
+  text.muted: 28 themes, worst nord 4.53 -> 4.05 (min 4.5)
+      nord                            4.53 ->  4.05
+      dracula                         4.53 ->  4.13
+      gruvbox_dark                    4.53 ->  4.16
+      one_dark                        4.53 ->  4.19
+      monokai_pro                     4.60 ->  4.20
+      everforest_dark                 4.53 ->  4.21
+      kanagawa_wave                   4.53 ->  4.24
+      catppuccin_mocha                4.53 ->  4.24
+      tokyo_night                     4.53 ->  4.27
+      solarized_dark                  4.53 ->  4.29
+      rose_pine                       4.53 ->  4.30
+      soltari.dark                    4.53 ->  4.35
+      github_dark                     4.53 ->  4.37
+      nebula                          4.58 ->  4.42
+      wormhole_volt.dark              4.67 ->  4.47
+      wormhole_white.dark             4.63 ->  4.47
+      wormhole_acid_cyan.dark         4.65 ->  4.47
+      wormhole_azure.dark             4.62 ->  4.47
+      wormhole_sky.dark               4.63 ->  4.47
+      wormhole_hot_pink.dark          4.61 ->  4.48
+      wormhole_red.dark               4.62 ->  4.49
+      wormhole_ultramarine.dark       4.60 ->  4.49
+      wormhole_ultraviolet.dark       4.61 ->  4.49
+      wormhole_electric_blue.dark     4.61 ->  4.49
+      wormhole_signal_orange.dark     4.64 ->  4.49
+      wormhole_klein_blue.dark        4.62 ->  4.50
+      wormhole_cobalt.dark            4.62 ->  4.50
+      wormhole_vivid_blue.dark        4.65 ->  4.50
+  text.faint: 35 themes, worst nord 3.03 -> 2.71 (min 3.0)
+      nord                            3.03 ->  2.71
+      monokai_pro                     3.03 ->  2.76
+      dracula                         3.03 ->  2.76
+      gruvbox_dark                    3.03 ->  2.78
+      one_dark                        3.03 ->  2.80
+      everforest_dark                 3.03 ->  2.82
+      kanagawa_wave                   3.03 ->  2.83
+      catppuccin_mocha                3.03 ->  2.84
+      tokyo_night                     3.03 ->  2.86
+      solarized_dark                  3.03 ->  2.87
+      rose_pine                       3.03 ->  2.88
+      wormhole_volt.dark              3.03 ->  2.90
+      soltari.dark                    3.03 ->  2.91
+      wormhole_acid_cyan.dark         3.03 ->  2.91
+      borealis                        3.03 ->  2.92
+      wormhole.dark                   3.03 ->  2.92
+      github_dark                     3.03 ->  2.92
+      wormhole_white.dark             3.03 ->  2.93
+      wormhole_sky.dark               3.03 ->  2.93
+      nebula                          3.03 ->  2.93
+      wormhole_vivid_blue.dark        3.03 ->  2.93
+      wormhole_azure.dark             3.03 ->  2.93
+      solar_flare                     3.03 ->  2.93
+      wormhole_signal_orange.dark     3.03 ->  2.94
+      wormhole_red.dark               3.03 ->  2.94
+      wormhole_klein_blue.dark        3.03 ->  2.95
+      wormhole_cobalt.dark            3.03 ->  2.95
+      wormhole_hot_pink.dark          3.03 ->  2.95
+      wormhole_ultraviolet.dark       3.03 ->  2.95
+      wormhole_electric_blue.dark     3.03 ->  2.96
+      wormhole_ultramarine.dark       3.03 ->  2.96
+      cyberpunk                       3.03 ->  2.96
+      crimson.dark                    3.03 ->  2.97
+      event_horizon                   3.03 ->  2.97
+      matrix                          3.03 ->  2.99
+  git.branch: 33 themes, worst nord 4.53 -> 4.12 (min 4.5)
+      nord                            4.53 ->  4.12
+      monokai_pro                     4.53 ->  4.19
+      dracula                         4.53 ->  4.19
+      gruvbox_dark                    4.53 ->  4.21
+      one_dark                        4.53 ->  4.23
+      everforest_dark                 4.53 ->  4.25
+      kanagawa_wave                   4.53 ->  4.27
+      tokyo_night                     4.53 ->  4.30
+      rose_pine                       4.53 ->  4.33
+      solarized_dark                  4.53 ->  4.33
+      wormhole_volt.dark              4.53 ->  4.36
+      soltari.dark                    4.53 ->  4.36
+      wormhole_acid_cyan.dark         4.53 ->  4.38
+      borealis                        4.53 ->  4.38
+      wormhole.dark                   4.53 ->  4.38
+      github_dark                     4.53 ->  4.39
+      nebula                          4.53 ->  4.39
+      wormhole_white.dark             4.53 ->  4.39
+      wormhole_sky.dark               4.53 ->  4.39
+      solar_flare                     4.53 ->  4.40
+      wormhole_azure.dark             4.53 ->  4.40
+      wormhole_vivid_blue.dark        4.53 ->  4.40
+      catppuccin_mocha                4.67 ->  4.41
+      wormhole_red.dark               4.53 ->  4.41
+      wormhole_hot_pink.dark          4.53 ->  4.41
+      wormhole_cobalt.dark            4.53 ->  4.42
+      wormhole_ultraviolet.dark       4.53 ->  4.42
+      wormhole_electric_blue.dark     4.53 ->  4.43
+      wormhole_ultramarine.dark       4.53 ->  4.43
+      cyberpunk                       4.53 ->  4.43
+      crimson.dark                    4.53 ->  4.44
+      event_horizon                   4.53 ->  4.45
+      wormhole_klein_blue.dark        4.58 ->  4.46
+  sidebar.row.selected.text: 25 themes, worst nord 4.53 -> 4.10 (min 4.5)
+      nord                            4.53 ->  4.10
+      monokai_pro                     4.53 ->  4.17
+      dracula                         4.53 ->  4.17
+      gruvbox_dark                    4.53 ->  4.19
+      one_dark                        4.53 ->  4.22
+      everforest_dark                 4.53 ->  4.24
+      kanagawa_wave                   4.53 ->  4.26
+      tokyo_night                     4.53 ->  4.29
+      catppuccin_mocha                4.57 ->  4.30
+      solarized_dark                  4.53 ->  4.31
+      wormhole.dark                   4.53 ->  4.38
+      github_dark                     4.53 ->  4.38
+      nebula                          4.53 ->  4.39
+      wormhole_vivid_blue.dark        4.53 ->  4.39
+      wormhole_azure.dark             4.53 ->  4.39
+      wormhole_signal_orange.dark     4.53 ->  4.40
+      wormhole_red.dark               4.53 ->  4.41
+      wormhole_hot_pink.dark          4.53 ->  4.41
+      wormhole_klein_blue.dark        4.53 ->  4.41
+      wormhole_cobalt.dark            4.53 ->  4.41
+      wormhole_ultraviolet.dark       4.53 ->  4.43
+      wormhole_ultramarine.dark       4.53 ->  4.43
+      wormhole_electric_blue.dark     4.53 ->  4.43
+      cyberpunk                       4.53 ->  4.43
+      crimson.dark                    4.53 ->  4.44
+  sidebar.row.selected.muted: 31 themes, worst nord 4.53 -> 4.10 (min 4.5)
+      nord                            4.53 ->  4.10
+      monokai_pro                     4.53 ->  4.17
+      dracula                         4.53 ->  4.17
+      gruvbox_dark                    4.53 ->  4.19
+      one_dark                        4.53 ->  4.22
+      everforest_dark                 4.53 ->  4.24
+      kanagawa_wave                   4.53 ->  4.26
+      catppuccin_mocha                4.53 ->  4.26
+      tokyo_night                     4.53 ->  4.29
+      solarized_dark                  4.53 ->  4.31
+      rose_pine                       4.53 ->  4.32
+      wormhole_volt.dark              4.53 ->  4.35
+      soltari.dark                    4.53 ->  4.36
+      wormhole_acid_cyan.dark         4.53 ->  4.36
+      borealis                        4.53 ->  4.37
+      wormhole.dark                   4.53 ->  4.38
+      github_dark                     4.53 ->  4.38
+      wormhole_white.dark             4.53 ->  4.38
+      wormhole_sky.dark               4.53 ->  4.38
+      nebula                          4.53 ->  4.39
+      wormhole_vivid_blue.dark        4.53 ->  4.39
+      solar_flare                     4.53 ->  4.39
+      wormhole_azure.dark             4.53 ->  4.39
+      wormhole_signal_orange.dark     4.53 ->  4.40
+      wormhole_klein_blue.dark        4.53 ->  4.41
+      wormhole_cobalt.dark            4.53 ->  4.41
+      wormhole_ultramarine.dark       4.53 ->  4.43
+      wormhole_red.dark               4.56 ->  4.43
+      wormhole_hot_pink.dark          4.56 ->  4.44
+      event_horizon                   4.53 ->  4.44
+      matrix                          4.53 ->  4.47
+=== 2. default look (opacity 0.8, blur), fill = sidebar.background: lower than today and below the minimum: 0
+
+=== 3. card vs the fill around it, opaque, fill = surface.window: higher than today 0, equal 110, lower 0
+=== 3. card vs the fill around it, at 0.8, fill = surface.window: higher than today 0, equal 55, lower 0
+=== 3. card vs the fill around it, opaque, fill = sidebar.background: higher than today 108, equal 2, lower 0
+=== 3. card vs the fill around it, at 0.8, fill = sidebar.background: higher than today 53, equal 1, lower 1 (matrix: 1.0059 -> 1.0016)
+    wormhole.dark: card vs surface.window 1.0000 opaque / 1.0075 at 0.8; vs sidebar.background 1.0260 / 1.0231
+    wormhole.light: card vs surface.window 1.0000 opaque / 1.0019 at 0.8; vs sidebar.background 1.0917 / 1.0556
