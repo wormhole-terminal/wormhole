@@ -39,7 +39,8 @@ public final class StudioDocument {
     @ObservationIgnored var disk: String?
     /// How often the core was asked since the draft was opened (`studio-perf`).
     @ObservationIgnored public internal(set) var coreCalls = StudioCoreCalls()
-    @ObservationIgnored var history: UndoStack
+    /// Observed: the title row's Undo and Redo read their step's name and whether there is one from it.
+    var history: UndoStack
     @ObservationIgnored var theme: Theme
     @ObservationIgnored let workspace: DraftWorkspace
     @ObservationIgnored let environment: StudioEnvironment

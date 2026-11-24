@@ -32,6 +32,14 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(doc.tokens.rgba(named: "primary")?.hex, "#ff6600")
     }
 
+    func testWhatReadsTheUndoStepIsToldWhenOneIsRecorded() throws {
+        let doc = try fixtures.opening("Nord")
+        let told = expectation(description: "a view that read the undo step is drawn again")
+        withObservationTracking { _ = doc.undoLabel } onChange: { told.fulfill() }
+        doc.set("primary", to: "#ff6600")
+        wait(for: [told], timeout: 0)
+    }
+
     func testAValueRustRefusesStaysInTheFieldAndTheDraftKeepsItsLastGoodOne() throws {
         let doc = try fixtures.opening("Nord")
         doc.set("primary", to: "#ff6600")
