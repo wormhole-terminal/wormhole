@@ -20,11 +20,18 @@ public struct SidebarMetrics: Sendable, Equatable {
     /// The row's padding at its sides, and the corner of its selection and hover.
     public let rowInset: CGFloat
     public let rowRadius: CGFloat
-    /// The card's distance from the sidebar's sides, its padding, its corner and the gap under it.
-    public let cardMargin: CGFloat
+    /// The card's distance from the sidebar's left edge (`ColumnMargins` says when it differs from the right one).
+    public let marginLeading: CGFloat
+    /// The card's distance from the sidebar's right edge.
+    public let marginTrailing: CGFloat
+    /// The card's padding, its corner and the gap under it.
     public let cardPad: CGFloat
     public let cardRadius: CGFloat
     public let cardGap: CGFloat
+    /// The room above the first card.
+    public let listTop: CGFloat
+    /// The room under the last card, besides the gap every card keeps below itself.
+    public let listBottom: CGFloat
     /// A group's head, its height with a second line for the folder, and the tiles it keeps while folded.
     public let headHeight: CGFloat
     public let headTwoLineHeight: CGFloat
@@ -38,7 +45,7 @@ public struct SidebarMetrics: Sendable, Equatable {
     public let addButton: CGFloat
     public let smallTitle: Bool
 
-    public init(density: SidebarDensity = .regular, cards: Bool = true) {
+    public init(density: SidebarDensity = .regular, cards: Bool = true, margins: ColumnMargins = .own) {
         let dense = density == .dense
         self.density = density
         self.cards = cards
@@ -50,15 +57,20 @@ public struct SidebarMetrics: Sendable, Equatable {
             }
         rowInset = dense ? 4 : 8
         rowRadius = dense ? 6 : 8
-        (cardMargin, cardPad) =
+        let (margin, pad): (CGFloat, CGFloat) =
             switch (dense, cards) {
             case (false, true): (10, 4)
             case (true, true): (4, 2)
             case (false, false): (6, 0)
             case (true, false): (4, 0)
             }
+        cardPad = pad
+        (marginLeading, marginTrailing) = margins.sides(own: margin, in: .sidebar)
         cardRadius = dense ? 8 : 12
-        cardGap = dense ? 4 : 8
+        let gap: CGFloat = dense ? 4 : 8
+        cardGap = gap
+        listTop = margins.top(own: Space._1)
+        listBottom = margins.bottom(own: 0, gap: gap)
         headHeight = dense ? 26 : 36
         headTwoLineHeight = [.regular: 44, .compact: 40, .dense: 26][density] ?? 44
         foldedTile = dense ? 14 : Metric.tileMini

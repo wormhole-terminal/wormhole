@@ -1,6 +1,6 @@
 // A run of the list as cards (`sidebar/card.rs`). A group is one card holding its head and its rows, washed in the
 // group's colour; a terminal in no group is a card of its own, and the terminals of one split that sit together share one.
-// Cards stand `cardMargin` in from the sidebar's sides with `cardGap` between them. A group folding closes its card's
+// Cards stand `marginLeading` and `marginTrailing` in from the sidebar's sides with `cardGap` between them. A group folding closes its card's
 // height while its rows fade. With cards off the same lines stand in by the margin with no fill.
 
 import DesignSystem
@@ -20,7 +20,7 @@ struct SidebarSectionView: View {
             groupCard(head)
         } else {
             ForEach(Self.cards(of: section.rows), id: \.first?.id) { rows in
-                card(rows).padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
+                card(rows).padding(.leading, metrics.marginLeading).padding(.trailing, metrics.marginTrailing).padding(.bottom, metrics.cardGap)
                     .id(SidebarStop.row(rows[0].id)).transition(.listRow(look.insertMotion, reduceMotion: reduceMotion))
             }
         }
@@ -38,7 +38,7 @@ struct SidebarSectionView: View {
         .popover(isPresented: popoverBinding(head.id), arrowEdge: .bottom) {
             GroupPopover(head: head, rows: section.rows, context: context) { dismissPopover() }
         }
-        .padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
+        .padding(.leading, metrics.marginLeading).padding(.trailing, metrics.marginTrailing).padding(.bottom, metrics.cardGap)
         // Under Classic the card closes on the timed curve (a cut under Reduce Motion); Drawer and Tuck close it by the rows'
         // own height (`GroupRows`).
         .animation(look.foldMotion == "classic" && !reduceMotion ? SidebarMotion.fold : nil, value: head.isFolded)

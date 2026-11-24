@@ -3,11 +3,16 @@
 // same colour never lies over another and no band shows darker where two would add up. The fill is chosen in one place,
 // `ChromeColours.oneFill`.
 
+import DesignSystem
 import SwiftUI
 
 extension WindowLook {
     /// What a column paints behind itself at the window's opacity: its own colour from the theme, or the one fill's.
     func columnSurface(_ own: Color, _ colours: ChromeColours) -> Color { surface(oneBackground ? colours.oneFill : own) }
+
+    /// How far the cards stand from the window's edges and from each other: with the one fill, one distance for every column and
+    /// the tab strip (`Chrome.surfaceInset`, which is also the terminal card's own); off, each column keeps its own.
+    var margins: ColumnMargins { oneBackground ? ColumnMargins(edge: Chrome.surfaceInset) : .own }
 
     /// Whether the lines between the columns are drawn. Liquid Glass hides them, as it always has. With the one fill they are gone
     /// too, except under Increase Contrast: the tint that told the columns apart is gone, and the GPUI app draws them under

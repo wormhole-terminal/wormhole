@@ -149,4 +149,37 @@ import WorkspaceModel
         let rule = [691, 692, 693].map { rgb(bitmap, CGPoint(x: 600, y: CGFloat($0))) }
         #expect(rule.contains { !same($0, fill) }, "and the status bar's rule")
     }
+
+    /// The stretches of a row (or a column) of the window that are not the one fill, in points, as (start, end) and gaps under 2 pt joined.
+    private func stretches(_ bitmap: NSBitmapImageRep, fill: [Int], along: (Int) -> CGPoint, count: Int, from first: Int = 0) -> [(Int, Int)] {
+        var out: [(Int, Int)] = []
+        for position in first..<count where !same(rgb(bitmap, along(position)), fill) {
+            if let last = out.last, position - last.1 <= 2 { out[out.count - 1].1 = position + 1 } else { out.append((position, position + 1)) }
+        }
+        return out
+    }
+
+    @Test func withItOnTheCardsStandOneDistanceFromTheEdgesAndFromEachOther() throws {
+        let bitmap = try render(oneBackground: true)
+        let fill = rgb(bitmap, Self.sidebar)
+        // Across the first sidebar card's row: the window's left edge to the card 8, the card to the terminal's card 8.
+        let across = stretches(bitmap, fill: fill, along: { CGPoint(x: CGFloat($0), y: 60) }, count: Int(Self.size.width), from: 4)
+        #expect(across.count >= 2)
+        #expect(abs(across[0].0 - 8) <= 1, "the sidebar's card starts 8 from the window's left edge")
+        #expect(abs(across[1].0 - across[0].1 - 8) <= 1, "and the terminal's card 8 after it")
+        // Down the sidebar and the terminal: both first cards start on the title row's bottom, the last one 8 above the status bar.
+        for x in [100, 600] {
+            let down = stretches(bitmap, fill: fill, along: { CGPoint(x: CGFloat(x), y: CGFloat($0)) }, count: Int(Self.size.height) - 28, from: 30)
+            #expect(abs(down[0].0 - 38) <= 1, "x \(x): the first card starts on the title row's bottom")
+        }
+        let terminal = stretches(bitmap, fill: fill, along: { CGPoint(x: 600, y: CGFloat($0)) }, count: Int(Self.size.height), from: 30)
+        #expect(abs(Int(Self.size.height) - 28 - 8 - (terminal.first { $0.0 < 100 }?.1 ?? 0)) <= 1, "the terminal's card ends 8 above the status bar")
+    }
+
+    @Test func withItOffTheSidebarsCardsKeepTheirOwnMargins() throws {
+        let bitmap = try render(oneBackground: false)
+        let fill = rgb(bitmap, Self.sidebar)
+        let across = stretches(bitmap, fill: fill, along: { CGPoint(x: CGFloat($0), y: 60) }, count: 350, from: 4)
+        #expect(abs((across.first?.0 ?? 0) - 10) <= 1, "10 from the window's left edge, as the GPUI app has it")
+    }
 }

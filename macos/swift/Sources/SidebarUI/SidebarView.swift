@@ -26,6 +26,7 @@ public struct SidebarView: View {
     @State var hold = CommandHoldMonitor()
     @State var cursor: SidebarStop?
     @Environment(\.windowFront) private var windowFront
+    @Environment(\.columnMargins) private var margins
     @State var keysLead = false
     @State var typed = TypedPrefix()
     @State var renaming: SidebarRename?
@@ -94,7 +95,8 @@ public struct SidebarView: View {
     }
 
     private func list(_ sections: [SidebarSection], _ walk: SidebarWalk, _ context: SidebarContext) -> some View {
-        ScrollViewReader { proxy in
+        let metrics = SidebarMetrics(density: appearance.density, cards: appearance.cards, margins: margins)
+        return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(sections) { section in
@@ -102,7 +104,8 @@ public struct SidebarView: View {
                     }
                     if let band { ExampleBandView(band: band, context: context) }
                 }
-                .padding(.top, Space._1)
+                .padding(.top, metrics.listTop)
+                .padding(.bottom, metrics.listBottom)
                 // At least the list's height, so a pane header can be let go below the rows (it leaves its split).
                 .frame(maxWidth: .infinity, minHeight: viewport.height, alignment: .top)
                 // Rows changing order slide on the core's spring; under Reduce Motion they stand in their new places at once
@@ -118,7 +121,7 @@ public struct SidebarView: View {
             .onChange(of: cursor) { _, stop in if let stop { withAnimation(reduce ? nil : SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
+        .environment(\.sidebarMetrics, metrics)
         .environment(\.sidebarLook, appearance)
         .environment(\.listRoom, drag?.aim?.room ?? ListRoom())
         .environment(\.listShownAt, shownAt)

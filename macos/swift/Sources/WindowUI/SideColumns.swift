@@ -3,6 +3,7 @@
 // and while it slides, so the one choice cannot drift between them. On Liquid Glass the sidebar paints none:
 // the system's glass lies behind it, its cards float on it.
 
+import DesignSystem
 import SwiftUI
 import SidebarUI
 import WorkspaceModel
@@ -29,6 +30,7 @@ struct SidebarColumn: View {
                 stage: hub.agentsTipStage, openSettings: { hub.actions.openSettingsAt("agents") }, close: { hub.closeAgentsTip() },
                 never: { hub.neverAgentsTip() }, keep: { hub.keepAgentsTip() })
         }
+        .environment(\.columnMargins, look.margins)
         .background { if !look.glassOn { look.columnSurface(colours.sidebar, colours) } }
     }
 }
@@ -40,6 +42,7 @@ struct PanelColumn: View {
 
     var body: some View {
         RightPanel(hub: hub)
+            .environment(\.columnMargins, look.margins)
             .background(look.columnSurface(colours.panel, colours))
     }
 }

@@ -19,7 +19,7 @@ public struct SidebarDragSpecimen: View {
     /// The terminal dragged in both lists: the last one.
     private static let dragged: TerminalID = 3
     /// A list's width: the lifted chip at its widest (`style::drag_ghost` stops at 240) and the card's margins.
-    private static let width = TearOffChipView.widest + 2 * SidebarMetrics().cardMargin
+    private static let width = TearOffChipView.widest + 2 * SidebarMetrics().marginLeading
 
     /// A specimen takes nothing: its sample is its own.
     public init() {}
@@ -39,7 +39,7 @@ public struct SidebarDragSpecimen: View {
                 item: .terminal(Self.dragged), point: pointer,
                 aim: DropAim(
                     action: .dropTerminal(Self.dragged, over: .row(2, .top)),
-                    mark: .line(y: gap, x: metrics.cardMargin...(Self.width - metrics.cardMargin))),
+                    mark: .line(y: gap, x: metrics.marginLeading...(Self.width - metrics.marginTrailing))),
                 grab: CGPoint(x: metrics.titleX, y: metrics.rowHeight / 2)))
         }
         .allowsHitTesting(false)

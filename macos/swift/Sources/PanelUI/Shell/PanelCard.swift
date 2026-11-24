@@ -7,15 +7,18 @@ import SwiftUI
 struct PanelCard<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.tokens) private var tokens
+    @Environment(\.columnMargins) private var margins
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: PanelMetrics.cardRadius, style: .continuous)
+        let sides = margins.sides(own: PanelMetrics.cardMargin, in: .panel)
         VStack(spacing: 0) { content }
             .padding(PanelMetrics.cardPad)
             .background(tokens.card, in: shape)
             .overlay { shape.strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }
             .marked("panel.card")
-            .padding(.horizontal, PanelMetrics.cardMargin)
+            .padding(.leading, sides.leading)
+            .padding(.trailing, sides.trailing)
             .padding(.bottom, PanelMetrics.cardGap)
     }
 }
@@ -24,13 +27,14 @@ struct PanelCard<Content: View>: View {
 struct PanelScroll<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.walkCursor) private var cursor
+    @Environment(\.columnMargins) private var margins
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) { content }
-                    .padding(.top, PanelMetrics.listTop)
-                    .padding(.bottom, PanelMetrics.tail - PanelMetrics.cardGap)
+                    .padding(.top, margins.top(own: PanelMetrics.listTop))
+                    .padding(.bottom, margins.bottom(own: PanelMetrics.tail - PanelMetrics.cardGap, gap: PanelMetrics.cardGap))
             }
             .scrollIndicators(.automatic)
             .scrollEdge()
