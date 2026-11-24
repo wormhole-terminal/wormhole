@@ -16,6 +16,15 @@ private final class WorkspaceWindow: NSWindow {
     }
 }
 
+/// The window's content. AppKit asks a view under the title bar which part of it the window is not to be dragged by
+/// (an undocumented question; Chromium's and GPUI's content views answer it this way too). All of this view: its title
+/// rows start the drag themselves (`WindowDragArea`), as the GPUI app's do. With AppKit's own answer the strip under
+/// the title bar stayed in the region it gives the window server to drag the window by (read on macOS 27.2: the strip's
+/// whole width but the lights; empty with this answer), and a press on a title row there moved nothing.
+private final class WorkspaceContentView<Content: View>: NSHostingView<Content> {
+    @objc(_opaqueRectForWindowMoveWhenInTitlebar) private func rectKeptFromTitleBarDrag() -> NSRect { bounds }
+}
+
 @MainActor
 public final class WorkspaceWindowController: NSWindowController, NSWindowDelegate {
     /// Called once, when the window is closing, so the owner can shut down what it started.
@@ -53,7 +62,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         window.backgroundColor = .clear
         window.contentMinSize = minSize
         window.isReleasedWhenClosed = false
-        let hosting = NSHostingView(rootView: content)
+        let hosting = WorkspaceContentView(rootView: content)
         // The window's size is the user's; the SwiftUI layout must not resize it as columns collapse.
         hosting.sizingOptions = []
         window.contentView = hosting
