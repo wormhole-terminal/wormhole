@@ -78,6 +78,7 @@ struct RevPicker: View {
         .background(hovering ? tokens.stateHover : .clear, in: shape)
         .overlay { shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth) }
         .contentShape(shape)
+        .help("\(prefix) \(selected?.title ?? headTitle)")
     }
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: tokens.metrics.radius, style: .continuous) }

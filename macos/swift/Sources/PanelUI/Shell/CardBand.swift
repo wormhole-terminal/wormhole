@@ -21,12 +21,17 @@ struct CardBand<Trailing: View>: View {
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
             // The title is what the band is: what stands beside it (a picker, the count) gives way first.
-            toggle.layoutPriority(1)
+            toggle.layoutPriority(2)
+            // The rest of the head folds too, as the title does; it is the room the trailing items take from.
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity).contentShape(Rectangle())
+                .onTapGesture { if folded != nil { onToggle() } }
+                .layoutPriority(-1).accessibilityHidden(true)
             HStack(spacing: Space._1) {
                 trailing
                 if let count { CountBadge(text: count) }
                 if let add { BandButton(symbol: "plus", label: add.label, action: add.action) }
             }
+            .layoutPriority(1)
         }
         .padding(.horizontal, PanelMetrics.inset)
         .frame(height: Metric.band)
@@ -40,7 +45,6 @@ struct CardBand<Trailing: View>: View {
             HStack(spacing: PanelMetrics.gap) {
                 if let folded { Disclosure(collapsed: folded) }
                 Text(title).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                Spacer(minLength: 0)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
