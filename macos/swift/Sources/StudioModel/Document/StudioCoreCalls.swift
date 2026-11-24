@@ -1,6 +1,7 @@
 // How often a draft asked the core, counted where each call is made: the control folder's `studio-perf` prints what one
 // step of a person's work asked, and a test can hold a step to its number. Plain counters; nothing reads them to decide.
 
+/// How often a draft asked the core for each of its answers.
 public struct StudioCoreCalls: Sendable, Equatable {
     /// `resolve_theme` for the draft (each one writes the draft file into the scratch folder first).
     public var resolves = 0
@@ -13,6 +14,7 @@ public struct StudioCoreCalls: Sendable, Equatable {
 
     public init() {}
 
+    /// What was asked between two readings.
     public static func - (after: StudioCoreCalls, before: StudioCoreCalls) -> StudioCoreCalls {
         var calls = StudioCoreCalls()
         calls.resolves = after.resolves - before.resolves

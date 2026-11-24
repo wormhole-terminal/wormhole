@@ -45,6 +45,7 @@ public final class StudioDocument {
     @ObservationIgnored let workspace: DraftWorkspace
     @ObservationIgnored let environment: StudioEnvironment
     @ObservationIgnored let store: ThemeStore
+    /// The token list's bands, every token in the catalogue's order (`TokenGroup.all`).
     @ObservationIgnored public let groups: [TokenGroup]
 
     public init(

@@ -19,8 +19,10 @@ public struct LayerDrawing<Key: Hashable>: NSViewRepresentable {
         (self.key, self.layers) = (key, layers)
     }
 
+    /// The view that holds the layers; it gets them in `updateNSView`, which SwiftUI calls once it is made.
     public func makeNSView(context: Context) -> LayerDrawingView { LayerDrawingView() }
 
+    /// Builds the layers again when `key` is another than the one they were built from.
     public func updateNSView(_ view: LayerDrawingView, context: Context) { view.show(AnyHashable(key), layers) }
 }
 
