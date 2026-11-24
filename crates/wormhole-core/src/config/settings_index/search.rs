@@ -116,12 +116,25 @@ fn index() -> Arc<Index> {
 /// Every setting `query` finds, sections in nav order and each section's best first. An empty
 /// query finds nothing.
 pub fn search(query: &Query) -> Vec<Hit> {
+    search_among(query, |_, _| true)
+}
+
+/// Like [`search`], but only in the sections shown for this build and settings, so a hidden
+/// feature's settings (a preview section off in this build, a row behind a flag that is off, a row of
+/// the other front end) never surface in the results. A hidden row is not scored at all: the search
+/// frame of the settings window is held to an allocation budget, and a row nobody sees must not cost it.
+pub fn search_visible(query: &Query, settings: &Settings) -> Vec<Hit> {
+    search_among(query, |section, entry| section.is_visible(settings) && entry.is_shown(settings))
+}
+
+fn search_among(query: &Query, among: impl Fn(SectionId, &Entry) -> bool) -> Vec<Hit> {
     if query.is_empty() {
         return Vec::new();
     }
     let index = index();
     let mut hits: Vec<(usize, Hit)> = entries()
         .enumerate()
+        .filter(|(_, (section, _, entry))| among(*section, entry))
         .filter_map(|(order, (section, group, entry))| {
             let section_title = &index.sections[section as usize];
             score(query, section, group, entry, &index.rows[order], section_title).map(|hit| (order, hit))
@@ -135,15 +148,6 @@ pub fn search(query: &Query) -> Vec<Hit> {
             .then(a_order.cmp(b_order))
     });
     hits.into_iter().map(|(_, hit)| hit).collect()
-}
-
-/// Like [`search`], but only in the sections shown for this build and settings, so a hidden
-/// feature's settings (a preview section off in this build, a row behind a flag that is off) never
-/// surface in the results.
-pub fn search_visible(query: &Query, settings: &Settings) -> Vec<Hit> {
-    let mut hits = search(query);
-    hits.retain(|hit| hit.section.is_visible(settings) && hit.entry.is_shown(settings));
-    hits
 }
 
 /// Where `word` is in `text` (lowercase) and whether that is the start of a word there.
