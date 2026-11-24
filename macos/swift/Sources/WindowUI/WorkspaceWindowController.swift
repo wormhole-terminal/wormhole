@@ -36,6 +36,8 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     private var dragFacts: (cell: CGSize, spare: CGSize)?
     /// The rectangle the window had before it was zoomed or made full screen: what a record of it comes back to.
     public private(set) var windowedFrame = NSRect.zero
+    /// The close button whose frame is watched; looked up again at each placing, in case AppKit has made a new one.
+    private weak var watchedLight: NSView?
 
     public init<Content: View>(title: String, contentSize: CGSize, minSize: CGSize, content: Content) {
         let window = WorkspaceWindow(
@@ -145,6 +147,21 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     }
 
     private func centreTrafficLights() {
-        if let window { TrafficLights.place(in: window) }
+        guard let window else { return }
+        TrafficLights.place(in: window)
+        let close = window.standardWindowButton(.closeButton)
+        guard close !== watchedLight else { return }
+        if let watchedLight { NotificationCenter.default.removeObserver(self, name: NSView.frameDidChangeNotification, object: watchedLight) }
+        watchedLight = close
+        guard let close else { return }
+        close.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(self, selector: #selector(lightsMoved), name: NSView.frameDidChangeNotification, object: close)
+    }
+
+    /// AppKit has laid its title bar out again and put the lights back where it wants them (seen on macOS 27.2 at a new
+    /// window title, `-[NSTitledFrame _titleDidChange]`, and after a resize). It moves the three one after another, so
+    /// they are placed when it is through, not from inside its pass.
+    @objc private func lightsMoved(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.centreTrafficLights() }
     }
 }
