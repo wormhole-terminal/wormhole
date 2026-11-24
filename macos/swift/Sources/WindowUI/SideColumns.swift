@@ -29,7 +29,7 @@ struct SidebarColumn: View {
                 stage: hub.agentsTipStage, openSettings: { hub.actions.openSettingsAt("agents") }, close: { hub.closeAgentsTip() },
                 never: { hub.neverAgentsTip() }, keep: { hub.keepAgentsTip() })
         }
-        .background { if !look.glassOn { look.surface(colours.sidebar) } }
+        .background { if !look.glassOn { look.columnSurface(colours.sidebar, colours) } }
     }
 }
 
@@ -40,6 +40,6 @@ struct PanelColumn: View {
 
     var body: some View {
         RightPanel(hub: hub)
-            .background(look.surface(colours.panel))
+            .background(look.columnSurface(colours.panel, colours))
     }
 }

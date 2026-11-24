@@ -106,8 +106,8 @@ struct StatusBar: View {
         .foregroundStyle(colours.muted)
         .padding(.horizontal, Chrome.edgeInset - Chrome.itemPad)
         .frame(height: Chrome.statusHeight)
-        .background { if !look.glassOn { look.surface(colours.sidebar) } }
-        .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
+        .background { if !look.glassOn { look.columnSurface(colours.sidebar, colours) } }
+        .overlay(alignment: .top) { if look.drawsStatusRule { colours.rule.frame(height: colours.borderWidth) } }
         .marked("status.bar")
         // Without the Motion feature the bar's changes are cuts, as in GPUI (the counts roll only with it).
         .animation(look.motionFeature ? Motion.fade : nil, value: summary)

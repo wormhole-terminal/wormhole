@@ -67,7 +67,7 @@ terminals, none closes it), `find [text]`, `notice [n]`, `sidebar`, `panel`, `pa
 `action <keymap id>` (any menu action), `menus` (the menu bar as text), `size WxH`, `window-shot <png> [title]` (the window's
 chrome; Metal grids are not in it, `shot` writes the grid), `about`, `licenses`, `hosts`, `trust`, `access`,
 `updates`, `onboarding`, `quick-panel`, and the look's (`theme`, `appearance`, `status-bar`, `tabs`, `gaps`,
-`blur`, `glass`, `dividers`, `opacity`, `reduce-transparency`, `increase-contrast`). `state` ends with the panes
+`blur`, `glass`, `dividers`, `onefill`, `opacity`, `reduce-transparency`, `increase-contrast`). `state` ends with the panes
 (`panes=row(1,col(14,15)) focused=15 zoomed=none cover=none`). `frames N` follows `macos/MEASURING.md`: forced draws on the main thread, 2 ms
 apart, the first 3 dropped, one line appended to `frames.txt`. Its fields (all milliseconds):
 

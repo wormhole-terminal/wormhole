@@ -57,7 +57,7 @@ struct TerminalColumn: View {
             .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))
             .padding([.horizontal, .bottom], Chrome.surfaceInset)
         }
-        .background(look.surface(colours.terminal))
+        .background(look.columnSurface(colours.terminal, colours))
         .onAppear { hold.start() }
         .onDisappear { hold.stop() }
     }

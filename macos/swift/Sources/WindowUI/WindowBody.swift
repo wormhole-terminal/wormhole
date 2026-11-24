@@ -103,7 +103,7 @@ struct WindowBody: View {
             width: panelWidth, shown: panelShown, inFlow: panelSlide.inFlow, sliding: panelSlide.sliding)
         let frames = PaneFrames(
             window: window, sidebar: sidebarColumn, panel: panelColumn, facts: facts,
-            ruleWidth: look.columnDividers && !look.glassOn ? colours.dividerWidth : 0)
+            ruleWidth: look.drawsColumnDividers ? colours.dividerWidth : 0)
         return ZStack(alignment: .topLeading) {
             TerminalColumn(hub: hub, pads: frames.pads)
             .frame(width: frames.contentWidth)

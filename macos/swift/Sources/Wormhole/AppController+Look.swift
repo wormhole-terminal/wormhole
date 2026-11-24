@@ -48,6 +48,7 @@ extension AppController {
         case "blur": on(&look.blur)
         case "glass": on(&look.liquidGlass)
         case "dividers": on(&look.columnDividers)
+        case "onefill": on(&look.oneBackground)
         case "opacity":
             guard let value = Double(argument), (0.3...1).contains(value) else { reply("error: opacity is 0.3 to 1"); return true }
             look.opacity = value
@@ -95,7 +96,7 @@ extension AppController {
     var lookState: String {
         "theme=\(themes.theme.id) appearance=\(themes.appearance.rawValue) mode=\(themes.mode.rawValue) "
             + "opacity=\(look.opacity) blur=\(look.blur) glass=\(look.liquidGlass) status_bar=\(look.statusBar) "
-            + "tabs=\(look.tabsOnTop) gaps=\(look.splitGaps) dividers=\(look.columnDividers) reduce_transparency=\(themes.reduceTransparency) increase_contrast=\(themes.increaseContrast)"
+            + "tabs=\(look.tabsOnTop) gaps=\(look.splitGaps) dividers=\(look.columnDividers) one_fill=\(look.oneBackground) reduce_transparency=\(themes.reduceTransparency) increase_contrast=\(themes.increaseContrast)"
     }
 
     /// What the settings of Settings → Appearance, Fonts, Terminals & sidebar and Git came to, as the windows hold them now:

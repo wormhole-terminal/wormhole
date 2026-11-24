@@ -16,6 +16,12 @@ struct ChromeColours {
     /// `sidebar.background` (`ui.panel`) and `surface.panel` (`ui.panel_right`).
     var sidebar: Color { tokens.sidebarBackground }
     var panel: Color { tokens.surfacePanel }
+    /// The one fill (`one_background`) that every column paints instead of its own colour: the chrome's, `sidebar.background`. The
+    /// only place that names its token. Chosen by contrast over the 55 bundled themes (`macos/parity/evidence/onefill`): none of
+    /// core's contrast pairs that change falls under its minimum with it, where `surface.window` leaves 71 measurements in 25 dark
+    /// themes under theirs; and the card (`terminalSurface`) stands further from it than from `surface.window` in 54 themes opaque
+    /// and 53 at the default opacity (none loses more than 0.005 of a contrast ratio).
+    var oneFill: Color { tokens.sidebarBackground }
     /// The terminal's own surface under its grid (`terminal.background`).
     var terminalSurface: Color { tokens.terminal.background.color }
     var divider: Color { tokens.divider }

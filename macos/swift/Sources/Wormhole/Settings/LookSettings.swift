@@ -39,6 +39,7 @@ enum LookSettings {
         if changed("minimap") { look.minimap = values["minimap"]?.bool ?? false }
         if changed("icon_animations") { look.iconAnimations = values["icon_animations"]?.bool ?? true }
         if changed("split_gaps") { look.splitGaps = values["split_gaps"]?.bool ?? look.splitGaps }
+        if changed("one_background") { look.oneBackground = values["one_background"]?.bool ?? look.oneBackground }
         if changed("column_dividers") { look.columnDividers = values["column_dividers"]?.bool ?? look.columnDividers }
         // Without the Motion feature every column is Classic, whatever config.json holds (`motion_in_force`).
         if changed("motion.column", "feature_flags") {

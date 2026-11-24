@@ -20,6 +20,9 @@ public final class WindowLook {
     public var blur = true
     /// Liquid Glass under the sidebar and the panel (macOS 26 and later), off by default as in the GPUI app.
     public var liquidGlass = false
+    /// The sidebar, the terminal's column, the right panel and the status bar painted with one colour, with no lines between them
+    /// (`one_background`, on by default); off, each paints its own colour from the theme. `WindowLook+OneFill.swift` says how.
+    public var oneBackground = true
     /// Zen mode: every window drawn with the Zen preset, for a while and saved nowhere (`settings::zen`). It is a layer over
     /// the person's own values below, which it never changes, so ending it brings back exactly what was there.
     public var zen: WindowShown?
@@ -82,9 +85,10 @@ public final class WindowLook {
     var glassOn: Bool { liquidGlass && !systemOpaque && Self.macHasGlass }
 
     /// What the surfaces are painted over, as the window has it now (the control folder's `backdrop`): the opacity in effect, whether
-    /// the blur lies behind, whether the cards stand on glass, and the system's say that overrules all three.
+    /// the blur lies behind, whether the cards stand on glass, whether the columns share the one fill, and the system's say that
+    /// overrules the first three.
     public var backdropSummary: String {
-        "surfaces opacity=\(effectiveOpacity) blur_behind=\(blurShown) cards_glass=\(glassOn) system_opaque=\(systemOpaque)"  // text: the control folder's output
+        "surfaces opacity=\(effectiveOpacity) blur_behind=\(blurShown) cards_glass=\(glassOn) one_fill=\(oneBackground) system_opaque=\(systemOpaque)"  // text: the control folder's output
     }
 
     /// `colour` at the window's opacity: every surface paints translucent over the blur.
