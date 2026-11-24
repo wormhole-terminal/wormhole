@@ -35,6 +35,17 @@ protocol; the app wires them). A new target is placed in the table on purpose, o
 - Over a budget today? It sits in `scripts/standards-allow.json`; the list only shrinks.
 - No dead code, no commented-out code, no duplicated logic. Comments say why, not what.
 
+## Apple's guidance first
+
+Xcode ships Apple's own guidance for SwiftUI as plain text, written for coding agents and as good for people. Read
+the parts that fit the change before writing or reviewing a view; they are newer than anything remembered:
+`Xcode.app/Contents/PlugIns/IDEIntelligenceChat.framework/Versions/A/Resources/`, `swiftui-specialist.idechatprompttemplate`
+(the index) with its `swiftui-specialist-ref-*.md.packaged` references (view structure, data flow, the environment,
+`ForEach` identity, modifiers, localization, animations, soft-deprecated APIs), and `swiftui-whats-new-27` with its
+references for what the macOS 27 SDK added. They are reference knowledge about the frameworks, not this project's rules:
+where the two differ, these standards hold. The package targets macOS 26, so an API new in 27 needs an availability
+check and a fallback. Look an API up in Apple's documentation before using one from memory.
+
 ## Swift 6 concurrency
 
 - UI types are `@MainActor`. Model modules are `Sendable` value types (`struct`, `enum`), not classes.
