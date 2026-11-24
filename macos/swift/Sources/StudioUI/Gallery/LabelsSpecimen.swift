@@ -1,5 +1,6 @@
 // The text that heads or fills a panel: a title, a section label open and folded, an empty note, a toolbar of controls
-// and a selected tint with its count (`gallery/labels.rs`).
+// and a selected tint with its count (`gallery/labels.rs`), and `CutText`, the one way text is cut: each end of it, in a room too
+// small for the whole.
 // text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
@@ -21,6 +22,13 @@ struct LabelsSpecimen: View {
             }
             .foregroundStyle(tokens.textMuted)
             Text("Nothing here yet.").font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+            // A name is cut at its end, a path at its front, an identifier in its middle; the whole text is the tooltip.
+            VStack(alignment: .leading, spacing: Space._1) {
+                CutText("A terminal named after what runs in it").font(TextRole.body.font)
+                CutText("~/clients/acme/services/authentication-gateway", at: .start).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                CutText("surface.sidebar.row.selected.hover", at: .middle).font(TextRole.caption.font.monospaced())
+            }
+            .frame(width: Metric.row * 6, alignment: .leading)
             HStack(spacing: Space._2) {
                 Label("main", systemImage: "arrow.triangle.branch").font(TextRole.caption.font)
                 Spacer(minLength: 0)
