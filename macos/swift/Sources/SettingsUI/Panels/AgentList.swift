@@ -40,7 +40,7 @@ struct AgentList: View {
                         StatusBadge(text: badge(agent.state).text, color: badge(agent.state).color)
                     }
                     HStack(spacing: Space._1) {
-                        Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
+                        Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textMuted)
                         if let path = agent.configPath {
                             IconButton(symbol: Icon.reveal.rawValue, label: Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder")) {
                                 ExternalOpen.reveal([URL(fileURLWithPath: path)])

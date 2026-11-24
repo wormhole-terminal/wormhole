@@ -29,7 +29,7 @@ struct ShortcutRecorder: View {
             HStack(spacing: Space._1) {
                 if let refusal = shownProblem {
                     // Keys that macOS, the app or the shell already answer to are said, not taken (`Recording::Taken`).
-                    Text(refusal).lineLimit(1).foregroundStyle(tokens.statusWarningText)
+                    Text(refusal).lineLimit(1).foregroundStyle(tokens.statusWarningText).help(refusal)
                 } else if recording {
                     Text(SettingsText.recorderPrompt).foregroundStyle(tokens.textMuted)
                 } else if spec.isEmpty {
