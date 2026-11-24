@@ -59,8 +59,27 @@ struct CharWidth: TextMeasuring {
         var f = facts()
         f.row = TitleRow([.ports, .space])
         f.ports = [3000, 5173, 8080]
-        let both = TitlePlanner.extras(f, CharWidth())
+        let both = TitlePlanner.extras(f, CharWidth(), modelWidth: 4)
         #expect(both.1.count == 1 && both.1[0] < (both.0.width(.ports) ?? 0))
+    }
+
+    @Test func aRoomyRowGivesTheCutTextsTheRoomItHasLeft() {
+        var long = facts()
+        long.branch = .some(String(repeating: "b", count: 200))
+        long.label = String(repeating: "n", count: 300)
+        (long.branchStatus, long.gauge, long.ports, long.pullRequest) = (nil, nil, [], nil)
+        let arrangement = TitleArrangement(
+            left: TitleEnd([.folder, .branch, .terminal], chevrons: [false, true, true]), right: TitleEnd([.splits], chevrons: [false]),
+            paths: [PathText(parents: "~/Projects/", last: "tube")])
+        // Their guaranteed shares keep the order of giving way; with the row's width counted they are cut only where the room ends.
+        let tight = TitlePlanner.plan(long, arrangement, width: 400, measure: CharWidth(), fitting: NaturalFit())
+        #expect(tight.fit.chip == TitleMetrics.chipMax && tight.fit.name == TitleMetrics.nameMax)
+        let roomy = TitlePlanner.plan(long, arrangement, width: 2000, measure: CharWidth(), fitting: NaturalFit())
+        #expect(roomy.fit.chip == 200 + TitleMetrics.chipChrome && roomy.fit.name == 300)
+        // Room for part of it: what the row has left is shared out, and nothing goes past it.
+        let some = TitlePlanner.plan(long, arrangement, width: 700, measure: CharWidth(), fitting: NaturalFit())
+        let used = TitleLayout.fixedWidth(arrangement.ends) + TitleMetrics.crumbGap + 15 + (some.fit.chip ?? 0) + TitleMetrics.rowGap + TitleMetrics.splitsWidth + some.fit.name
+        #expect((some.fit.chip ?? 0) > TitleMetrics.chipMax && used <= 700)
     }
 
     @Test func aPullRequestAndAGaugeSpeak() {

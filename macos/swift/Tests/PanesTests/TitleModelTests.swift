@@ -21,11 +21,10 @@ import PanesModel
         #expect(steps(8, last: "abcdefghijklmnop").last?.text.last == "abcd…nop")
     }
 
-    @Test func elidingKeepsTheExtensionAndTheEndOfAFolder() {
+    @Test func elidingKeepsTheExtensionOfAName() {
         #expect(Elide.middle("session_store_adapter.rs", 20) == "session_…_adapter.rs")
         #expect(Elide.middle("abcdefgh.rs", 9) == "abc…gh.rs")
         #expect(Elide.middle("short", 9) == "short" && Elide.middle("abcdef", 1) == "…")
-        #expect(Elide.front("/Users/ben/Projects/adapters/session", 20) == "…/adapters/session")
         #expect(Elide.fit("abcdefghij", max: 6, measure: { Double($0.count) }, shorten: Elide.middle) == "abc…ij")
     }
 

@@ -77,6 +77,21 @@ fails them). A one-shot deadline (a debounce, a hover delay, a "copied" label go
   view. Logs, the CLI and config keys stay English.
 - Prefer a native control (`Form`, `List`, `Menu`, `NSAlert`, `NSPopover`) where it gives the GPUI app's behaviour.
 
+## Cut text
+
+Text is shown whole whenever the place it is in can hold it; the layout cuts it from the real width, never from a count of
+characters or a width fixed in advance (a fixed width is fine where the design fixes the thing, like a tab, and then the text
+uses all of it). When a row is too narrow the less important text gives way first (`layoutPriority`: the folder before the
+name, the value before the token's name, a detail before a title), and what is cut is cut where it loses least: a name at
+its end, a path or folder at its front, an identifier whose two ends matter (a dotted token, a hash, a file name with its
+extension) in its middle. A sentence (a message, an empty state, a hint, an error) wraps and is never cut. Whatever is cut can
+still be read whole: the tooltip says it, and VoiceOver reads a `Text` whole whatever is cut.
+
+One helper does it: `CutText(whole, at: .end | .start | .middle)` in `DesignSystem` (the font and the colour are the
+environment's), or `cutProbe` where a view draws the cut itself (a fade). `rules.py` fails `Elide.` and `.prefix(…)` joined to
+an "…" in a view. The core cuts nothing a shell can cut by width: a text it must shorten for the GPUI app comes beside its whole
+form (`SecondLine.place`).
+
 ## Tests
 
 Swift Testing (`@Test`, `#expect`), deterministic: no `Task.sleep`, no wall clock, no network, no real user
@@ -96,7 +111,7 @@ One command runs them all: `macos/scripts/quality.sh [--strict]`.
 
 | Script | Checks | Result |
 |---|---|---|
-| `rules.py` | file over 1,000 lines, bucket names, `unsafe`, polling (`Timer`, `Task.sleep` without `// one-shot:`), spawning a process | error |
+| `rules.py` | file over 1,000 lines, bucket names, `unsafe`, polling (`Timer`, `Task.sleep` without `// one-shot:`), spawning a process, cutting text by a count of characters in a view | error |
 | `layers.py` | an upward, sideways or forbidden edge; an unplaced target (`--selftest`) | error |
 | `parity.py --check` | `features.csv` is valid; `--size` prints Swift lines per module | error / info |
 | `standards.py` | file 400/600 lines, function 60 lines, unchecked escape without `why:`, `AnyView`, undocumented `public` | warning |

@@ -13,6 +13,9 @@ Rules, each with the reason it exists:
   no-polling     no Timer.scheduledTimer / Timer.publish / Task.sleep in the Swift sources: an idle
                  window sleeps until an event (events.md); the measuring tool (ffi-bench) is exempt, and a call with
                  a `// one-shot: <what it waits for>` comment on its line or the two above is a deadline, not polling;
+  cut-by-count   a view never cuts text by a count of characters: no `Elide.` and no `.prefix(...)` joined to an "…" in a ui
+                 target (`...UI`, `AuxWindows`) or the app (its `Driving/` dev tooling aside); `CutText` (DesignSystem) cuts by
+                 the width the layout gives;
   no-process     the Swift sources never spawn a process (everything goes through the seam). The one exception is the
                  end-to-end tests' harness (`Tests/EndToEndTests`), where a `// process: <what it runs>` comment on
                  the line or the two above says what is started; the comment excuses nothing anywhere else.
@@ -40,6 +43,9 @@ BUCKET_NAMES = {"utils", "util", "helpers", "helper", "common", "misc"}
 LIMIT = 1000
 UNSAFE_ALLOWED = {Path("crates/wormhole-ffi/src/lib.rs"), Path("crates/wormhole-ffi/src/c_abi.rs")}
 POLLING = re.compile(r"\bTimer\.(scheduledTimer|publish)\b|\bTask\.sleep\b")
+# A view cuts by width, through `CutText`; these cut by a number of characters. `Elide` is the title row's measured path
+# (PanesModel), a model, so only the ui targets and the app are held to it.
+CUT_BY_COUNT = re.compile(r"\bElide\.|\.prefix\([^)]*\)[^\n]*\"…\"|\"…\"[^\n]*\.prefix\(")
 PROCESS = re.compile(r"\bProcess\(\)|\bNSTask\b|\bposix_spawn\b")
 UNSAFE_RUST = re.compile(r"\bunsafe\b")
 
@@ -73,6 +79,9 @@ def main() -> int:
             swift_lines = text.splitlines()
             for number, line in enumerate(swift_lines, 1):
                 code = line.split("//", 1)[0]
+                in_views = len(rel.parts) > 4 and rel.parts[2] == "Sources" and (rel.parts[3].endswith("UI") or rel.parts[3] in {"AuxWindows", "Wormhole"}) and "Driving" not in rel.parts
+                if in_views and CUT_BY_COUNT.search(code):
+                    problems.append(f"cut-by-count: {rel}:{number}: {line.strip()}  (use CutText: cut by width, not by characters)")
                 # A one-shot deadline (a debounce, a delay) is allowed when a `// one-shot:` comment says what it waits for.
                 if POLLING.search(code) and not any("one-shot:" in l for l in swift_lines[max(0, number - 3) : number]):
                     problems.append(f"no-polling: {rel}:{number}: {line.strip()}")

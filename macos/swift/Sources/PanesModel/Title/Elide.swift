@@ -1,5 +1,6 @@
-// Shortening a name or a folder to fit a row (`view/elide.rs`): by characters, the caller measuring, so it
-// is testable without fonts. A name loses its middle and keeps its extension; a folder loses its front.
+// Shortening the title row's last folder to the room the plan gives it (`view/elide.rs`): by characters, the caller
+// measuring, so it is testable without fonts. A name loses its middle and keeps its extension. A view never calls this: it
+// cuts with `CutText`, by the width the layout gives.
 
 import Foundation
 
@@ -20,17 +21,6 @@ public enum Elide {
         if room < 2 { (stem, ext, room) = (chars, [], keep - 1) }
         let head = (room + 1) / 2
         return String(stem[..<head]) + String(ellipsis) + String(stem[(stem.count - (room - head))...]) + String(ext)
-    }
-
-    /// `folder` in at most `keep` characters, cut at the front: `…/adapters/session`.
-    public static func front(_ folder: String, _ keep: Int) -> String {
-        let chars = Array(folder)
-        if chars.count <= keep { return folder }
-        if keep <= 1 { return String(ellipsis) }
-        let tail = Array(chars[(chars.count - (keep - 1))...])
-        // The longest end that starts at a separator, so it reads `…/name`, not `…me`.
-        let cut = tail.firstIndex(of: "/").map { Array(tail[$0...]) } ?? tail
-        return String(ellipsis) + String(cut)
     }
 
     /// `text` as it fits in `max`: itself when it does, else the longest `shorten(text, keep)` that does, or
