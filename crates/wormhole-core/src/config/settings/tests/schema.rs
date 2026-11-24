@@ -104,6 +104,17 @@ fn column_dividers_are_shown_until_turned_off_and_the_persons_own() {
     assert!(APP_SETTINGS.contains(&"column_dividers") && !PROJECT_SETTINGS.contains(&"column_dividers"));
 }
 
+#[test]
+fn one_background_is_on_until_turned_off_and_the_persons_own() {
+    let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+    assert!(unset.one_background, "on by default");
+    assert_eq!(Settings::default().one_background, unset.one_background);
+    let off: Settings = jsonc::parse(r#"{ "one_background": false }"#).expect("valid jsonc");
+    assert!(!off.one_background);
+    assert!(keys().contains(&"one_background".to_string()));
+    assert!(APP_SETTINGS.contains(&"one_background") && !PROJECT_SETTINGS.contains(&"one_background"));
+}
+
 /// The window's chrome and the programs a person opens: not a repository's to set. A file that still
 /// has the removed `title_border` reads, and the key is not reported as a mistake.
 #[test]

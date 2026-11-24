@@ -466,6 +466,36 @@ mod tests {
     }
 
     #[test]
+    fn the_one_background_row_is_the_swift_apps_alone() {
+        use crate::config::settings_index::{Query, search_visible};
+        use crate::platform::front_end::{FrontEnd, with_front_end};
+        let (section, _, row) = entry("one-background").expect("the row");
+        assert_eq!(section, SectionId::Appearance);
+        assert_eq!(row.keys, ["one_background"]);
+        let found = |settings: &Settings| {
+            search_visible(&Query::new("One background"), settings).iter().any(|hit| hit.entry.id == row.id)
+        };
+        let changed = |settings: &Settings| {
+            Values::of(settings).changed_rows(settings).iter().any(|changed| changed.entry.id == row.id)
+        };
+        let off = Settings { one_background: false, ..Settings::default() };
+
+        // The GPUI app: nothing shows it, whatever the key holds, and it does not count as changed.
+        with_front_end(FrontEnd::Gpui, || {
+            assert!(!row.is_shown(&Settings::default()) && !row.is_shown(&off));
+            assert!(!found(&Settings::default()), "search skips it");
+            assert!(!changed(&off), "the Changed page skips it");
+        });
+        // The Swift app: the row is there, found, and changed once it is off.
+        with_front_end(FrontEnd::Swift, || {
+            assert!(row.is_shown(&Settings::default()) && row.is_shown(&off));
+            assert!(found(&Settings::default()));
+            assert!(!changed(&Settings::default()), "on is the default");
+            assert!(changed(&off));
+        });
+    }
+
+    #[test]
     fn the_choices_of_the_changed_files_count_are_shown_only_while_it_is_shown() {
         let shown = |id: &str, settings: &Settings| {
             let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");

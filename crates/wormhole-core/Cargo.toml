@@ -67,6 +67,9 @@ notify = { version = "8.2", default-features = false, features = ["macos_fsevent
 # The saved terminal text's key in a file beside it instead of the Keychain, as debug builds do:
 # for development builds in the release profile (`wormhole/devctl` turns it on). Never shipped.
 dev-key = []
+# `platform::front_end::with_front_end`, for the tests of what only the Swift app shows (also those of the FFI
+# crate, which links this one). Never shipped.
+test-support = []
 
 [lints]
 workspace = true

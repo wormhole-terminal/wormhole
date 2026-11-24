@@ -76,6 +76,8 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("liquid-glass", liquid_glass)
         .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
         .below(glass_held_note),
+    // The row is not on the GPUI page (`front_end`); the registry has a control for every row of the table.
+    toggle!("one-background", one_background),
     Setting::custom("translucent", draw_translucent),
     toggle!("borders", borders),
     toggle!("column-dividers", column_dividers),

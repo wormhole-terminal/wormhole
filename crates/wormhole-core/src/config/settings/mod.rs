@@ -80,6 +80,11 @@ pub struct Settings {
     /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later), a beta: off,
     /// every surface is painted; see [`Settings::glass_on`].
     pub liquid_glass: bool,
+    /// The sidebar, the terminal's column, the right panel and the status bar are painted with one
+    /// colour and have no lines between them; off, each has its own colour from the theme. Only the
+    /// Swift app paints this look (its row is not in the GPUI app's Settings, `platform::front_end`),
+    /// so in a GPUI user's `config.json` the key is written and read and does nothing.
+    pub one_background: bool,
     /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later). Off, every
     /// surface is painted; see [`Settings::glass_on`].
 
@@ -350,6 +355,7 @@ impl Default for Settings {
             opacity: 0.8,
             blur: true,
             liquid_glass: false,
+            one_background: true,
             density: Density::default(),
             show_groups_as_cards: true,
             fade_group_colors: false,

@@ -51,6 +51,10 @@ settings-appearance-liquid-glass = Liquid Glass
     .description = Glass under the sidebar's and the panel's cards. Off: every surface painted.
     .keywords = glass translucent material apple tahoe cards beta
 
+settings-appearance-one-background = One background for the whole window
+    .description = The sidebar, the terminal's column, the right panel and the status bar share one colour, with no lines between them. Off, each uses its own colour from the theme. Increase Contrast keeps the lines
+    .keywords = fill colour color flat single uniform columns sidebar panel status bar tint seams lines dividers
+
 
 settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too

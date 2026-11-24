@@ -47,6 +47,11 @@ pub(super) const APPEARANCE: &[Group] = &[
                 .with_needs(|_| crate::platform::system::has_liquid_glass())
                 .with_description(SETTINGS_APPEARANCE_LIQUID_GLASS_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_LIQUID_GLASS_KEYWORDS),
+            // Only the Swift app paints the one fill, so the GPUI app's Settings has no row for it.
+            entry("one-background", SETTINGS_APPEARANCE_ONE_BACKGROUND, &["one_background"])
+                .with_needs(|_| crate::platform::front_end::is_swift())
+                .with_description(SETTINGS_APPEARANCE_ONE_BACKGROUND_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_ONE_BACKGROUND_KEYWORDS),
             entry(
                 "translucent",
                 SETTINGS_APPEARANCE_TRANSLUCENT,
