@@ -219,7 +219,9 @@ let package = Package(
     platforms: [.macOS(.v26)],
     products: [
         // The executable keeps the product's name (the updater looks for `Contents/MacOS/Wormhole`).
-        .executable(name: "Wormhole", targets: ["Wormhole"])
+        .executable(name: "Wormhole", targets: ["Wormhole"]),
+        // A scheme of its own in Xcode: a preview is built through a library's scheme, not the executable's.
+        .library(name: "DesignSystem", targets: ["DesignSystem"]),
     ],
     targets: targets
 )
