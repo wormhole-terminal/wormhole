@@ -15,7 +15,7 @@ struct SpecimenFrame<Extras: View>: View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(alignment: .firstTextBaseline, spacing: Space._2) {
                 Text(specimen.title).textCase(.uppercase).font(TextRole.caption.font.weight(.semibold)).foregroundStyle(tokens.textMuted).fixedSize()
-                Text(specimen.detail).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(1)
+                Text(specimen.detail).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
             }
             SpecimenContent.view(for: specimen.id, context: context, extras: extras).padding(Space._2)
         }

@@ -23,7 +23,21 @@ public struct Segmented<Value: Hashable>: View {
         (self.file, self.line) = (file, line)
     }
 
+    /// The track with every label whole; where the room cannot hold it, the same choices as a menu, so no label is cut.
     public var body: some View {
+        ViewThatFits(in: .horizontal) {
+            track
+            Picker(selection: $selection) {
+                ForEach(options.indices, id: \.self) { index in Text(options[index].title).tag(options[index].value) }
+            } label: {
+                EmptyView()
+            }
+            .pickerStyle(.menu).labelsHidden().fixedSize()
+            .opacity(enabled ? 1 : 0.5)
+        }
+    }
+
+    private var track: some View {
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { index in
                 segment(options[index].title, on: options[index].value == selection) { selection = options[index].value }
@@ -86,7 +100,7 @@ private struct Segment: View {
     @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        Text(title).font(tokens.font(.caption).weight(.medium)).lineLimit(1)
+        Text(title).font(tokens.font(.caption).weight(.medium)).lineLimit(1).fixedSize(horizontal: true, vertical: false)
             .foregroundStyle(on ? tokens.textOnSelected : hovering && enabled ? tokens.textPrimary : tokens.textMuted)
             .padding(.horizontal, Space._2).frame(maxHeight: .infinity)
             .background {

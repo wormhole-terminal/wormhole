@@ -21,7 +21,7 @@ struct LowContrastCard: View {
                     if index > 0 { Divider().overlay(tokens.border) }
                     VStack(alignment: .leading, spacing: Space._1) {
                         HStack {
-                            Text(issue.check.fg).codeFont().lineLimit(1).truncationMode(.middle)
+                            CutText(issue.check.fg, at: .middle).codeFont()
                             Spacer(minLength: 0)
                             RatioText(check: issue.check)
                         }

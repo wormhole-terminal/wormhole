@@ -50,8 +50,8 @@ struct SymbolRowView<Window: View>: View {
             Text(proposal.id).font(TextRole.caption.font.monospaced()).foregroundStyle(tokens.textPrimary)
                 .frame(width: Metric.row * 4, alignment: .leading).lineLimit(1)
             VStack(alignment: .leading, spacing: 0) {
-                Text(proposal.meaning).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1)
-                ForEach(detail, id: \.self) { Text($0).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(2) }
+                Text(proposal.meaning).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                ForEach(detail, id: \.self) { Text($0).font(TextRole.caption.font).foregroundStyle(tokens.textFaint) }
             }
             .frame(width: Metric.row * 11, alignment: .leading)
             today.frame(width: Metric.row * 2, alignment: .leading)

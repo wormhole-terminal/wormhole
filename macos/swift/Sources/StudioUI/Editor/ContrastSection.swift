@@ -21,7 +21,7 @@ struct ContrastSection: View {
                             .font(TextRole.caption.font).foregroundStyle(check.passes ? tokens.statusSuccess : tokens.statusWarning)
                             .frame(width: Metric.lead)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(check.fg).codeFont().lineLimit(1).truncationMode(.middle)
+                            CutText(check.fg, at: .middle).codeFont()
                             Text(StudioWords.contrastOn(check.bg == token ? token : check.bg)).font(TextRole.caption.font)
                                 .foregroundStyle(tokens.textFaint)
                         }

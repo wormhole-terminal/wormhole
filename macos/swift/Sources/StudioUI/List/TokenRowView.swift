@@ -25,16 +25,16 @@ struct TokenRowView: View {
         Row(isSelected: isSelected, selection: selection, action: select) { _ in
             HStack(spacing: Space._2) {
                 TokenSwatch(chip: value.chip).frame(width: Metric.lead + Space._1)
-                Text(name).font(TextRole.caption.font.monospaced()).lineLimit(1).truncationMode(.middle)
+                // The name is what the row is: it keeps the room it needs and the value gives way first.
+                CutText(name, at: .middle).font(TextRole.caption.font.monospaced()).layoutPriority(2)
                 if isLow { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(tokens.statusWarning).font(TextRole.caption.font) }
                 if isChanged { ChangedDot() }
                 Spacer(minLength: Space._2)
                 if let reach { reach }
                 Text(originWord)
-                    .font(TextRole.caption.font).foregroundStyle(muted)
+                    .font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1).layoutPriority(1)
                     .help(originTip)
-                Text(value.text).font(TextRole.caption.font.monospaced()).foregroundStyle(muted).lineLimit(1)
-                    .truncationMode(.tail).frame(maxWidth: StudioMetrics.valueMaxWidth, alignment: .trailing)
+                CutText(value.text).font(TextRole.caption.font.monospaced()).foregroundStyle(muted)
             }
             .frame(height: Metric.row)
             .foregroundStyle(isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary)

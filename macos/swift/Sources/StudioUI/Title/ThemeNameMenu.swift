@@ -51,8 +51,7 @@ struct ThemeNameMenu: View {
             // One Text, so the system's menu label keeps the chevron after the name.
             (Text(document.name).font(TextRole.heading.font.weight(.medium))
                 + Text(" ") + Text(Image(systemName: "chevron.down")).font(.system(size: Metric.chevron, weight: .bold)))
-                .lineLimit(1).truncationMode(.tail)
-                .frame(maxWidth: StudioMetrics.nameMaxWidth)
+                .lineLimit(1)
         }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .help(StudioWords.tooltipMenu)

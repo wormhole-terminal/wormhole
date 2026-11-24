@@ -23,7 +23,7 @@ struct NoticeRow: View {
             Image(systemName: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                 .foregroundStyle(failed ? tokens.statusWarning : tokens.statusSuccess)
             Text(text).font(TextRole.caption.font).foregroundStyle(failed ? tokens.statusWarningText : tokens.textMuted)
-                .lineLimit(2).textSelection(.enabled)
+                .textSelection(.enabled)
             Spacer(minLength: 0)
             if let file {
                 Button(StudioWords.reveal) { NSWorkspace.shared.activateFileViewerSelecting([file]) }

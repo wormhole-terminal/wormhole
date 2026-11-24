@@ -17,7 +17,7 @@ struct ColorPickerRow: View {
         HStack(spacing: Space._3) {
             ColorPicker(token, selection: binding(color), supportsOpacity: true).labelsHidden()
             VStack(alignment: .leading, spacing: 0) {
-                Text(shown(color)).font(TextRole.body.font.monospaced()).lineLimit(1).truncationMode(.middle)
+                CutText(shown(color), at: .middle).font(TextRole.body.font.monospaced())
                 Text(color.alpha >= 1 ? StudioWords.opaque : StudioWords.alpha(Int((color.alpha * 100).rounded())))
                     .font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
             }

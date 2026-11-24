@@ -17,7 +17,7 @@ struct TitleBar: View {
             Text(StudioWords.title).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
             Text("/").font(TextRole.body.font).foregroundStyle(tokens.textFaint)
             if session.renaming { NameField(session: session) } else { ThemeNameMenu(session: session, showsVersions: $showsVersions) }
-            Text(basedOn(document)).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(1)
+            CutText(basedOn(document)).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).layoutPriority(-1)
             marks(document)
             if document.isDirty {
                 Text(StudioWords.unsaved).font(TextRole.caption.font).foregroundStyle(tokens.statusWarningText)

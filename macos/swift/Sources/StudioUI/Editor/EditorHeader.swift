@@ -13,7 +13,7 @@ struct EditorHeader: View {
     var body: some View {
         EditorSection(spacing: Space._1) {
             HStack(alignment: .firstTextBaseline, spacing: Space._2) {
-                Text(token).font(TextRole.body.font.weight(.semibold).monospaced()).lineLimit(1).truncationMode(.middle)
+                CutText(token, at: .middle).font(TextRole.body.font.weight(.semibold).monospaced())
                     .textSelection(.enabled)
                 Spacer(minLength: 0)
                 Text(document.groupName(of: token) ?? "").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)

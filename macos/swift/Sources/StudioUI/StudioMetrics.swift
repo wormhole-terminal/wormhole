@@ -10,11 +10,8 @@ enum StudioMetrics {
     static let windowMin = CGSize(width: 1300, height: 640)
     static let listWidth: CGFloat = 300  // LIST_W
     static let editorWidth: CGFloat = 320  // EDITOR_W
-    /// The longest a token row's value runs before it is cut short (`VALUE_MAX_W`).
-    static let valueMaxWidth: CGFloat = 112
-    /// The name field while renaming, the most room the name takes before it is cut with "…", the Save menu.
+    /// The name field while renaming, the Save menu.
     static let nameFieldWidth: CGFloat = 200  // NAME_FIELD_W
-    static let nameMaxWidth: CGFloat = 260  // NAME_MAX_W
     static let menuWidth: CGFloat = 240  // MENU_W
     /// A metric's slider and stepper stop here (`METRIC_MAX`).
     static let metricMax: Double = 24
