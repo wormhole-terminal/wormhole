@@ -63,6 +63,12 @@ pub fn own_team_id() -> Option<String> {
     os::own_team_id()
 }
 
+/// The signing identifier in this process's own signature, if it has one. Anyone can pick one: it
+/// means something only beside a signature that names its signer, as the team id above does.
+pub fn own_identifier() -> Option<String> {
+    os::own_identifier()
+}
+
 /// Find the peer's code and check it against `requirement`.
 pub fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
     os::check_peer(stream, requirement)
@@ -120,7 +126,14 @@ pub fn of_pid(pid: u32) -> Signature {
 
 #[cfg(all(test, target_os = "macos"))]
 mod tests {
-    use super::{SignerKind, of_pid};
+    use super::{SignerKind, of_pid, own_identifier, own_team_id};
+
+    #[test]
+    fn the_own_identifier_is_the_one_the_system_reads_for_this_process() {
+        let own = own_identifier().expect("a linker signature has an identifier");
+        assert_eq!(Some(own), of_pid(std::process::id()).identifier);
+        assert_eq!(own_team_id(), None);
+    }
 
     #[test]
     fn a_test_binary_is_signed_ad_hoc_by_the_linker_and_says_its_hash() {

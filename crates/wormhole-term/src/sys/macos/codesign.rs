@@ -34,6 +34,7 @@ const CODE_GONE: i32 = 100_000 + libc::ENOENT;
 // Not in `security-framework-sys`. The framework is linked already (by that crate).
 #[allow(non_upper_case_globals, unsafe_code)] // declarations only; each call has its SAFETY note.
 unsafe extern "C" {
+    static kSecCodeInfoIdentifier: CFStringRef;
     static kSecCodeInfoTeamIdentifier: CFStringRef;
 
     fn SecCodeCopyStaticCode(code: SecCodeRef, flags: SecCSFlags, out: *mut SecStaticCodeRef) -> i32;
@@ -75,8 +76,22 @@ pub(crate) fn self_satisfies(requirement: &Requirement) -> bool {
 }
 
 /// The team id in this process's own signature, if it has one.
-#[allow(unsafe_code)] // Security framework FFI around two calls the crate does not wrap.
+#[allow(unsafe_code)] // reads a constant the framework exports.
 pub(crate) fn own_team_id() -> Option<String> {
+    // SAFETY: the key is a constant CFString that lives as long as the framework.
+    own_signing_value(&unsafe { CFString::wrap_under_get_rule(kSecCodeInfoTeamIdentifier) })
+}
+
+/// The signing identifier in this process's own signature, if it has one.
+#[allow(unsafe_code)] // reads a constant the framework exports.
+pub(crate) fn own_identifier() -> Option<String> {
+    // SAFETY: the key is a constant CFString that lives as long as the framework.
+    own_signing_value(&unsafe { CFString::wrap_under_get_rule(kSecCodeInfoIdentifier) })
+}
+
+/// The string under `key` in this process's own signing information.
+#[allow(unsafe_code)] // Security framework FFI around two calls the crate does not wrap.
+fn own_signing_value(key: &CFString) -> Option<String> {
     let code = SecCode::for_self(Flags::NONE).ok()?;
     let mut static_code: SecStaticCodeRef = std::ptr::null_mut();
     // SAFETY: `code` is a live SecCode; the call writes one owned reference (or nothing, on
@@ -98,10 +113,9 @@ pub(crate) fn own_team_id() -> Option<String> {
     // SAFETY: a Copy function's dictionary, taken once; its keys are CFStrings and its values
     // CFTypes, which is how it is read.
     let info: CFDictionary<CFString, CFType> = unsafe { CFDictionary::wrap_under_create_rule(info) };
-    // SAFETY: the key is a constant CFString that lives as long as the framework.
-    let key = unsafe { CFString::wrap_under_get_rule(kSecCodeInfoTeamIdentifier) };
-    // An ad-hoc signature has no team id: the key is missing.
-    info.find(&key)?.downcast::<CFString>().map(|team| team.to_string())
+    // A part the signature does not have (an ad-hoc one's team id, an unsigned program's identifier)
+    // is a missing key.
+    info.find(key)?.downcast::<CFString>().map(|value| value.to_string())
 }
 
 /// The peer's audit token: who is on the other end of the connection, in a form that cannot

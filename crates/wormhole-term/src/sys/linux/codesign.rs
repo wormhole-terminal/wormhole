@@ -19,6 +19,10 @@ pub(crate) fn own_team_id() -> Option<String> {
     None
 }
 
+pub(crate) fn own_identifier() -> Option<String> {
+    None
+}
+
 pub(crate) fn check_peer(_stream: &Stream, _requirement: &Requirement) -> Result<(), Refusal> {
     Ok(())
 }
