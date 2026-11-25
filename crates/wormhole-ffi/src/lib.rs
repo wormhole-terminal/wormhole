@@ -9,6 +9,9 @@
 // UniFFI's generated scaffolding is `unsafe extern "C"` code; no hand-written `unsafe` exists in
 // this crate (`macos/scripts/rules.py` checks that).
 #![allow(unsafe_code, reason = "UniFFI's generated scaffolding")]
+// The root workspace's clippy.toml refuses `fs::write` and `Command::new` outside their one place, and lets tests
+// build their own files and processes, as every crate of the workspace does for itself.
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 mod app_actions;
 mod aux_backends;
