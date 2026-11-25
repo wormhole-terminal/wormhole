@@ -79,9 +79,11 @@ struct Compiled {
     keys: Vec<u8>,
 }
 
+/// A language's name and its compiled query, `None` for one that did not compile.
+type Queries = HashMap<&'static str, Option<Arc<Compiled>>>;
+
 /// One compiled query per language, for the life of the process; `None` for one that did not compile.
-static COMPILED: LazyLock<Mutex<HashMap<&'static str, Option<Arc<Compiled>>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+static COMPILED: LazyLock<Mutex<Queries>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn compiled(grammar: Grammar) -> Option<Arc<Compiled>> {
     // A panic while the lock was held leaves at worst a language uncompiled, which is compiled again.
