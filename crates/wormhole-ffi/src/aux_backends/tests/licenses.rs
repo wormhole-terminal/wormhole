@@ -62,3 +62,33 @@ fn the_list_matches_the_lockfile() {
         .collect();
     assert!(stale.is_empty(), "run scripts/gen-licenses.py --ffi; not in Cargo.lock any more: {stale:?}");
 }
+
+/// A crate that ships no license file gets the standard text only when it declares exactly MPL-2.0 or Apache-2.0
+/// (a text with nothing to fill in), and its entry says so. The MIT, BSD and ISC crates need their holder's own
+/// line, so they stay without a text.
+#[test]
+fn a_standard_text_is_only_for_a_crate_that_declares_exactly_that_license() {
+    let file: serde_json::Value =
+        serde_json::from_str(include_str!("../../../assets/licenses.json")).expect("the bundled list parses");
+    let texts = file["texts"].as_array().expect("texts");
+    let standard = ["MPL-2.0", "Apache-2.0"];
+    let mut marked = Vec::new();
+    for entry in file["crates"].as_array().expect("crates") {
+        let name = entry["name"].as_str().expect("name");
+        let license = entry["license"].as_str().unwrap_or_default();
+        let given = entry["texts"].as_array().expect("texts of an entry");
+        if entry["standard_text"] == true {
+            assert!(standard.contains(&license), "{name} declares {license}");
+            assert_eq!(given.len(), 1, "{name}: the standard text, and nothing else");
+            let text = texts[given[0].as_u64().expect("an index") as usize].as_str().expect("a text");
+            assert!(
+                text.contains("Mozilla Public License Version 2.0") || text.contains("Apache License"),
+                "{name}"
+            );
+            marked.push(name);
+        } else if given.is_empty() {
+            assert!(!standard.contains(&license), "{name} could carry the standard text");
+        }
+    }
+    assert!(marked.contains(&"uniffi"), "the UniFFI family declares MPL-2.0 and ships no file: {marked:?}");
+}
