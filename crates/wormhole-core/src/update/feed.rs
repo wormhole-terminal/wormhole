@@ -395,6 +395,49 @@ mod tests {
     }
 
     #[test]
+    fn betas_order_below_their_release_and_the_bundles_short_version_would_hide_them() {
+        let v = |s: &str| Version::parse(s).unwrap();
+        assert!(is_newer(&v("2.0.0-beta.2"), &v("2.0.0-beta.1"), true));
+        assert!(is_newer(&v("2.0.0-beta.10"), &v("2.0.0-beta.9"), true), "numeric, not text, order");
+        assert!(!is_newer(&v("2.0.0-beta.1"), &v("2.0.0-beta.2"), true));
+        assert!(is_newer(&v("2.0.0"), &v("2.0.0-beta.2"), true));
+        // Why the updater must run as the full version (`WormholeVersion`), not `CFBundleShortVersionString`:
+        // as plain 2.0.0 it would never be offered a later beta.
+        assert!(!is_newer(&v("2.0.0-beta.2"), &v("2.0.0"), true));
+    }
+
+    #[test]
+    fn beta_offers_a_newer_beta_and_nothing_to_the_same_or_a_newer_one() {
+        let feed = feed("2.0.0-beta.2", "darwin-aarch64", "26.0", &sig());
+        let mut config = test_config("2.0.0-beta.1", "unused");
+        config.channel = UpdateChannel::Beta;
+        config.system_version = Some(Version::new(26, 1, 0));
+        let status = evaluate(feed.as_bytes(), &config).unwrap();
+        assert!(
+            matches!(status, UpdateStatus::Available(r) if r.version == Version::parse("2.0.0-beta.2").unwrap())
+        );
+        for current in ["2.0.0-beta.2", "2.0.0-beta.3", "2.0.0"] {
+            config.current_version = Version::parse(current).unwrap();
+            assert_eq!(evaluate(feed.as_bytes(), &config).unwrap(), UpdateStatus::UpToDate, "{current}");
+        }
+    }
+
+    #[test]
+    fn beta_honours_the_feeds_minimum_system_version() {
+        let feed = feed("2.0.0-beta.2", "darwin-aarch64", "26.0", &sig());
+        let mut config = test_config("2.0.0-beta.1", "unused");
+        config.channel = UpdateChannel::Beta;
+        config.system_version = Some(Version::new(15, 6, 0));
+        assert_eq!(
+            evaluate(feed.as_bytes(), &config).unwrap(),
+            UpdateStatus::Unsupported {
+                version: Version::parse("2.0.0-beta.2").unwrap(),
+                minimum_system_version: Version::new(26, 0, 0)
+            }
+        );
+    }
+
+    #[test]
     fn the_newer_feed_wins_and_an_error_only_when_nothing_answered() {
         let available = |v: &str| Ok(UpdateStatus::Available(sample_release(v)));
         let version = |r: Result<UpdateStatus, UpdateError>| match r {

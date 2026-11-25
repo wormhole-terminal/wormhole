@@ -289,6 +289,10 @@ mod unit_tests {
             feed_url("https://u.example.com", UpdateChannel::Unstable),
             "https://u.example.com/unstable/latest.json"
         );
+        assert_eq!(
+            feed_url("https://github.com/o/r/releases/download", UpdateChannel::Beta),
+            "https://github.com/o/r/releases/download/beta/latest.json"
+        );
     }
 
     #[test]

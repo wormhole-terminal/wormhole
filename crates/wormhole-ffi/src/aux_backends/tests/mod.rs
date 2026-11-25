@@ -8,5 +8,6 @@ mod hosts;
 mod imports;
 mod licenses;
 mod trust;
+mod update_beta;
 mod update_fixture;
 mod updater;

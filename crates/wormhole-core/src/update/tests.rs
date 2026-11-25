@@ -185,6 +185,51 @@ fn a_check_that_reaches_the_download_server_never_asks_github() {
 }
 
 #[test]
+fn beta_asks_its_own_feed_and_never_stables_or_unstables() {
+    let feed = br#"{"version":"0.1.0","platforms":{}}"#.to_vec();
+    let (base, seen) = serve_recording(HashMap::from([
+        ("/beta/latest.json".to_string(), feed.clone()),
+        ("/stable/latest.json".to_string(), feed.clone()),
+        ("/unstable/latest.json".to_string(), feed),
+    ]));
+    let mut config = test_config("0.1.0", "");
+    config.base_url = base;
+    config.channel = UpdateChannel::Beta;
+    assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate);
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.iter().map(|s| s.path.as_str()).collect::<Vec<_>>(), ["/beta/latest.json"]);
+}
+
+#[test]
+fn beta_with_no_feed_of_its_own_is_an_error_not_a_stable_release() {
+    let key = TestKey::generate();
+    let archive = fake_app_archive(BUNDLE_ID, "0.2.0");
+    // Only stable/latest.json is served, with a release newer than the app.
+    let mut config = publish(&key, &archive, archive.clone(), None).config;
+    config.channel = UpdateChannel::Beta;
+    assert!(matches!(check(&config), Err(UpdateError::Network(_))));
+}
+
+#[test]
+fn beta_falls_back_to_the_github_prerelease_named_beta() {
+    let feed = br#"{"version":"0.1.0","platforms":{}}"#.to_vec();
+    let (github, seen) = serve_recording(HashMap::from([
+        ("/releases/download/beta/latest.json".to_string(), feed.clone()),
+        ("/releases/latest/download/latest.json".to_string(), feed),
+    ]));
+    let mut config = test_config("0.1.0", "");
+    config.base_url = "http://127.0.0.1:1".into();
+    config.fallback_url = Some(format!("{github}/releases"));
+    config.channel = UpdateChannel::Beta;
+    assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate);
+    let seen = seen.lock().unwrap();
+    assert_eq!(
+        seen.iter().map(|s| s.path.as_str()).collect::<Vec<_>>(),
+        ["/releases/download/beta/latest.json"]
+    );
+}
+
+#[test]
 fn checksum_mismatch_is_rejected() {
     let key = TestKey::generate();
     let archive = fake_app_archive(BUNDLE_ID, "0.2.0");

@@ -307,8 +307,11 @@ impl FlagMode {
     pub fn of(dev_build: bool, channel: UpdateChannel, unlocked: bool) -> Self {
         match (dev_build, channel, unlocked) {
             (true, _, _) => Self::Dev,
-            (false, UpdateChannel::Unstable, _) | (false, UpdateChannel::Stable, true) => Self::Unstable,
-            (false, UpdateChannel::Stable, false) => Self::Release,
+            (false, UpdateChannel::Unstable, _) => Self::Unstable,
+            // Beta is never a setting (`Settings::update_channel` cannot hold it); were it asked, it is a
+            // Stable release for the flags: they show only what a release does.
+            (false, UpdateChannel::Stable | UpdateChannel::Beta, true) => Self::Unstable,
+            (false, UpdateChannel::Stable | UpdateChannel::Beta, false) => Self::Release,
         }
     }
 

@@ -1,11 +1,13 @@
 //! The updater's values as Swift reads them (`AuxModel/Update`).
 
 /// Which feeds a check reads. `Preview` is core's `UpdateChannel::Unstable` (its rename is pending: the feed
-/// path stays `unstable/latest.json` until the release workflow moves).
+/// path stays `unstable/latest.json` until the release workflow moves). `Beta` is the beta build's own
+/// feed, fixed when the build is made (`UpdateReleaseSetup::channel`): nothing switches an engine off it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum UpdateChannelRecord {
     Stable,
     Preview,
+    Beta,
 }
 
 /// Where and what to update: the release build's facts, given by the app (a dev build has no `base_url`).
@@ -59,7 +61,7 @@ pub struct UpdateAdvisoryRecord {
 }
 
 /// The release build's updater facts, baked in when the app was built (`WORMHOLE_UPDATE_URL`, `WORMHOLE_TEAM_ID`,
-/// `packaging/updater.pub`); a dev build has none.
+/// `WORMHOLE_UPDATE_CHANNEL`, `packaging/updater.pub`); a dev build has none.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct UpdateReleaseSetup {
     pub base_url: String,
@@ -67,6 +69,9 @@ pub struct UpdateReleaseSetup {
     pub team_id: Option<String>,
     /// Where the release workflow publishes, for when the download server does not answer.
     pub fallback_url: String,
+    /// The channel the build was made for: `Beta` for the beta, whose one channel is no setting (the app uses it
+    /// and ignores `update_channel`); `None` for a build whose channel is Settings'.
+    pub channel: Option<UpdateChannelRecord>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]

@@ -83,6 +83,7 @@ fn core_channel(channel: UpdateChannelRecord) -> UpdateChannel {
     match channel {
         UpdateChannelRecord::Stable => UpdateChannel::Stable,
         UpdateChannelRecord::Preview => UpdateChannel::Unstable,
+        UpdateChannelRecord::Beta => UpdateChannel::Beta,
     }
 }
 
@@ -90,6 +91,7 @@ fn record_channel(channel: UpdateChannel) -> UpdateChannelRecord {
     match channel {
         UpdateChannel::Stable => UpdateChannelRecord::Stable,
         UpdateChannel::Unstable => UpdateChannelRecord::Preview,
+        UpdateChannel::Beta => UpdateChannelRecord::Beta,
     }
 }
 
@@ -133,19 +135,41 @@ const GITHUB_RELEASES: &str = "https://github.com/wormhole-terminal/wormhole/rel
 const BUNDLE_LOOK: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// What a release build of the app knows about its updates, as the GPUI app bakes it in (`update::feed_config`): the feed
-/// from the build's `WORMHOLE_UPDATE_URL`, the minisign key, the team id and the fallback. `None` for a build made
+/// from the build's `WORMHOLE_UPDATE_URL`, the minisign key, the team id and the fallback; and, for the beta, its channel
+/// from `WORMHOLE_UPDATE_CHANNEL` (the beta has no channel setting: it reads its own feed). `None` for a build made
 /// without a feed (a dev build), which does not update itself.
 #[uniffi::export]
 pub fn update_release_setup() -> Option<UpdateReleaseSetup> {
-    release_setup(option_env!("WORMHOLE_UPDATE_URL"), option_env!("WORMHOLE_TEAM_ID"))
+    release_setup(
+        option_env!("WORMHOLE_UPDATE_URL"),
+        option_env!("WORMHOLE_TEAM_ID"),
+        option_env!("WORMHOLE_UPDATE_CHANNEL"),
+    )
 }
 
-pub(super) fn release_setup(url: Option<&str>, team: Option<&str>) -> Option<UpdateReleaseSetup> {
+/// A channel name that is not `beta` makes no setup, rather than a build on the wrong feed: a typo in the build's
+/// environment is a build that does not update itself, which the person who made it sees at once.
+pub(super) fn release_setup(
+    url: Option<&str>,
+    team: Option<&str>,
+    channel: Option<&str>,
+) -> Option<UpdateReleaseSetup> {
+    let channel = match channel.filter(|channel| !channel.is_empty()) {
+        None => None,
+        Some("beta") => Some(UpdateChannelRecord::Beta),
+        Some(other) => {
+            tracing::error!(
+                "WORMHOLE_UPDATE_CHANNEL {other:?} is not a channel a build can bake: no updates"
+            );
+            return None;
+        }
+    };
     Some(UpdateReleaseSetup {
         base_url: url.filter(|url| !url.is_empty())?.to_string(),
         public_key: include_str!("../../../../packaging/updater.pub").to_string(),
         team_id: team.filter(|id| !id.is_empty()).map(str::to_string),
         fallback_url: GITHUB_RELEASES.to_string(),
+        channel,
     })
 }
 
@@ -311,14 +335,19 @@ impl UpdateEngine {
         Ok(())
     }
 
-    /// Switches the feeds. A build of the channel left that is on its way is called off, one already installed
+    /// Switches the feeds (Stable and Preview; a beta engine stays on its own). A build of the channel left that is on its way is called off, one already installed
     /// stays and is said so; otherwise the new channel is asked at once.
     pub fn set_channel(&self, channel: UpdateChannelRecord) {
         let channel = core_channel(channel);
         let shared = &self.shared;
         let check_now = {
             let mut state = locked(&shared.state);
-            if state.channel == channel {
+            // The beta is its build's own feed, fixed when the build was made: no setting or window moves an
+            // engine onto it or off it (off it would read the GPUI app's releases as this app's updates).
+            if state.channel == channel
+                || state.channel == UpdateChannel::Beta
+                || channel == UpdateChannel::Beta
+            {
                 return;
             }
             state.channel = channel;

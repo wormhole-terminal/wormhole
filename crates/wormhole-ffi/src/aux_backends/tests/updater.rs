@@ -96,7 +96,7 @@ fn skipping_quiets_automatic_checks_but_a_manual_one_still_shows_it() {
 
 #[test]
 fn the_preview_channel_reads_its_own_feed_and_takes_the_newer() {
-    let published = publish(Offer { signer_is_trusted: true, preview: Some("0.3.0-dev.1"), security: None });
+    let published = publish(Offer { preview: Some("0.3.0-dev.1"), ..Offer::default() });
     published.engine.check(true);
     wait_for(&published, |s| offered(s).as_deref() == Some("0.2.0"));
     // Switching asks the new channel at once: the person just made a choice about updates.
@@ -212,13 +212,14 @@ fn a_bundle_replaced_while_running_is_installed_and_waits_for_a_restart() {
 
 #[test]
 fn a_release_build_has_its_feed_key_and_fallback_baked_in_and_a_dev_build_has_none() {
-    assert_eq!(crate::aux_backends::updater::release_setup(None, None), None);
-    assert_eq!(crate::aux_backends::updater::release_setup(Some(""), None), None);
+    assert_eq!(crate::aux_backends::updater::release_setup(None, None, None), None);
+    assert_eq!(crate::aux_backends::updater::release_setup(Some(""), None, None), None);
     let setup =
-        crate::aux_backends::updater::release_setup(Some("https://downloads.example"), Some("TEAM123"))
+        crate::aux_backends::updater::release_setup(Some("https://downloads.example"), Some("TEAM123"), None)
             .expect("a feed");
     assert_eq!(setup.base_url, "https://downloads.example");
     assert_eq!(setup.team_id.as_deref(), Some("TEAM123"));
     assert!(setup.public_key.contains("untrusted comment"), "the minisign key of packaging/updater.pub");
     assert!(setup.fallback_url.ends_with("/releases"));
+    assert_eq!(setup.channel, None, "its channel is Settings'");
 }

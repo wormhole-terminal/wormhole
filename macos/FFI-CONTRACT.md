@@ -464,7 +464,7 @@ hop to the main queue. Blocking calls (`HostsDesk.report`, `FirstRun.scan_agents
 
 | Object | What it is | Calls |
 |---|---|---|
-| `UpdateEngine` | core `update`: feed (`<base>/<channel>/latest.json`, GitHub fallback), version compare, download with size + sha256 + minisign check against the key given, bundle swap beside the running one, relaunch helper | `new(UpdateSetup, listener)`, `state() -> UpdateStateRecord`, `check(manual)`, `install(version)`, `skip(version)`, `set_channel(Stable\|Preview)`, `next_check_in_seconds()`, `due_at_launch()`, `restart()` |
+| `UpdateEngine` | core `update`: feed (`<base>/<channel>/latest.json`, GitHub fallback), version compare, download with size + sha256 + minisign check against the key given, bundle swap beside the running one, relaunch helper | `new(UpdateSetup, listener)`, `state() -> UpdateStateRecord`, `check(manual)`, `install(version)`, `skip(version)`, `set_channel(Stable\|Preview)` (ignored on a `Beta` engine, and `Beta` is never a target), `next_check_in_seconds()`, `due_at_launch()`, `restart()` |
 | `HostsDesk` | core `ipc::hosts` survey + report, said in the catalog's words (cards come with their facts as text) | `new(data_dir, listener)`, `set_attachments`, `set_persistent_terminals`, `follow()/unfollow()` (folder watch -> wake), `report()`, `end(id)`, `forget(id)` |
 | `TrustDesk` | core `project` trust: one project's lines, standing against the profile's `trusted-projects.json`, approval | `new(root, profile, data_dir, listener)`, `review()`, `approve_reviewed()`, `revoke()`, `follow()/unfollow()` |
 | `AccessDesk` | core `ipc::access` queue, grants and scopes for one profile | `new(profile, data_dir, listener)`, `next_question()`, `answer(id, AccessAnswer)`, `withdraw(id)`, `held()`, `revoke(id)`, `waiting()`; Rust-side `ask(resolved, need, about, waiter)` for the control socket's gate |
@@ -483,6 +483,15 @@ host 400 ms to answer, all at once. `AccessDesk.answer` settles under one mutex 
 - `TrustDesk.approve_reviewed` trusts exactly the request the last `review()` returned (a file that changed since reads
   `Changed` again). It asks nothing: Touch ID is the platform's (`Authenticating`), asked first by the Swift side.
 - The `Preview` channel is core's `UpdateChannel::Unstable` (its rename is pending; the feed path is still `unstable/`).
+- The `Beta` channel (`UpdateChannelRecord.beta`, core's `UpdateChannel::Beta`) is the beta build's own feed, `<base>/beta/latest.json`
+  (GitHub fallback `download/beta/latest.json`): it reads no other feed, takes prereleases, and is no value of the `update_channel`
+  setting. `update_release_setup()` returns it in `channel` when the library was built with `WORMHOLE_UPDATE_CHANNEL=beta` (beside
+  `WORMHOLE_UPDATE_URL` and `WORMHOLE_TEAM_ID`; any other non-empty value gives no setup at all, a build that does not update
+  itself); the app then passes it as `UpdateSetup.channel` and ignores the setting. `UpdateSetup.current_version` is the full version
+  (`WormholeVersion` of the bundle's Info.plist, else `CFBundleShortVersionString`): a beta's short version is `2.0.0` for every
+  beta, which sorts above `2.0.0-beta.2`. `UpdateSetup.bundle_id` must be the running bundle's own identifier. An install checks
+  the extracted bundle: identifier, short version, and when the bundle has a `WormholeVersion` key it must be exactly the
+  version offered (a key that is not a version refuses too); a bundle without the key is judged as before.
 - Link counters of a host (`LinkStats`) are the GPUI app's own terminals': a card of an attached host says "no connection
   counters" until the Swift workspace holds hosted terminals.
 - Not here: the control socket's gate that raises questions (only its Rust-side `ask`), the access modes and "Always" list in
