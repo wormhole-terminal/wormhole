@@ -112,7 +112,7 @@ fn only_a_trusted_project_sets_the_environment_and_the_shell() {
     )
     .expect("project config");
     let untrusted = options_of(&root, Some(&project));
-    assert!(untrusted.env.get("PROJECT_FLAG").is_none(), "an untrusted project sets nothing");
+    assert!(!untrusted.env.contains_key("PROJECT_FLAG"), "an untrusted project sets nothing");
     assert_eq!(untrusted.shell.map(|s| s.program), Some(shells::login_shell()));
 
     let profile = profile_in(&root, None);
@@ -126,7 +126,7 @@ fn only_a_trusted_project_sets_the_environment_and_the_shell() {
 
     // Project folders off: nothing, trusted or not.
     config(&root, r#"{"feature_flags": {"project_folders": false}}"#);
-    assert!(options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none());
+    assert!(!options_of(&root, Some(&project)).env.contains_key("PROJECT_FLAG"));
 }
 
 /// A revoke that could not be saved holds for a terminal's start as it does for the panel: the approvals are the
@@ -153,7 +153,7 @@ fn a_revoke_that_could_not_be_saved_still_keeps_the_projects_environment_out() {
     std::fs::set_permissions(profile.dir(), std::fs::Permissions::from_mode(0o700)).expect("writable again");
     assert!(revoked.is_err(), "the save failed");
     assert!(
-        options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none(),
+        !options_of(&root, Some(&project)).env.contains_key("PROJECT_FLAG"),
         "revoked in the process: nothing of the project reaches a new terminal"
     );
 }
