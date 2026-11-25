@@ -18,6 +18,17 @@ dialog-quit-end-all-title = Quit and End All Terminals?
 # The box under the question: whether the terminals keep running in a background helper.
 dialog-keep-running = Keep terminals running in the background
 
+## The question when the app cannot start
+
+# The title of the question an app started from its icon shows when it cannot go on. { $name } is the app's name.
+launch-failed-title = { $name } can't start
+
+# The line under the reason: where the app writes what it did. { $folder } is the folder of its logs.
+launch-failed-logs = The logs are in { $folder }.
+
+# The button that closes the question and ends the app.
+launch-failed-quit = Quit
+
 ## The questions before closing a terminal, a group or a window
 
 # { $name } is the terminal's name in the sidebar.

@@ -181,6 +181,7 @@ final class AppController: NSObject, NSApplicationDelegate {
             try open()
         } catch {
             FileHandle.standardError.write(Data("cannot start: \(error)\n".utf8)) // text: a stderr line
+            LaunchFailure.show(error, options: options, dataDirectory: dataDirectory)
             exit(1)
         }
     }
