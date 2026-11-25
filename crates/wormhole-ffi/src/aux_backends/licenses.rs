@@ -1,10 +1,12 @@
-//! The open-source software Wormhole is built from (`update::licenses`, `assets/licenses.json`): what the
-//! About window's Licenses list shows. Core's list is the one compiled into the library; identical texts are
-//! stored once and shared by index, as the file has them.
+//! The open-source software the Swift app is built from (`assets/licenses.json`, written by
+//! `scripts/gen-licenses.py --ffi` from this workspace's `Cargo.lock`): what the About window's Licenses
+//! list shows. It is this library's own list, not core's: the 1.x app links GPUI and not UniFFI. Identical
+//! texts are stored once and shared by index, as the file has them.
 
-use std::collections::HashMap;
+use anyhow::{Result, ensure};
+use serde::Deserialize;
 
-use wormhole_core::update::licenses::{Kind, Licenses};
+const BUNDLED: &str = include_str!("../../assets/licenses.json");
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct LicensePackageRecord {
@@ -25,31 +27,77 @@ pub struct LicensesRecord {
     pub packages: Vec<LicensePackageRecord>,
 }
 
-/// Every package and the license texts shipped in it.
+/// What an entry of the file is. Core's own reader knows only the first two; the icons and logos the Swift app
+/// bundles are a third, which is why this library reads the file itself.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Kind {
+    /// A Rust crate from Cargo.lock.
+    #[default]
+    Crate,
+    Font,
+    Icons,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Entry {
+    pub(crate) name: String,
+    pub(crate) version: String,
+    license: Option<String>,
+    repository: Option<String>,
+    texts: Vec<u32>,
+    #[serde(default)]
+    pub(crate) kind: Kind,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct List {
+    texts: Vec<String>,
+    pub(crate) crates: Vec<Entry>,
+}
+
+impl List {
+    pub(crate) fn parse(json: &str) -> Result<List> {
+        let list: List = serde_json::from_str(json)?;
+        for entry in &list.crates {
+            ensure!(
+                entry.texts.iter().all(|&index| (index as usize) < list.texts.len()),
+                "{} {} points at a license text that does not exist",
+                entry.name,
+                entry.version
+            );
+        }
+        Ok(list)
+    }
+}
+
+/// Every package and the license texts shipped in it. Empty (and logged) if the bundled file is broken,
+/// which a test rules out.
 #[uniffi::export]
 pub fn licenses() -> LicensesRecord {
-    let list = Licenses::bundled();
-    let mut texts: Vec<String> = Vec::new();
-    let mut index: HashMap<&str, u32> = HashMap::new();
-    let packages = list
-        .crates()
-        .iter()
-        .map(|package| LicensePackageRecord {
-            name: package.name.clone(),
-            version: package.version.clone(),
-            license: package.license.clone(),
-            repository: package.repository.clone(),
-            texts: list
-                .texts_of(package)
-                .map(|text| {
-                    *index.entry(text).or_insert_with(|| {
-                        texts.push(text.to_string());
-                        u32::try_from(texts.len() - 1).unwrap_or(u32::MAX)
-                    })
-                })
-                .collect(),
-            is_font: package.kind == Kind::Font,
-        })
-        .collect();
-    LicensesRecord { texts, packages }
+    match List::parse(BUNDLED) {
+        Ok(list) => list.into(),
+        Err(err) => {
+            tracing::error!("the bundled license list is unreadable: {err:#}");
+            LicensesRecord { texts: Vec::new(), packages: Vec::new() }
+        }
+    }
+}
+
+impl From<List> for LicensesRecord {
+    fn from(list: List) -> Self {
+        let packages = list
+            .crates
+            .into_iter()
+            .map(|entry| LicensePackageRecord {
+                is_font: entry.kind == Kind::Font,
+                name: entry.name,
+                version: entry.version,
+                license: entry.license,
+                repository: entry.repository,
+                texts: entry.texts,
+            })
+            .collect();
+        LicensesRecord { texts: list.texts, packages }
+    }
 }
