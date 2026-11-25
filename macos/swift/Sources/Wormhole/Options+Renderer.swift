@@ -27,9 +27,19 @@ extension Options {
         )
     }
 
-    /// The repository's bundled fonts, found by walking up from the executable and from the working folder.
+    /// The bundled fonts: the ones an app bundle ships in its resources, else the repository's, found by walking up from the
+    /// executable and from the working folder (a dev build, which has no bundle).
     static func findBundledFonts() -> URL? {
-        findInRepository("crates/wormhole-core/assets/fonts/JetBrainsMono", containing: "JetBrainsMono-Regular.ttf")
+        shippedFonts(in: Bundle.main.resourceURL)
+            ?? findInRepository("crates/wormhole-core/assets/fonts/JetBrainsMono", containing: "JetBrainsMono-Regular.ttf")
+    }
+
+    /// `Fonts/JetBrainsMono` in an app's resources folder (`macos/scripts/bundle.sh` puts the four faces and the licence there),
+    /// when the regular face is in it.
+    static func shippedFonts(in resources: URL?) -> URL? {
+        guard let folder = resources?.appendingPathComponent("Fonts/JetBrainsMono", isDirectory: true) else { return nil }
+        let regular = folder.appendingPathComponent("JetBrainsMono-Regular.ttf")
+        return FileManager.default.fileExists(atPath: regular.path) ? folder : nil
     }
 
     /// `relative` (a folder, or a file when `containing` is nil) inside the repository this was built from.
