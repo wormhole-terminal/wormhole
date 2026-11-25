@@ -3,6 +3,8 @@
 //! choice once more where the program starts, `terminal::process::shell`). It is what keeps a test instance started
 //! with `/bin/cat` from ever running a real shell. The variable itself is the process's and is not set here.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

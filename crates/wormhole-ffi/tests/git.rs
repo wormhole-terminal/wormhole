@@ -3,6 +3,8 @@
 //! details and stashes; the watch; and the worktree round trip. Real git, real core, no mocks. The worktree
 //! list is kept in the data folder `crates/wormhole-ffi/.cargo/config.toml` gives the tests (`Wormhole-swift-cargo-test`).
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
