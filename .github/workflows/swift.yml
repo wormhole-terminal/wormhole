@@ -66,6 +66,13 @@ jobs:
           cargo --version
       - name: Rust library and bindings
         run: macos/scripts/build-ffi.sh swift
+      # The bridge is a cargo workspace of its own, so the CI workflow's fmt, clippy and tests never reach it:
+      # the same three commands scripts/check.sh runs for it.
+      - name: The bridge's format, lints and tests
+        run: |
+          cargo fmt --manifest-path crates/wormhole-ffi/Cargo.toml --all -- --check
+          cargo clippy --quiet --manifest-path crates/wormhole-ffi/Cargo.toml --workspace --all-targets -- -D warnings
+          cargo test --quiet --manifest-path crates/wormhole-ffi/Cargo.toml
       - name: Release build
         working-directory: macos/swift
         run: swift build -c release
@@ -115,9 +122,8 @@ jobs:
       - name: Failures, if any
         if: failure()
         run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" "$RUNNER_TEMP/swift-e2e.log" 2> /dev/null | sort -u | head -80 || true
-      # Reserved, for the two checks whose lanes are finishing them (each lands with its own step here):
-      #   - the Swift static checks: macos/scripts/quality.sh
-      #   - the bridge crate's fmt, clippy and tests, as scripts/check.sh runs them
+      # Not here yet: the Swift static checks (macos/scripts/quality.sh). Its no-polling rule still names waits in
+      # the tests and five in the app; the step lands with the change that clears them.
 
   # Wormhole Beta as it ships, without a secret: macos/scripts/bundle.sh builds the universal app with this runner's
   # newest Xcode and `--build-system swiftbuild` and signs it ad hoc, and macos/scripts/check-bundle.sh checks it and
