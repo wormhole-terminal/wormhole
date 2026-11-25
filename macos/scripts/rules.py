@@ -20,7 +20,7 @@ Rules, each with the reason it exists:
                  end-to-end tests' harness (`Tests/EndToEndTests`), where a `// process: <what it runs>` comment on
                  the line or the two above says what is started; the comment excuses nothing anywhere else.
 
-Generated and built files (dist/, target/, .build/, the links build-ffi.sh makes) are skipped.
+Generated and built files (dist/, target/, .build/, what build-ffi.sh links or copies in) are skipped.
 Exit status 1 and a line per violation when a rule is broken.
 """
 
@@ -37,7 +37,11 @@ BRIDGE = REPO / "crates" / "wormhole-ffi"
 
 SKIP_DIRS = {"target", ".build", "dist", ".git"}
 # What build-ffi.sh links or generates inside a package.
-GENERATED = [re.compile(r"(^|/)Sources/WormholeBindings(/|$)"), re.compile(r"\.xcframework(/|$)")]
+# The intro's shader is the GPUI app's own, copied in (git-ignored); its `common.metal` is that app's file, held to that app's rules.
+GENERATED = [
+    re.compile(r"(^|/)Sources/WormholeBindings(/|$)"), re.compile(r"\.xcframework(/|$)"),
+    re.compile(r"(^|/)Sources/AuxWindows/Resources/shader(/|$)"),
+]
 SOURCE_SUFFIXES = {".rs", ".swift", ".py", ".sh", ".metal"}
 BUCKET_NAMES = {"utils", "util", "helpers", "helper", "common", "misc"}
 LIMIT = 1000
