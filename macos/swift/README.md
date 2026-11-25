@@ -30,7 +30,7 @@ shell does not have it. In the beta's folder the agent and import homes are the 
 It never reads or writes the 1.x app's folder, and a launch that fails shows why in an alert when it was started as an app
 (never a `--background` or test instance).
 
-The real engine: `macos/scripts/build-ffi.sh macos/swift` links `WormholeFFI.xcframework` and the generated
+The real engine: `macos/scripts/build-ffi.sh swift` links `WormholeFFI.xcframework` and the generated
 bindings into this package, and the next `swift build` adds `Sources/UniFFISource`; then
 `WORMHOLE_SHELL=/bin/zsh .build/release/Wormhole` (or `--shell <program>`) runs it on the real terminal.
 With the FFI linked the window is the Rust workspace's too: `WorkspaceBridge` keeps the terminal list (order, pins, groups,
@@ -51,6 +51,22 @@ Screenshots without a window or Screen Recording permission (a texture readback 
 .build/release/Wormhole --render-png out/gallery --mock unicode --grid 100x30           # out/gallery-0001.png
 .build/release/Wormhole --render-png out/matrix --mock matrix --frames 40 --png-every 40
 ```
+
+## The beta's app bundle
+
+```sh
+macos/scripts/bundle.sh                 # "Wormhole Beta.app" in macos/dist/: universal, ad-hoc signed
+APPLE_SIGNING_IDENTITY="Developer ID Application: Name (TEAMID)" macos/scripts/bundle.sh   # a real signature (the workflow's)
+```
+
+It builds the shipped library (`build-ffi.sh --shipped`: both architectures, no `dev-key`, the update feed, channel and team baked in), the
+session host from the root workspace and a release build of the app, and puts them in a bundle that needs nothing of this checkout:
+the resource bundles (themes, keymap, icons, shaders) are in `Contents/Resources`, JetBrains Mono and its licence in
+`Contents/Resources/Fonts/JetBrainsMono`, the host beside the executable. The resource bundles are found there because the app is built
+with `swift build --build-system swiftbuild`; SwiftPM's older build system looks at the bundle's root and then at an absolute path into
+the build folder, which a user's Mac does not have, so `bundle.sh` always names the one it needs and refuses a binary that holds a path
+of the builder's Mac. The package is linked to the shipped library only while the script runs, and back to the dev one after it. The
+script's header lists what it reads from the environment.
 
 ## Layout
 
