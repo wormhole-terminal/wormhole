@@ -40,3 +40,5 @@ ce289a1171ccd3b38be77f1c8b0e95abb6c46a1f
 b9a2363d7e07645ae1d13080cb9e93db29ff468f
 # refactor(macos): the Swift app moves to macos/, its bridge crate to crates/wormhole-ffi
 ccac3f2eb702b9dd7b1fc9525c0c09a281d08d44
+# style(ffi): cargo fmt over the bridge
+29e0fea11b51a507672b6255156b5019fe674e0c
