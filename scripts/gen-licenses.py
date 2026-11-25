@@ -14,7 +14,10 @@ It lists the crates the app is built from on macOS (normal dependencies of the
 workspace crates, for both architectures we ship; not dev- or build-only ones, and not
 this repository's own crates), with each crate's declared license and the text of the
 license files in its package. Crates whose package ships no license file get an empty
-text list, and the window says so. Identical texts are stored once. What is compiled in
+text list, and the window says so; with --ffi, one that declares exactly MPL-2.0 or exactly
+Apache-2.0 (licenses with a fixed text and nothing to fill in) gets that standard text from
+`STANDARD_TEXTS` instead, and its entry says `"standard_text": true`. MIT, BSD and ISC need the
+copyright holder's own line, so those stay empty. Identical texts are stored once. What is compiled in
 without being a crate (the bundled font; for the Swift app also its icons and logos) is
 listed from `ASSETS` and `FFI_ASSETS` below, marked with its `kind`.
 
@@ -35,6 +38,13 @@ FFI_OUT = os.path.join(FFI_DIR, "assets", "licenses.json")
 FFI_ROOT_PACKAGE = "wormhole-ffi"
 TARGETS = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 LICENSE_PREFIXES = ("LICENSE", "LICENCE", "COPYING", "UNLICENSE", "NOTICE")
+# The licenses whose text is the same for everyone (no year, no holder to fill in), by SPDX identifier, for a
+# crate that declares exactly that one and ships no license file. Copied unmodified from crates' own license
+# files (`assets/license-texts/README.md` says which, and how they were compared).
+STANDARD_TEXTS = {
+    "Apache-2.0": os.path.join(FFI_DIR, "assets", "license-texts", "Apache-2.0.txt"),
+    "MPL-2.0": os.path.join(FFI_DIR, "assets", "license-texts", "MPL-2.0.txt"),
+}
 
 # Compiled into the app without being a crate: each with its license file, relative to ROOT.
 # Update the version with the files (the folder's README says which release they are).
@@ -224,7 +234,13 @@ def build(ffi):
             packages[package["id"]] = package
         ids |= shipped_ffi(meta, target) if ffi else shipped(meta)
 
-    entries = [(p, [read_text(path) for path in license_files(p)]) for p in (packages[i] for i in ids)]
+    entries = []
+    for package in (packages[i] for i in ids):
+        found = [read_text(path) for path in license_files(package)]
+        standard = ffi and not found and package.get("license") in STANDARD_TEXTS
+        if standard:
+            found = [read_text(STANDARD_TEXTS[package["license"]])]
+        entries.append(({**package, "standard_text": True} if standard else package, found))
     for asset in FFI_ASSETS if ffi else ASSETS:
         found = [read_text(os.path.join(ROOT, f)) for f in asset.get("files", [])]
         found += [fenced_block(os.path.join(ROOT, f), heading) for f, heading in asset.get("sections", [])]
@@ -252,6 +268,8 @@ def build(ffi):
         }
         if "kind" in package:
             entry["kind"] = package["kind"]
+        if package.get("standard_text"):
+            entry["standard_text"] = True
         crates.append(entry)
 
     # One line per text and per crate, so a regeneration diffs readably.
