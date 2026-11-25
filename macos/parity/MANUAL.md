@@ -166,3 +166,7 @@ Start a normal (not `--background`) instance as in the setup above, with a shell
 T12. Find: ⌘F, type a word that is on screen more than once, press ↩ then ⇧↩ in the field. **Expect** the current match (the one painted
     apart) to move to the next and the previous match, round the ends, scrolling the history when the match is in it. (An injected key never
     reaches SwiftUI's own key handling, so only a real keyboard shows it; ⌘G and ⇧⌘G do the same and `FindTypedTests` proves them.)
+T01, T03. Blink: with the window in front run `printf '\e[5mblink\e[0m\n'` and `printf '\e[5 q'`. **Expect** the word to fade out and in once a
+    second, together in every pane, and the cursor to blink as DECSCUSR 5 says; with Reduce Motion on (System Settings → Accessibility → Display)
+    both stay steady, and with the window behind another app both stay steady (the clock runs only for the key window, so a `--background`
+    instance shows them steady: the steady "on" half is what `DrawnStylesTests/drawnFacesAndLines` proves).
