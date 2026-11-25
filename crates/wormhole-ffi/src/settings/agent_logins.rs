@@ -24,7 +24,7 @@ use crate::isolation;
 
 /// One profile's login of an agent.
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
-pub struct SettingsAgentLogin {
+pub(crate) struct SettingsAgentLogin {
     /// The agent's command (`claude`): the id `settings_set_login_hooks` takes.
     pub agent: String,
     /// The profile's name.
@@ -129,7 +129,7 @@ fn resolved_within(root: &Path, dir: &Path) -> Option<PathBuf> {
 /// Every profile's login of an agent with the hooks' state there. Reads each login's config: call it off the main
 /// thread, with the agents' list.
 #[uniffi::export]
-pub fn settings_agent_logins() -> Result<Vec<SettingsAgentLogin>, SettingsError> {
+pub(crate) fn settings_agent_logins() -> Result<Vec<SettingsAgentLogin>, SettingsError> {
     isolation::require()?;
     Ok(logins_in(&DataRoot::current()))
 }
@@ -137,7 +137,11 @@ pub fn settings_agent_logins() -> Result<Vec<SettingsAgentLogin>, SettingsError>
 /// Installs (`install`) or removes Wormhole's status hooks of `agent` in the login folder `dir` of a profile. Refuses
 /// unless `WORMHOLE_AGENT_HOME` names a folder of its own that holds `dir`.
 #[uniffi::export]
-pub fn settings_set_login_hooks(agent: String, dir: String, install: bool) -> Result<(), SettingsError> {
+pub(crate) fn settings_set_login_hooks(
+    agent: String,
+    dir: String,
+    install: bool,
+) -> Result<(), SettingsError> {
     isolation::require()?;
     set_login_hooks_in(&agent_home_for_writing()?, &agent, &PathBuf::from(dir), install)
 }

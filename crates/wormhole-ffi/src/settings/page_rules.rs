@@ -10,7 +10,7 @@ use super::handle::SettingsHandle;
 /// Whether the desktop would show sharp behind the text: translucent without the blur, below the opacity text can be
 /// judged at (core's `Translucency::unsafe_without_blur`). The Appearance page warns under the Blur row while it holds.
 #[uniffi::export]
-pub fn settings_blur_unsafe(opacity: f32, blur: bool) -> bool {
+pub(crate) fn settings_blur_unsafe(opacity: f32, blur: bool) -> bool {
     Translucency { opacity, blur }.unsafe_without_blur()
 }
 

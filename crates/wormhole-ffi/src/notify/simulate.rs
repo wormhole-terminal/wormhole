@@ -8,7 +8,7 @@ use super::{NoticeKindRecord, NoticeLevelRecord, NotifySettingsRecord};
 
 /// The rules' answer for one event.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct NotifySimRecord {
+pub(crate) struct NotifySimRecord {
     /// A system banner is delivered (else nothing is).
     pub banner: bool,
     pub level: NoticeLevelRecord,
@@ -23,7 +23,7 @@ pub struct NotifySimRecord {
 /// Wormhole in front or not, under `settings`.
 #[uniffi::export]
 #[allow(clippy::too_many_arguments)]
-pub fn notify_simulate(
+pub(crate) fn notify_simulate(
     kind: NoticeKindRecord,
     settings: NotifySettingsRecord,
     looking: bool,

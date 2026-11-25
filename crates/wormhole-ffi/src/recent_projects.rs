@@ -16,7 +16,7 @@ fn read(store: &Store) -> Vec<String> {
 
 /// What profile `profile` remembers (nothing for an unknown profile or outside an isolated instance).
 #[uniffi::export]
-pub fn recent_projects_load(profile: String) -> Vec<String> {
+pub(crate) fn recent_projects_load(profile: String) -> Vec<String> {
     crate::profile::dir_of(&profile)
         .and_then(|dir| Store::open_at(&dir).ok())
         .map(|store| read(&store))
@@ -25,7 +25,7 @@ pub fn recent_projects_load(profile: String) -> Vec<String> {
 
 /// `root` was just worked in: it leads profile `profile`'s list, which is kept. Returns the list as it is now.
 #[uniffi::export]
-pub fn recent_projects_remember(profile: String, root: String) -> Vec<String> {
+pub(crate) fn recent_projects_remember(profile: String, root: String) -> Vec<String> {
     let Some(store) = crate::profile::dir_of(&profile).and_then(|dir| Store::open_at(&dir).ok()) else {
         return Vec::new();
     };

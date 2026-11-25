@@ -12,34 +12,34 @@ use crate::keymap::records::KeySpecRecord;
 /// The paragraph (the lines around the cursor up to the nearest blank lines) that holds the character at
 /// `cursor`, a count of UTF-8 bytes into `text`. Empty on a blank line: sending then sends nothing.
 #[uniffi::export]
-pub fn note_paragraph_at(text: String, cursor: u64) -> String {
+pub(crate) fn note_paragraph_at(text: String, cursor: u64) -> String {
     paragraphs::paragraph_at(&text, usize::try_from(cursor).unwrap_or(usize::MAX))
 }
 
 /// A note's title: its first non-empty line without the marks of a list or a heading; none when the note is blank.
 #[uniffi::export]
-pub fn note_title(text: String) -> Option<String> {
+pub(crate) fn note_title(text: String) -> Option<String> {
     paragraphs::note_title(&text)
 }
 
 /// What an open note shows under its title: the text after the title's line without the blank lines around it;
 /// none for a note that is its title alone.
 #[uniffi::export]
-pub fn note_body(text: String) -> Option<String> {
+pub(crate) fn note_body(text: String) -> Option<String> {
     paragraphs::note_body(&text).map(str::to_string)
 }
 
 /// How many of an open note's `lines` (as wrapped on screen) show: none for all of them, while it is being edited,
 /// after "Show all" or when it is short enough.
 #[uniffi::export]
-pub fn note_cap(lines: u64, editing: bool, show_all: bool) -> Option<u64> {
+pub(crate) fn note_cap(lines: u64, editing: bool, show_all: bool) -> Option<u64> {
     let lines = usize::try_from(lines).unwrap_or(usize::MAX);
     panel::note_cap(lines, editing, show_all).map(|cap| cap as u64)
 }
 
 /// What `key` does in the editor of a note or a next step that every item shares, as the keymap has it now.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum ItemKeyRecord {
+pub(crate) enum ItemKeyRecord {
     /// Back to the terminal.
     Leave,
     /// Delete the empty item and carry on in the one above.
@@ -52,7 +52,7 @@ pub enum ItemKeyRecord {
 
 /// `view::notes::keys::item_key` for a key press; `empty` is that the editor holds nothing.
 #[uniffi::export]
-pub fn note_item_key(key: KeySpecRecord, empty: bool) -> Option<ItemKeyRecord> {
+pub(crate) fn note_item_key(key: KeySpecRecord, empty: bool) -> Option<ItemKeyRecord> {
     let spec = KeySpec::from(&key);
     let plain = spec.mods == KeyMods::default();
     item_key(&spec.key, plain, empty, || keymap::list_action(&spec)).map(|key| match key {
@@ -66,7 +66,7 @@ pub fn note_item_key(key: KeySpecRecord, empty: bool) -> Option<ItemKeyRecord> {
 /// What closing a terminal says of its `open_items` notes and tasks ("notes and tasks are discarded."), or nothing when none
 /// are open; the close question puts "Its" or "Their" before it.
 #[uniffi::export]
-pub fn notes_close_stake(open_items: u64) -> Option<String> {
+pub(crate) fn notes_close_stake(open_items: u64) -> Option<String> {
     stake::discarded(usize::try_from(open_items).unwrap_or(usize::MAX)).map(str::to_string)
 }
 

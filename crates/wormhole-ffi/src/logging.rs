@@ -23,7 +23,7 @@ fn dir() -> std::path::PathBuf {
 
 /// Install the subscriber and the panic hook, once, at launch (a second call does nothing). Returns the logs folder.
 #[uniffi::export]
-pub fn logging_start() -> String {
+pub(crate) fn logging_start() -> String {
     GUARD.get_or_init(|| {
         let guard = init();
         install_panic_hook();
@@ -34,7 +34,7 @@ pub fn logging_start() -> String {
 
 /// One line from the Swift side into the same files; `level` is `error`, `warn`, `info` or `debug`.
 #[uniffi::export]
-pub fn log_line(level: String, message: String) {
+pub(crate) fn log_line(level: String, message: String) {
     match level.as_str() {
         "error" => tracing::error!(target: "swift", "{message}"),
         "warn" => tracing::warn!(target: "swift", "{message}"),
@@ -117,7 +117,7 @@ fn panic_report(thread: &str, message: &str, location: &str, backtrace: &str) ->
 /// The data folder's files an earlier version made with the umask's modes become owner-only (core's rule; the GPUI app
 /// runs it on a thread of its own at launch, so this does too and never holds up the launch).
 #[uniffi::export]
-pub fn make_data_dir_private() {
+pub(crate) fn make_data_dir_private() {
     let _ = std::thread::Builder::new().name("private-data".into()).spawn(|| {
         wormhole_core::storage::store::make_data_dir_private(&wormhole_core::storage::paths::data_dir());
     });

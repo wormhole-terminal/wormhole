@@ -12,7 +12,7 @@ use wormhole_core::storage::store::migrate_legacy_data;
 
 /// What was brought forward, for the log.
 #[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
-pub struct LegacyUpgrades {
+pub(crate) struct LegacyUpgrades {
     /// The data folder moved from the old name to the new (its path); none when there was none to move.
     pub moved_data_folder: Option<String>,
     /// The agents whose old hooks were replaced with today's.
@@ -24,7 +24,7 @@ pub struct LegacyUpgrades {
 /// The data folder of the old name moves to the new one, once, and only when no `WORMHOLE_DATA_DIR` names another (core's
 /// rule). Before anything opens a file in the data folder.
 #[uniffi::export]
-pub fn legacy_move_data_folder() -> LegacyUpgrades {
+pub(crate) fn legacy_move_data_folder() -> LegacyUpgrades {
     let mut done = LegacyUpgrades::default();
     match migrate_legacy_data() {
         Ok(moved) => done.moved_data_folder = moved.map(|path| path.display().to_string()),
@@ -36,7 +36,7 @@ pub fn legacy_move_data_folder() -> LegacyUpgrades {
 /// Agent hooks an earlier version installed under its old names are replaced with today's, for each agent that has any in the
 /// home `agent_home` (else the person's, or `WORMHOLE_AGENT_HOME`); an agent without any is left alone.
 #[uniffi::export]
-pub fn legacy_replace_agent_hooks(agent_home: Option<String>) -> LegacyUpgrades {
+pub(crate) fn legacy_replace_agent_hooks(agent_home: Option<String>) -> LegacyUpgrades {
     let home = agent_home.map_or_else(integrations::home, |home| Path::new(&home).to_path_buf());
     let mut done = LegacyUpgrades::default();
     for (agent, result) in integrations::upgrade_legacy(&home) {

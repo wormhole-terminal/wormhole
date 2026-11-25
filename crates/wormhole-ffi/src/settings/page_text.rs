@@ -31,14 +31,14 @@ pub fn settings_reset_question(count: u32) -> String {
 
 /// "7 settings changed", the Changed page's summary.
 #[uniffi::export]
-pub fn settings_changed_summary_line(count: u32) -> String {
+pub(crate) fn settings_changed_summary_line(count: u32) -> String {
     settings_changed_summary(whole(count))
 }
 
 /// "The list of profiles couldn't be read, so it was set aside and rebuilt: <why>": the Profile page's banner while
 /// `profiles.json` was recovered at launch; `None` when it read.
 #[uniffi::export]
-pub fn settings_profiles_problem() -> Option<String> {
+pub(crate) fn settings_profiles_problem() -> Option<String> {
     crate::profile::recovered().map(|message| settings_window_profiles_unreadable(&message))
 }
 
