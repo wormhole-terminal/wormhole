@@ -12,11 +12,8 @@ publish.workspace = true
 crate-type = ["staticlib", "lib"]
 
 [dependencies]
-# `dev-key`: Probe approvals and the other sealed stores keep their keys in files of the experiment's own data
-# folder, never in the login Keychain (the experiment never touches it); drop it when the Swift app ships.
-# `dev-key`: the saved text's key lives in a file beside it, never in the login Keychain: this crate only runs in
-# `Wormhole-swift*` data folders (`isolation`), and an experiment must not leave items in anyone's Keychain.
-wormhole-core = { path = "../wormhole-core", features = ["dev-key"] }
+# Its `dev-key` feature is this crate's own (below), so a shipped build can leave it out.
+wormhole-core = { path = "../wormhole-core" }
 wormhole-term = { path = "../wormhole-term" }
 wormhole-text = { path = "../wormhole-text" }
 anyhow = "1"
@@ -53,6 +50,12 @@ tree-sitter-typescript = "0.23"
 tree-sitter-yaml = "0.7"
 
 [features]
+# On by default, which is every dev and test build: Probe approvals, the saved text's key and the other sealed stores
+# keep their keys in files of the data folder, never in the login Keychain, so an experiment leaves nothing in anyone's
+# Keychain. The shipped build is made with `--no-default-features`: its keys are in the Keychain, as 1.x's are.
+# `isolation` ties the two together: a library that keeps keys in files only opens `Wormhole-swift*` folders.
+default = ["dev-key"]
+dev-key = ["wormhole-core/dev-key"]
 # `perf-counters`: the terminal layer's reader and lock counters, for the Swift app's `perf-profile` (a build
 # made to measure turns it on; the shipped library never has it, and `perf-profile` then says the reader was not counted).
 perf-counters = ["wormhole-term/perf-counters"]
