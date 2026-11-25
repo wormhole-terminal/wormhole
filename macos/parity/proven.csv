@@ -1,6 +1,6 @@
 id,proven,manual,unproven_auto,recorded,hosted_cut,unproven
 T01,85,5,10,5,5,"the blink flip in a key window (MANUAL.md T01); the visual-run pass against GPUI (s2-terminal/visual-table.md) is a recorded harness run, not in the suite; hosted terminal only shown drawing plain text"
-T02,35,0,65,35,5,"fallback glyph actually drawn (the test asserts a counter, not a picture); ZWJ/flag/skin-tone/Indic marks shaped and drawn; font_features string; variation selectors; hosted"
+T02,80,0,20,15,5,"the font_features string beyond the ligatures switch; variation selectors; Indic shaping beyond that the cluster is drawn; hosted"
 T03,82,8,10,0,5,"theme cursor-text colour; the outline of a pane without the keys is read out (CursorTests) and not read from the picture; cursor shapes in a hosted terminal"
 T04,90,0,10,0,6,"drag autoscroll actually scrolling the history (PointerTests only checks a timer exists, on a mock); word/line/block selection in a hosted terminal"
 T05,85,8,7,0,7,"the hover through the window server and a real window gaining or losing the keys (MANUAL.md T05); back and forward buttons; mouse reporting in a hosted terminal"
