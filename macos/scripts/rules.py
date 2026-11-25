@@ -16,9 +16,10 @@ Rules, each with the reason it exists:
   cut-by-count   a view never cuts text by a count of characters: no `Elide.` and no `.prefix(...)` joined to an "…" in a ui
                  target (`...UI`, `AuxWindows`) or the app (its `Driving/` dev tooling aside); `CutText` (DesignSystem) cuts by
                  the width the layout gives;
-  no-process     the Swift sources never spawn a process (everything goes through the seam). The one exception is the
-                 end-to-end tests' harness (`Tests/EndToEndTests`), where a `// process: <what it runs>` comment on
-                 the line or the two above says what is started; the comment excuses nothing anywhere else.
+  no-process     the Swift sources never spawn a process (everything goes through the seam). The exceptions are the two
+                 fixtures that need a program of their own, the end-to-end tests' harness (`Tests/EndToEndTests`: the app under
+                 test) and the git bridge's throwaway repositories (`Tests/GitBridgeTests`: git), where a `// process: <what it
+                 runs>` comment on the line or the two above says what is started; the comment excuses nothing anywhere else.
 
 Generated and built files (dist/, target/, .build/, what build-ffi.sh links or copies in) are skipped.
 Exit status 1 and a line per violation when a rule is broken.
@@ -50,6 +51,7 @@ POLLING = re.compile(r"\bTimer\.(scheduledTimer|publish)\b|\bTask\.sleep\b")
 # A view cuts by width, through `CutText`; these cut by a number of characters. `Elide` is the title row's measured path
 # (PanesModel), a model, so only the ui targets and the app are held to it.
 CUT_BY_COUNT = re.compile(r"\bElide\.|\.prefix\([^)]*\)[^\n]*\"…\"|\"…\"[^\n]*\.prefix\(")
+PROCESS_FIXTURES = {"EndToEndTests", "GitBridgeTests"}
 PROCESS = re.compile(r"\bProcess\(\)|\bNSTask\b|\bposix_spawn\b")
 UNSAFE_RUST = re.compile(r"\bunsafe\b")
 
@@ -89,9 +91,9 @@ def main() -> int:
                 # A one-shot deadline (a debounce, a delay) is allowed when a `// one-shot:` comment says what it waits for.
                 if POLLING.search(code) and not any("one-shot:" in l for l in swift_lines[max(0, number - 3) : number]):
                     problems.append(f"no-polling: {rel}:{number}: {line.strip()}")
-                # A `// process: <what it runs>` comment on the line or the two above marks the one place that starts a program
-                # on purpose (the end-to-end tests' harness: the app under test, git for its throwaway repository).
-                marked = "EndToEndTests" in rel.parts and any("process:" in l for l in swift_lines[max(0, number - 3) : number])
+                # A `// process: <what it runs>` comment on the line or the two above marks the place that starts a program on purpose
+                # (the end-to-end tests' harness: the app under test; the git bridge's tests: git for a throwaway repository).
+                marked = PROCESS_FIXTURES.intersection(rel.parts) and any("process:" in l for l in swift_lines[max(0, number - 3) : number])
                 if PROCESS.search(code) and not marked:
                     problems.append(f"no-process: {rel}:{number}: {line.strip()}")
 

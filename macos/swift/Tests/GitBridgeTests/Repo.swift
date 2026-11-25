@@ -42,6 +42,7 @@ enum Repo {
 
     @discardableResult
     static func git(_ root: URL, _ arguments: String...) throws -> String {
+        // process: git, in a throwaway repository under the temp folder
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments =
