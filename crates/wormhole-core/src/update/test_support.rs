@@ -77,13 +77,20 @@ pub(super) fn sample_release(version: &str) -> Release {
 }
 
 pub(super) fn info_plist(bundle_id: &str, version: &str) -> String {
+    info_plist_naming(bundle_id, version, None)
+}
+
+/// An `Info.plist` that also names the full version in `WormholeVersion`, as the Swift app's bundles do.
+pub(super) fn info_plist_naming(bundle_id: &str, version: &str, full: Option<&str>) -> String {
+    let full =
+        full.map(|full| format!("<key>WormholeVersion</key><string>{full}</string>\n")).unwrap_or_default();
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>{bundle_id}</string>
 <key>CFBundleShortVersionString</key><string>{version}</string>
-<key>CFBundleExecutable</key><string>Wormhole</string>
+{full}<key>CFBundleExecutable</key><string>Wormhole</string>
 </dict></plist>"#
     )
 }
@@ -103,9 +110,15 @@ pub(super) fn marker_of(app: &Path) -> String {
 
 /// A `.tar.gz` of a fake `Wormhole.app`, shaped like CI's (with a framework symlink).
 pub(super) fn fake_app_archive(bundle_id: &str, version: &str) -> Vec<u8> {
+    fake_app_archive_naming(bundle_id, version, None)
+}
+
+/// [`fake_app_archive`] whose `Info.plist` also names the full version (see [`info_plist_naming`]).
+pub(super) fn fake_app_archive_naming(bundle_id: &str, version: &str, full: Option<&str>) -> Vec<u8> {
     let src = tempfile::tempdir().unwrap();
     let app = src.path().join("Wormhole.app");
     write_fake_app(&app, bundle_id, version, "new");
+    fs::write(app.join("Contents/Info.plist"), info_plist_naming(bundle_id, version, full)).unwrap();
     let versions = app.join("Contents/Frameworks/X.framework/Versions");
     fs::create_dir_all(versions.join("A")).unwrap();
     fs::write(versions.join("A/X"), b"lib").unwrap();

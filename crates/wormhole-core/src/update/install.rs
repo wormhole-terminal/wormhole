@@ -20,6 +20,10 @@ use crate::platform::user::UserId;
 use super::archive::extract;
 use super::{DownloadedUpdate, UpdateError, UpdaterConfig, parse_lenient_version};
 
+/// The `Info.plist` key that holds an app's full version, prerelease part included, where
+/// `CFBundleShortVersionString` can only hold `x.y.z`. Absent from the GPUI app's bundles.
+pub(crate) const WORMHOLE_VERSION_KEY: &str = "WormholeVersion";
+
 /// Verifies `update` once more at the bundle level and swaps it in place of `app_bundle`.
 ///
 /// On error the original bundle is left (or put back) at `app_bundle`. Takes the config (unlike
@@ -257,6 +261,17 @@ fn validate_bundle(app: &Path, config: &UpdaterConfig, version: &semver::Version
     let matches = short == version.to_string() || parse_lenient_version(short).is_some_and(|v| v == core);
     if !matches {
         return Err(bad(format!("bundle version {short:?} does not match release {version}")));
+    }
+    // A bundle that carries its full version (`WORMHOLE_VERSION_KEY`: the Swift app, whose betas all share
+    // one short version) must carry exactly the one offered; a key that is there but is no version
+    // refuses too, never counts as absent. A bundle without the key is judged by the short version alone.
+    if let Some(full) = dict.get(WORMHOLE_VERSION_KEY) {
+        let exact = full.as_string().and_then(|text| semver::Version::parse(text).ok());
+        if exact.as_ref() != Some(version) {
+            return Err(bad(format!(
+                "bundle {WORMHOLE_VERSION_KEY} {full:?} does not match release {version}"
+            )));
+        }
     }
     Ok(())
 }

@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 use crate::platform::fs::{mtime, same_file};
 use crate::storage::files::{LinkPolicy, read_capped};
 
-use super::install::{bundle_from_exe, is_translocated};
+use super::install::{WORMHOLE_VERSION_KEY, bundle_from_exe, is_translocated};
 
 /// The most of `Info.plist` read (they are a few KiB).
 const PLIST_CAP: u64 = 256 * 1024;
@@ -74,12 +74,14 @@ impl Launched {
     }
 }
 
-/// `CFBundleShortVersionString` of the bundle at `bundle`.
+/// The version of the bundle at `bundle`: its full one when it names it (the Swift app's betas share one
+/// `CFBundleShortVersionString`, so the short one would call a new beta the running one), else the short one.
 fn bundle_version(bundle: &Path) -> Option<String> {
     let bytes = read_capped(&bundle.join("Contents/Info.plist"), PLIST_CAP, LinkPolicy::Follow).ok()?;
     let info = plist::Value::from_reader(Cursor::new(bytes)).ok()?;
-    let version = info.as_dictionary()?.get("CFBundleShortVersionString")?.as_string()?;
-    Some(version.to_owned())
+    let info = info.as_dictionary()?;
+    let version = info.get(WORMHOLE_VERSION_KEY).or_else(|| info.get("CFBundleShortVersionString"))?;
+    Some(version.as_string()?.to_owned())
 }
 
 #[cfg(test)]
@@ -89,7 +91,7 @@ mod tests {
     use std::time::Duration;
 
     use super::{Launched, Replaced};
-    use crate::update::test_support::info_plist;
+    use crate::update::test_support::{info_plist, info_plist_naming};
 
     /// `<dir>/Wormhole.app` with an executable holding `body` and an Info.plist of `version`.
     fn bundle(dir: &Path, body: &str, version: &str) -> PathBuf {
@@ -172,6 +174,36 @@ mod tests {
         bundle(dir.path(), "one again", "1.0.0");
         fs::remove_dir_all(dir.path().join("old.app")).expect("removed");
         assert_eq!(launched.replaced(), None);
+    }
+
+    #[test]
+    fn a_bundle_naming_its_full_version_is_compared_by_that_not_by_the_short_one() {
+        let dir = tempfile::tempdir().expect("dir");
+        let app = bundle(dir.path(), "one", "2.0.0");
+        fs::write(
+            app.join("Contents/Info.plist"),
+            info_plist_naming("app.getwormhole.terminal", "2.0.0", Some("2.0.0-beta.1")),
+        )
+        .expect("plist");
+        let launched = launched(&app, "2.0.0-beta.1");
+        // The same beta copied again: no restart to offer.
+        fs::rename(&app, dir.path().join("old.app")).expect("moved aside");
+        let again = bundle(dir.path(), "one again", "2.0.0");
+        fs::write(
+            again.join("Contents/Info.plist"),
+            info_plist_naming("app.getwormhole.terminal", "2.0.0", Some("2.0.0-beta.1")),
+        )
+        .expect("plist");
+        fs::remove_dir_all(dir.path().join("old.app")).expect("removed");
+        assert_eq!(launched.replaced(), None);
+        // The next beta has the same short version: only the full one tells.
+        fs::write(exe_of(&again), "the next beta, longer").expect("overwritten");
+        fs::write(
+            again.join("Contents/Info.plist"),
+            info_plist_naming("app.getwormhole.terminal", "2.0.0", Some("2.0.0-beta.2")),
+        )
+        .expect("plist");
+        assert_eq!(launched.replaced(), Some(Replaced { version: "2.0.0-beta.2".into() }));
     }
 
     #[test]

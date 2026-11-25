@@ -11,8 +11,8 @@ use super::archive::extract;
 use super::download::sha256_hex;
 use super::install::swap_into_place;
 use super::test_support::{
-    BUNDLE_ID, RawEntry, TEST_TRUSTED_COMMENT, TestKey, fake_app_archive, marker_of, raw_archive, serve,
-    serve_recording, temp_apps_dir, test_config, write_fake_app,
+    BUNDLE_ID, RawEntry, TEST_TRUSTED_COMMENT, TestKey, fake_app_archive, fake_app_archive_naming, marker_of,
+    raw_archive, serve, serve_recording, temp_apps_dir, test_config, write_fake_app,
 };
 use super::{
     UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, download, install, install_unless,
@@ -278,6 +278,57 @@ fn wrong_bundle_leaves_current_app_untouched() {
         assert!(marker_of(&app).contains("old"));
         assert!(leftovers(dir.path()).is_empty());
     }
+}
+
+/// Installs `archive` as the release 2.0.0-beta.2, signed as CI signs it (the trusted comment names the release):
+/// the error, or `None` with the new app in place. A refused install leaves the old app and nothing beside it.
+/// The feed is served at the stable path and read as Unstable, which takes prereleases too: the check is not under
+/// test here (it is, for Beta, above), the install is.
+fn install_beta(archive: &[u8]) -> Option<String> {
+    let key = TestKey::generate();
+    let comment = "Wormhole 2.0.0-beta.2 Wormhole-0.2.0-macos.app.tar.gz";
+    let signature = key.sign_with_comment(archive, comment);
+    let mut p = publish_with(&key, archive, archive.to_vec(), Some(signature), |feed| {
+        feed["version"] = "2.0.0-beta.2".into();
+    });
+    p.config.channel = UpdateChannel::Unstable;
+    let update = download(&p.config, &available(&p.config), |_, _| {}).unwrap();
+    let (dir, app) = temp_apps_dir();
+    let result = install(&p.config, &update, &app);
+    match &result {
+        Ok(()) => assert!(marker_of(&app).contains("new")),
+        Err(_) => {
+            assert!(marker_of(&app).contains("old"), "the app was touched");
+            assert!(leftovers(dir.path()).is_empty());
+        }
+    }
+    result.err().map(|err| err.to_string())
+}
+
+#[test]
+fn a_bundle_naming_the_full_version_offered_installs() {
+    assert_eq!(install_beta(&fake_app_archive_naming(BUNDLE_ID, "2.0.0", Some("2.0.0-beta.2"))), None);
+}
+
+#[test]
+fn a_bundle_naming_another_full_version_is_refused_though_its_short_version_fits() {
+    // Every beta of 2.0.0 has the short version 2.0.0, so it cannot tell them apart; the key can.
+    for other in ["2.0.0-beta.1", "2.0.0-beta.3", "2.0.0", "2.0.0-beta.2+x", "2.0.0-beta.2 ", "banana", ""] {
+        let archive = fake_app_archive_naming(BUNDLE_ID, "2.0.0", Some(other));
+        let err = install_beta(&archive).unwrap_or_else(|| panic!("{other:?} was accepted"));
+        assert!(err.contains("WormholeVersion"), "{other:?}: {err}");
+    }
+}
+
+#[test]
+fn a_bundle_without_the_key_is_judged_by_its_short_version_as_before() {
+    assert_eq!(
+        install_beta(&fake_app_archive_naming(BUNDLE_ID, "2.0.0", None)),
+        None,
+        "x.y.z of a prerelease"
+    );
+    let err = install_beta(&fake_app_archive_naming(BUNDLE_ID, "2.0.1", None)).expect("refused");
+    assert!(err.contains("does not match release"), "{err}");
 }
 
 #[test]
