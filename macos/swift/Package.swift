@@ -214,8 +214,9 @@ targets.append(
         ]
     ))
 
+// The package's name is the prefix of every resource bundle (`Wormhole_DesignSystem.bundle`), which ships inside the app.
 let package = Package(
-    name: "WormholeMetalSpike",
+    name: "Wormhole",
     platforms: [.macOS(.v26)],
     products: [
         // The executable keeps the product's name (the updater looks for `Contents/MacOS/Wormhole`).
