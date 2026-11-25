@@ -60,7 +60,9 @@ impl SettingsHandle {
     pub fn rename_theme_picks(&self, renames: Vec<String>) -> bool {
         self.shared.lock().update(|s| {
             for pick in [&mut s.theme, &mut s.theme_light] {
-                if let Some(pair) = renames.chunks_exact(2).find(|pair| pick.eq_ignore_ascii_case(&pair[0])) {
+                if let Some(pair) =
+                    renames.as_chunks::<2>().0.iter().find(|pair| pick.eq_ignore_ascii_case(&pair[0]))
+                {
                     pick.clone_from(&pair[1]);
                 }
             }
