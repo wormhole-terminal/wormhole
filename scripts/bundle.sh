@@ -107,28 +107,12 @@ cp "$ROOT/crates/wormhole-core/assets/fonts/JetBrainsMono/OFL.txt" \
   "$app/Contents/Resources/Licenses/JetBrainsMono-OFL.txt"
 printf 'APPL????' > "$app/Contents/PkgInfo"
 
-# CFBundleShortVersionString must be 1-3 integers: drop any "-beta.1" suffix.
-short_version="${APP_VERSION%%[-+]*}"
-build_version="${BUILD_NUMBER:-$short_version}"
-sed_escape() { printf '%s' "$1" | sed -e 's/[\\|&]/\\&/g'; }
-sed \
-  -e "s|@APP_NAME@|$(sed_escape "$APP_NAME")|g" \
-  -e "s|@APP_BINARY@|$(sed_escape "$APP_BINARY")|g" \
-  -e "s|@BUNDLE_ID@|$(sed_escape "$BUNDLE_ID")|g" \
-  -e "s|@SHORT_VERSION@|$(sed_escape "$short_version")|g" \
-  -e "s|@BUILD_VERSION@|$(sed_escape "$build_version")|g" \
-  -e "s|@MIN_MACOS@|$(sed_escape "$MIN_MACOS")|g" \
-  -e "s|@COPYRIGHT@|$(sed_escape "$COPYRIGHT")|g" \
-  "$PACKAGING/Info.plist" > "$app/Contents/Info.plist"
-if grep -q '@[A-Z_]*@' "$app/Contents/Info.plist"; then die "unreplaced placeholder in Info.plist"; fi
-plutil -lint -s "$app/Contents/Info.plist"
+render_info_plist "$app/Contents/Info.plist"
 
-identity="${APPLE_SIGNING_IDENTITY:-}"
 profile="${APPLE_PROVISIONING_PROFILE_PATH:-}"
 entitlements="$PACKAGING/entitlements.plist"
-if [ -n "$identity" ]; then
-  log "signing with '$identity' (hardened runtime, secure timestamp)"
-  timestamp=(--timestamp)
+select_signing_identity
+if [ "$SIGN_IDENTITY" != "-" ]; then
   if [ -n "$profile" ]; then
     # The profile is sealed into the signature, so it goes in before codesign runs.
     [ -f "$profile" ] || die "APPLE_PROVISIONING_PROFILE_PATH is set but '$profile' is not a file"
@@ -140,24 +124,12 @@ if [ -n "$identity" ]; then
     log "no APPLE_PROVISIONING_PROFILE_PATH: 'needs you' notifications are delivered at Active"
   fi
 else
-  warn "APPLE_SIGNING_IDENTITY not set: ad-hoc signing (fine locally; cannot be notarized)"
   [ -z "$profile" ] || warn "ignoring APPLE_PROVISIONING_PROFILE_PATH: only Developer ID builds carry its entitlement"
-  identity="-"
-  timestamp=(--timestamp=none)
 fi
-# Two Mach-Os, so the nested one is signed first and the bundle's seal then covers it (no --deep:
-# it would re-sign everything with the app's entitlements). The host always gets the base
-# entitlements: macOS attributes a terminal program's privacy (TCC) requests to the process that
-# started it, and the host is that process, so it needs the same resource-access set as the app.
-# The restricted Time Sensitive entitlement stays with the app alone: the embedded profile
-# authorizes the main executable, and a nested one claiming it would not launch.
-codesign --force --sign "$identity" --options runtime "${timestamp[@]}" \
-  --identifier "$BUNDLE_ID.host" --entitlements "$PACKAGING/entitlements.plist" \
-  "$app/Contents/MacOS/$HOST_BINARY"
-codesign --force --sign "$identity" --options runtime "${timestamp[@]}" \
-  --entitlements "$entitlements" "$app"
-# --deep here only widens the check to the nested host; it signs nothing.
-codesign --verify --deep --strict --verbose=2 "$app"
+# The restricted Time Sensitive entitlement stays with the app alone: the embedded profile authorizes the main
+# executable, and a nested one claiming it would not launch.
+sign_host "$app"
+sign_app "$app" "$entitlements"
 "$ROOT/scripts/check-entitlements.sh" "$app"
 
 log "done: $app"

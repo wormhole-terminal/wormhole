@@ -3,13 +3,24 @@
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGING="$ROOT/packaging"
-# shellcheck source=../packaging/app.env
-. "$PACKAGING/app.env"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning::$*"; fi; }
 die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::$*"; fi; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "'$1' not found. ${2:-}"; }
+
+# repo_path <path>: a path as the repository's files write it, relative to the root unless it is absolute.
+repo_path() { case "$1" in /*) printf '%s' "$1" ;; *) printf '%s/%s' "$ROOT" "$1" ;; esac; }
+
+# The app's identity: packaging/app.env, or the file WORMHOLE_APP_ENV names (the Swift beta's scripts run with
+# packaging/beta.env). Whatever it sets is read from here on; it holds plain KEY=value lines only.
+APP_ENV="$(repo_path "${WORMHOLE_APP_ENV:-packaging/app.env}")"
+[ -f "$APP_ENV" ] || die "no app identity file at $APP_ENV (WORMHOLE_APP_ENV)"
+# shellcheck source=../packaging/app.env
+. "$APP_ENV"
+# The disk image's and the archive's name stem, without version or extension: a name with a space in it
+# makes a poor file name (GitHub turns the space into a dot).
+DIST_NAME="${DIST_NAME:-$APP_NAME}"
 
 # set_app_build_args <comma-separated app features, may be empty> [<tree>]: fills APP_BUILD_ARGS with the
 # cargo arguments that build the app and its session host together. The host is a second binary the
@@ -38,10 +49,11 @@ copy_host_beside() {
   cp -c "$host" "$2/$HOST_BINARY" 2>/dev/null || cp "$host" "$2/$HOST_BINARY"
 }
 
-# workspace.package.version from the root Cargo.toml (the only version source).
+# workspace.package.version from the manifest VERSION_MANIFEST names (the Swift beta's bridge workspace), else
+# from the root Cargo.toml: the one place the app's version is written.
 app_version() {
   awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/^[^"]*"|".*$/,"");print;exit}' \
-    "$ROOT/Cargo.toml"
+    "$(repo_path "${VERSION_MANIFEST:-Cargo.toml}")"
 }
 
 APP_VERSION="$(app_version)"
@@ -52,6 +64,7 @@ APP_VERSION="$(app_version)"
 # Re-source this file (or start a new script) for APP_VERSION to follow.
 set_app_version() {
   local tmp
+  [ -z "${VERSION_MANIFEST:-}" ] || die "the version is in $VERSION_MANIFEST, which this does not write"
   tmp="$(mktemp)"
   awk -v v="$1" '
     /^\[workspace\.package\]/ { f = 1; print; next }
@@ -106,6 +119,60 @@ plist_get() { /usr/libexec/PlistBuddy -c "Print $2" "$1" 2>/dev/null || true; }
 # profile_payload <profile> <out>: the plain plist inside a (CMS-signed) .provisionprofile.
 profile_payload() {
   security cms -D -i "$1" -o "$2" 2>/dev/null || die "not a readable provisioning profile: $1"
+}
+
+# sed_escape <text>: text for the replacement of an `s|from|to|` (its \, | and & are literal there).
+sed_escape() { printf '%s' "$1" | sed -e 's/[\\|&]/\\&/g'; }
+
+# render_info_plist <out>: packaging/Info.plist with its @...@ placeholders filled from the app's env file and its
+# version. CFBundleShortVersionString must be 1-3 integers, so a "-beta.1" suffix is dropped from it; the build
+# number is BUILD_NUMBER, else the same X.Y.Z.
+render_info_plist() {
+  local out="$1" short_version="${APP_VERSION%%[-+]*}"
+  sed \
+    -e "s|@APP_NAME@|$(sed_escape "$APP_NAME")|g" \
+    -e "s|@APP_BINARY@|$(sed_escape "$APP_BINARY")|g" \
+    -e "s|@BUNDLE_ID@|$(sed_escape "$BUNDLE_ID")|g" \
+    -e "s|@SHORT_VERSION@|$(sed_escape "$short_version")|g" \
+    -e "s|@BUILD_VERSION@|$(sed_escape "${BUILD_NUMBER:-$short_version}")|g" \
+    -e "s|@MIN_MACOS@|$(sed_escape "$MIN_MACOS")|g" \
+    -e "s|@COPYRIGHT@|$(sed_escape "$COPYRIGHT")|g" \
+    "$PACKAGING/Info.plist" > "$out"
+  if grep -q '@[A-Z_]*@' "$out"; then die "unreplaced placeholder in Info.plist"; fi
+  plutil -lint -s "$out"
+}
+
+# select_signing_identity: sets SIGN_IDENTITY and SIGN_TIMESTAMP, the codesign arguments every signature of a bundle
+# shares. APPLE_SIGNING_IDENTITY (e.g. "Developer ID Application: Name (TEAMID)") selects a real identity from the
+# keychain; unset is an ad-hoc signature ("-"), which runs locally but cannot be notarized.
+select_signing_identity() {
+  if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+    log "signing with '$APPLE_SIGNING_IDENTITY' (hardened runtime, secure timestamp)"
+    SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+    SIGN_TIMESTAMP=(--timestamp)
+  else
+    warn "APPLE_SIGNING_IDENTITY not set: ad-hoc signing (fine locally; cannot be notarized)"
+    SIGN_IDENTITY="-"
+    SIGN_TIMESTAMP=(--timestamp=none)
+  fi
+}
+
+# sign_host <app>: the session host, before the bundle: two Mach-Os, so the nested one is signed first and the
+# bundle's seal then covers it (no --deep: it would re-sign everything with the app's entitlements). Its identifier
+# is the app's plus ".host", which the host reads to know which app it serves (crates/wormhole-host/src/peer.rs).
+# It always gets the base entitlements: macOS attributes a terminal program's privacy (TCC) requests to the
+# process that started it, and the host is that process, so it needs the same resource-access set as the app.
+sign_host() {
+  codesign --force --sign "$SIGN_IDENTITY" --options runtime "${SIGN_TIMESTAMP[@]}" \
+    --identifier "$BUNDLE_ID.host" --entitlements "$PACKAGING/entitlements.plist" \
+    "$1/Contents/MacOS/$HOST_BINARY"
+}
+
+# sign_app <app> <entitlements>: the bundle (its identifier is the CFBundleIdentifier's), then the check that it
+# holds. --deep there only widens the check to the nested host; it signs nothing.
+sign_app() {
+  codesign --force --sign "$SIGN_IDENTITY" --options runtime "${SIGN_TIMESTAMP[@]}" --entitlements "$2" "$1"
+  codesign --verify --deep --strict --verbose=2 "$1"
 }
 
 # The PATH a test instance gets: the system's folders alone, as an app started from the Finder

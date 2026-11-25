@@ -72,7 +72,6 @@ bin_dir="$dev_app/Contents/MacOS"
 bin="$bin_dir/$APP_BINARY-Dev"   # the process name, so ⌘Tab and the menu tell it apart
 legacy_bin="$run/bin/$APP_BINARY-Dev"   # where it ran before the bundle, for taking one over
 mkdir -p "$bin_dir"
-sed_escape() { printf '%s' "$1" | sed -e 's/[\\|&]/\\&/g'; }
 # The release's Info.plist with its own name and id (so LaunchServices never mistakes it for the
 # installed app) and without the document types, which would offer it in Finder's Open With.
 sed \
