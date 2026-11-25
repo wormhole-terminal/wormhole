@@ -110,9 +110,11 @@ impl Terminal {
                 PointerAction::Release => mouse::MouseAction::Release,
                 PointerAction::Motion => mouse::MouseAction::Motion,
             };
-            if action == mouse::MouseAction::Motion && !mouse::wants_pixels(mode) {
+            if !mouse::wants_pixels(mode) {
                 let mut memory = self.interaction.pointer();
-                if memory.last_cell == Some((event.col, event.row)) {
+                // A press and a release count as the pointer's last place too, as in xterm: a drag that has not left the cell
+                // it began in is no motion to report.
+                if action == mouse::MouseAction::Motion && memory.last_cell == Some((event.col, event.row)) {
                     return true;
                 }
                 memory.last_cell = Some((event.col, event.row));

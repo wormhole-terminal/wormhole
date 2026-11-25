@@ -100,6 +100,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A program that asks for the mouse's drag (mode 1002) is no longer told again of the cell a drag began in: the
+  press counts as the pointer's place, so only a move to another cell is reported, as xterm does.
 - Making a window or a pane wider no longer erases the line of output above the prompt when zsh's or bash's
   prompt was wrapped, or a command was typed over several rows. The terminal joined those rows before the
   shell drew them again, and the shell, counting its old rows, erased one line too far up. The rows of the
