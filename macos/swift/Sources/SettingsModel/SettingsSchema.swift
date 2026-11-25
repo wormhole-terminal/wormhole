@@ -70,6 +70,23 @@ public struct SettingsSchema: Sendable {
         (sections, defaults) = (dump.sections, dump.defaults)
     }
 
+    /// These pages without the rows `ids` name: a build that has no use for a row (the beta has one update channel and must not
+    /// install a global command line tool) never shows it, and search never finds it, since both read this schema.
+    public func hiding(_ ids: Set<String>) -> SettingsSchema {
+        guard !ids.isEmpty else { return self }
+        func kept(_ group: Group) -> Group {
+            Group(title: group.title, blurb: group.blurb, aside: group.aside, entries: group.entries.filter { !ids.contains($0.id) })
+        }
+        let sections = sections.map {
+            Section(id: $0.id, title: $0.title, intro: $0.intro, nav: $0.nav, navTitle: $0.navTitle, preview: $0.preview, groups: $0.groups.map(kept))
+        }
+        return SettingsSchema(sections: sections, defaults: defaults)
+    }
+
+    private init(sections: [Section], defaults: [String: JSONValue]) {
+        (self.sections, self.defaults) = (sections, defaults)
+    }
+
     public static let bundled: SettingsSchema = {
         do {
             guard let url = Bundle.module.url(forResource: "settings", withExtension: "json") else {

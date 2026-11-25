@@ -7,6 +7,7 @@ import Foundation
 import SettingsModel
 
 #if WITH_UNIFFI
+    import AuxBridge
     import SettingsBridge
 #endif
 
@@ -26,11 +27,17 @@ enum AppSettings {
         return model
     }
 
+    #if WITH_UNIFFI
+        /// A build that baked its channel in (the beta) has one channel, so the row that picks it is not there, and must not install a
+        /// global `wh`, which would replace the shipped app's (`/usr/local/bin/wh`): the Command line tool row is not there either.
+        private static var hiddenRows: Set<String> { AuxBridge.bakedChannel() == nil ? [] : ["update-channel", "cli-tool"] }
+    #endif
+
     private static func makeBare(app: AppController) -> SettingsModel {
         #if WITH_UNIFFI
             if app.options.isReal {
                 do {
-                    return try SettingsBridge.makeModel(platform: SettingsPlatform.make(app: app))
+                    return try SettingsBridge.makeModel(platform: SettingsPlatform.make(app: app), hiding: hiddenRows)
                 } catch {
                     FileHandle.standardError.write(Data("settings: the core's are not available (\(error)); using the sample\n".utf8)) // text: a line on stderr for whoever launched the app
                 }

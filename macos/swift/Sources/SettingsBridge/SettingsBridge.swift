@@ -24,11 +24,12 @@ public enum SettingsBridge {
     @MainActor
     public static func make(
         profile: String? = nil, platform: RustSettingsHost.Platform = .init(),
-        importHome: String? = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"] // text: environment variable
+        importHome: String? = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"], // text: environment variable
+        hiding: Set<String> = []
     ) throws -> Kit {
         let relay = WakeRelay()
         let handle = try SettingsHandle.open(profile: profile, listener: relay)
-        let schema = try SettingsSchema(json: Data(settingsSchemaJson().utf8))
+        let schema = try SettingsSchema(json: Data(settingsSchemaJson().utf8)).hiding(hiding)
         let backend = RustSettingsBackend(
             handle: handle, relay: relay, bundledFonts: platform.bundledFonts(), registersFonts: profile == nil)
         return Kit(
@@ -40,9 +41,10 @@ public enum SettingsBridge {
     /// The window's model over the real core.
     @MainActor
     public static func makeModel(
-        profile: String? = nil, platform: RustSettingsHost.Platform = .init(), selection: String = "appearance"
+        profile: String? = nil, platform: RustSettingsHost.Platform = .init(), selection: String = "appearance",
+        hiding: Set<String> = []
     ) throws -> SettingsModel {
-        let kit = try make(profile: profile, platform: platform)
+        let kit = try make(profile: profile, platform: platform, hiding: hiding)
         return SettingsModel(
             schema: kit.schema, backend: kit.backend, host: kit.host, searcher: kit.searcher,
             shortcuts: kit.shortcuts, selection: selection)
