@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::error::FfiError;
-use crate::isolation::{self, FOLDER_PREFIX};
+use crate::isolation;
 
 /// What can go wrong in the auxiliary windows' backends.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -60,25 +60,20 @@ pub(crate) fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// The data folder an object works in: the one given (a folder named `Wormhole-swift*`: tests and previews
-/// pass their own) or core's own, which must be the experiment's (`WORMHOLE_DATA_DIR`, see `isolation`).
+/// The data folder an object works in: the one given (tests and previews pass their own) or core's own
+/// (`WORMHOLE_DATA_DIR`), either by the rule in `isolation`.
 pub(crate) fn resolve_data_dir(explicit: Option<String>) -> Result<PathBuf, AuxError> {
-    let Some(dir) = explicit else {
-        isolation::require().map_err(|err| match err {
-            FfiError::NotIsolated { reason } => AuxError::NotIsolated { reason },
-            other => AuxError::failed(other),
-        })?;
-        return Ok(wormhole_core::storage::paths::data_dir());
+    let dir = match explicit {
+        Some(dir) => {
+            let dir = PathBuf::from(dir);
+            isolation::require_folder(&dir).map(|()| dir)
+        }
+        None => isolation::require().map(|()| wormhole_core::storage::paths::data_dir()),
     };
-    let dir = PathBuf::from(dir);
-    let named = dir.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with(FOLDER_PREFIX));
-    if named {
-        Ok(dir)
-    } else {
-        Err(AuxError::NotIsolated {
-            reason: format!("{} is not a folder named {FOLDER_PREFIX}*", dir.display()),
-        })
-    }
+    dir.map_err(|err| match err {
+        FfiError::NotIsolated { reason } => AuxError::NotIsolated { reason },
+        other => AuxError::failed(other),
+    })
 }
 
 #[cfg(test)]
