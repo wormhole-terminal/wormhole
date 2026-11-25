@@ -26,7 +26,7 @@ extension AppController {
         guard let model = settings.updates else { reply("update-status none"); return true }
         // The channel is the updater's own (Settings' row writes the setting, which the app hands to the updater), not the
         // page model's copy, which nothing draws.
-        var pairs = [("channel", model.backend.channel == .stable ? "stable" : "preview")]
+        var pairs = [("channel", model.backend.channel.rawValue)]
         var notes: [String] = []
         var security = false
         var fixes: [String] = []

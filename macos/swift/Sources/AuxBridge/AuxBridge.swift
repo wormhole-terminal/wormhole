@@ -5,6 +5,7 @@
 import AuxModel
 import Foundation
 import PlatformModel
+import WormholeBindings
 
 public enum AuxBridge {
     /// The updater for a release build; `hooks` carry what only the app can do (quit, idle terminals).
@@ -12,6 +13,10 @@ public enum AuxBridge {
     public static func makeUpdateBackend(setup: FFIUpdateBackend.Setup, hooks: FFIUpdateBackend.Hooks) throws -> FFIUpdateBackend {
         try FFIUpdateBackend(setup: setup, hooks: hooks)
     }
+
+    /// The channel this build was made for (`WORMHOLE_UPDATE_CHANNEL`): the beta's, which has no setting. `nil` for a build
+    /// whose channel is Settings' (and for a dev build, which has no feed).
+    public static func bakedChannel() -> UpdateChannel? { updateReleaseSetup()?.channel?.value }
 
     @MainActor
     public static func makeHostsBackend(dataDir: URL? = nil, facts: FFIHostsBackend.Facts? = nil) throws -> FFIHostsBackend {

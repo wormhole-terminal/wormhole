@@ -102,7 +102,8 @@ struct AuxBackends {
     #if WITH_UNIFFI
         /// Where and what to update. A fixture names its own feed and key (`--update-feed`, `--update-key`, `--update-bundle`: they
         /// are what the tests use); a release build has its feed, key, team and fallback baked in when it was built, the way the GPUI app
-        /// has them (`update::feed_config`), and its channel is Settings'. The bundle the updater expects is the running one's own identifier, and it runs as the full version
+        /// has them (`update::feed_config`), and its channel is Settings' unless the build baked one (the beta's: it reads its own feed and
+        /// ignores the setting). The bundle the updater expects is the running one's own identifier, and it runs as the full version
         /// (`WormholeVersion`; a beta's short version is `2.0.0` and would never be offered `2.0.0-beta.2`). A test instance never takes
         /// the baked feed: it would ask a real server (and be counted); a dev build has none.
         func updateSetup() -> FFIUpdateBackend.Setup? {
@@ -122,7 +123,7 @@ struct AuxBackends {
             setup.teamID = release.teamId
             setup.fallbackURL = release.fallbackUrl
             if Bundle.main.bundleURL.pathExtension == "app" { setup.appBundle = Bundle.main.bundleURL }
-            setup.channel = app.settingsModel.backend.values["update_channel"]?.string == "unstable" ? .preview : .stable
+            setup.channel = AuxBridge.bakedChannel() ?? (app.settingsModel.backend.values["update_channel"]?.string == "unstable" ? .preview : .stable)
             return setup
         }
     #endif

@@ -6,6 +6,8 @@ import Foundation
 
 public enum UpdateChannel: String, CaseIterable, Sendable, Identifiable {
     case stable, preview
+    /// The beta build's own feed, fixed when the build was made: no setting or window offers it, and nothing moves an updater off it.
+    case beta
     public var id: String { rawValue }
 }
 

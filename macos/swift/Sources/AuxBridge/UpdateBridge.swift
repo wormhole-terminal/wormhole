@@ -193,11 +193,23 @@ public final class FFIUpdateBackend: UpdateBackend {
 }
 
 extension UpdateChannel {
-    var record: UpdateChannelRecord { self == .stable ? .stable : .preview }
+    var record: UpdateChannelRecord {
+        switch self {
+        case .stable: .stable
+        case .preview: .preview
+        case .beta: .beta
+        }
+    }
 }
 
 extension UpdateChannelRecord {
-    var value: UpdateChannel { self == .stable ? .stable : .preview }
+    var value: UpdateChannel {
+        switch self {
+        case .stable: .stable
+        case .preview: .preview
+        case .beta: .beta
+        }
+    }
 }
 
 extension UpdatePhaseRecord {
