@@ -77,8 +77,10 @@ wormhole-term = { path = "../wormhole-term", features = ["test-support"] }
 wormhole-core = { path = "../wormhole-core", features = ["test-support"] }
 
 # A workspace of its own (this crate and its bindings generator), so that nothing here reaches the app's
-# `Cargo.lock`, `cargo deny`, `licenses.json` or `scripts/structure.py` yet: the root `Cargo.toml` lists this
-# folder under `exclude`. The app's crates come in by path; none of them may name anything in here.
+# `Cargo.lock` or `scripts/structure.py` yet: the root `Cargo.toml` lists this folder under `exclude`. What the
+# root's tools do not see has its own: `cargo deny` over this `Cargo.lock` (`scripts/check.sh`) and
+# `assets/licenses.json` (`scripts/gen-licenses.py --ffi`). The app's crates come in by path; none of them may
+# name anything in here.
 [workspace]
 members = ["bindgen"]
 resolver = "3"

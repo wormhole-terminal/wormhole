@@ -21,7 +21,8 @@
 #         tools/visual, the top-level .md files (CHANGELOG.md too): the source checks (they scan the
 #         wording), which link std alone, so nothing of the app or core compiles.
 #   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench, macos and
-#         crates/wormhole-ffi (the Swift app and its bridge, a workspace of their own) and tools/feed-counter (bun test there): nothing to run.
+#         crates/wormhole-ffi (the Swift app and its bridge, a workspace of their own) and tools/feed-counter (bun test there): nothing to run,
+#         except that a change to the bridge's Cargo.toml or Cargo.lock runs `cargo deny` over the bridge's own dependencies.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
@@ -54,7 +55,9 @@ done
 scope_of() {
   case "$1" in
     # The Swift app's bridge: a workspace of its own (the root Cargo.toml's `exclude`), built and checked with macos/. Before the
-    # manifests below: its Cargo.toml and Cargo.lock are not the app's.
+    # manifests below: its Cargo.toml and Cargo.lock are not the app's. Its dependencies are still
+    # checked with cargo deny (`ffi_deps` below); everything else in it is left to macos/.
+    crates/wormhole-ffi/Cargo.toml|crates/wormhole-ffi/Cargo.lock) echo "none ffi-deps" ;;
     crates/wormhole-ffi/*) echo none ;;
     Cargo.toml|Cargo.lock|deny.toml|crates/*/Cargo.toml) echo "all deps" ;;
     rust-toolchain*|rustfmt.toml|clippy.toml|.cargo/*|.config/nextest.toml) echo all ;;
@@ -136,11 +139,12 @@ git rev-parse --verify -q "$base^{commit}" >/dev/null || die "not a revision: $b
 
 changed="$( { git diff --name-only "$base"; git ls-files --others --exclude-standard; } | sort -u)"
 
-scope=none deps=0 why=""
+scope=none deps=0 ffi_deps=0 why=""
 while IFS= read -r path; do
   [ -n "$path" ] || continue
   read -r s d <<<"$(scope_of "$path")"
-  [ "$d" = deps ] && deps=1
+  [ "$d" = deps ] && deps=1 ffi_deps=1   # a dependency of a crate the bridge uses may be the bridge's too
+  [ "$d" = ffi-deps ] && ffi_deps=1
   if [ "$(rank "$s")" -gt "$(rank "$scope")" ]; then scope=$s why=$path; fi
 done <<<"$changed"
 [ "$force_all" = 1 ] && { scope=all; why="--all"; }
@@ -177,6 +181,9 @@ case "$scope" in
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check" "cargo shear")
+# The Swift app's bridge is a workspace of its own, so `cargo deny check` above never sees its dependencies:
+# the same deny.toml, pointed at the bridge's manifest and Cargo.lock.
+[ "$ffi_deps" = 1 ] && steps+=("cargo deny --config deny.toml --manifest-path crates/wormhole-ffi/Cargo.toml check")
 
 # The history steps go first. They read the git history, so they run for every scope, `none` included.
 history=("python3 scripts/commits.py check-range $base..HEAD"
@@ -214,7 +221,7 @@ failed=0
 for step in "${steps[@]}"; do
   log "$step"
   start=$SECONDS
-  if [ "$step" = "cargo deny check" ] && ! command -v cargo-deny >/dev/null 2>&1; then
+  if [[ "$step" == "cargo deny "* ]] && ! command -v cargo-deny >/dev/null 2>&1; then
     warn "cargo-deny is not installed (cargo install cargo-deny): dependencies and licenses are unchecked"
     continue
   fi
