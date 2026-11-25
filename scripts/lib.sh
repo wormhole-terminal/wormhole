@@ -21,6 +21,8 @@ APP_ENV="$(repo_path "${WORMHOLE_APP_ENV:-packaging/app.env}")"
 # The disk image's and the archive's name stem, without version or extension: a name with a space in it
 # makes a poor file name (GitHub turns the space into a dot).
 DIST_NAME="${DIST_NAME:-$APP_NAME}"
+# What a release's tag starts with: v1.2.3 for the 1.x app (release.yml starts on v*), beta-2.0.0-beta.1 for the beta.
+TAG_PREFIX="${TAG_PREFIX:-v}"
 
 # set_app_build_args <comma-separated app features, may be empty> [<tree>]: fills APP_BUILD_ARGS with the
 # cargo arguments that build the app and its session host together. The host is a second binary the

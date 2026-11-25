@@ -12,6 +12,9 @@
 #   dist/SHA256SUMS
 #   dist/latest.json                                   update feed
 #
+# "Wormhole" in these names is DIST_NAME (the identity file's, default its APP_NAME): the Swift app's beta, packaged with
+# WORMHOLE_APP_ENV=packaging/beta.env, is Wormhole-Beta-<v>-macos.dmg and so on, a name without a space.
+#
 # The feed also lists each DMG under its stable name and size ("dmgs": {"<build>": {name, size}}), so the
 # website can show the download's size and whether an Intel one exists without asking for the files.
 #
@@ -27,7 +30,8 @@
 # Env:
 #   GITHUB_REPOSITORY    owner/name whose Releases host the files (set in Actions; default
 #                        wormhole-terminal/wormhole)
-#   RELEASE_TAG          the release the files go onto (default v<version>; `preview` for main builds)
+#   RELEASE_TAG          the release the files go onto (default <TAG_PREFIX><version>, v1.2.3 or beta-2.0.0-beta.1;
+#                        `preview` for main builds)
 #   RELEASE_NOTES        Markdown notes for latest.json, or RELEASE_NOTES_FILE=path
 #   RELEASE_SEVERITY     critical|high|medium|low: this version is a security update, so latest.json gets
 #                        "security": {"severity": "<level>", "advisories": ["GHSA-…"]}. Without it
@@ -57,7 +61,7 @@ done
 need minisign "Install it: brew install minisign"
 need jq
 
-base_url="https://github.com/${GITHUB_REPOSITORY:-wormhole-terminal/wormhole}/releases/download/${RELEASE_TAG:-v$APP_VERSION}"
+base_url="https://github.com/${GITHUB_REPOSITORY:-wormhole-terminal/wormhole}/releases/download/${RELEASE_TAG:-$TAG_PREFIX$APP_VERSION}"
 
 # An app's build: universal, aarch64 or x86_64, from the architectures its binary holds.
 build_of() {
@@ -79,7 +83,7 @@ for app in "${apps[@]}"; do
   [ -d "$app" ] || die "no app bundle at $app (run scripts/bundle.sh first)"
   bundled_version="$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")"
   [ "$bundled_version" = "${APP_VERSION%%[-+]*}" ] \
-    || die "$app is version $bundled_version but Cargo.toml says $APP_VERSION (re-run bundle.sh)"
+    || die "$app is version $bundled_version but ${VERSION_MANIFEST:-Cargo.toml} says $APP_VERSION (re-run its bundle.sh)"
   # --deep so the nested session host is checked too, as the updater does with the downloaded app.
   [ -x "$app/Contents/MacOS/$HOST_BINARY" ] || die "$app has no Contents/MacOS/$HOST_BINARY (re-run bundle.sh)"
   codesign --verify --deep --strict "$app" || die "code signature of $app is invalid"
@@ -131,7 +135,7 @@ fi
 # --- update archive -----------------------------------------------------------
 # bsdtar keeps symlinks, modes and the code signature (which lives in regular files,
 # not xattrs). COPYFILE_DISABLE/--no-mac-metadata keep AppleDouble "._*" files out.
-archive_of() { printf '%s-%s-macos%s.app.tar.gz' "$APP_NAME" "$APP_VERSION" "$(suffix_of "$1")"; }
+archive_of() { printf '%s-%s-macos%s.app.tar.gz' "$DIST_NAME" "$APP_VERSION" "$(suffix_of "$1")"; }
 make_archive() {
   local build="$1" app name archive
   app="$(app_of "$1")"
@@ -148,8 +152,10 @@ make_archive() {
   log "signing $name with minisign"
   # The trusted comment is covered by the signature, so the updater may check it
   # names the version and the file it expects (protects against replaying an older signed archive).
+  # Its first word is a name without a space (the updater refuses one with a space, core update::download):
+  # DIST_NAME, "Wormhole" for the 1.x app as always, "Wormhole-Beta" for the beta, never its APP_NAME "Wormhole Beta".
   printf '%s\n' "$password" | minisign -S -s "$seckey" -m "$archive" -x "$archive.minisig" \
-    -t "$APP_NAME $APP_VERSION $name" >/dev/null 2>"$work/minisign.err" \
+    -t "$DIST_NAME $APP_VERSION $name" >/dev/null 2>"$work/minisign.err" \
     || { cat "$work/minisign.err" >&2; die "minisign failed (wrong MINISIGN_PASSWORD?)"; }
   # Catch a secret key that doesn't match the public key embedded in the app.
   minisign -V -q -p "$pubkey" -m "$archive" -x "$archive.minisig" \
@@ -166,7 +172,7 @@ sums=()
 dmgs='{}'
 for build in universal aarch64 x86_64; do
   [ -n "$(app_of "$build")" ] || continue
-  name="$APP_NAME-$APP_VERSION-macos$(suffix_of "$build").dmg"
+  name="$DIST_NAME-$APP_VERSION-macos$(suffix_of "$build").dmg"
   dmg="$dist/$name"
   log "creating $name"
   # The window, background and volume icon: scripts/make-dmg.sh (Finder lays it out, so it needs a desktop
@@ -177,7 +183,7 @@ for build in universal aarch64 x86_64; do
     "$(dirname "$0")/notarize.sh" "$dmg"
   fi
   hdiutil verify -quiet "$dmg"
-  stable="$APP_NAME-macos$(suffix_of "$build").dmg"
+  stable="$DIST_NAME-macos$(suffix_of "$build").dmg"
   cp "$dmg" "$dist/$stable"
   dmgs="$(jq -n --argjson dmgs "$dmgs" --arg build "$build" --arg name "$stable" \
     --argjson size "$(stat -f%z "$dmg")" '$dmgs + {($build): {name: $name, size: $size}}')"

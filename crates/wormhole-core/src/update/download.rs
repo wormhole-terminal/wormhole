@@ -118,7 +118,7 @@ pub fn download(
 }
 
 /// The signed comment must name this release: `scripts/package.sh` signs every archive with
-/// `-t "<app name> <version> <archive file name>"`.
+/// `-t "<name> <version> <archive file name>"`, the name being one word (`Wormhole`, the beta's `Wormhole-Beta`).
 ///
 /// This is what ties the archive to the version the feed announces. The feed is unsigned, so
 /// without it whoever controls the feed could offer an older archive (validly signed, same key)
@@ -228,12 +228,42 @@ mod tests {
         // The two halves live in different languages; if either side's format changes, this
         // fails and says to change both.
         let package = include_str!("../../../../scripts/package.sh");
-        assert!(package.contains(r#"-t "$APP_NAME $APP_VERSION $name""#), "trusted comment format");
+        assert!(package.contains(r#"-t "$DIST_NAME $APP_VERSION $name""#), "trusted comment format");
         assert!(
-            package.contains(r#"printf '%s-%s-macos%s.app.tar.gz' "$APP_NAME" "$APP_VERSION""#),
+            package.contains(r#"printf '%s-%s-macos%s.app.tar.gz' "$DIST_NAME" "$APP_VERSION""#),
             "archive name"
         );
         assert!(package.contains(r#"--arg url "$base_url/$name""#), "asset url");
         assert!(package.contains(r#"--arg version "$APP_VERSION""#), "feed version");
+
+        // DIST_NAME is the identity file's, else its APP_NAME (scripts/lib.sh): the comment's first word, which
+        // must hold no space. The 1.x app's is "Wormhole", as every release before signed it; the Swift beta's
+        // APP_NAME has a space, so its file names a DIST_NAME without one.
+        let lib = include_str!("../../../../scripts/lib.sh");
+        assert!(lib.contains(r#"DIST_NAME="${DIST_NAME:-$APP_NAME}""#), "DIST_NAME defaults to APP_NAME");
+        let value = |env: &str, key: &str| {
+            env.lines()
+                .find_map(|line| line.strip_prefix(&format!("{key}=")))
+                .map(|value| value.trim_matches('"').to_owned())
+        };
+        let app = include_str!("../../../../packaging/app.env");
+        assert_eq!(value(app, "DIST_NAME"), None, "the 1.x app's archives keep their names");
+        assert_eq!(value(app, "APP_NAME").as_deref(), Some("Wormhole"));
+        let beta = include_str!("../../../../packaging/beta.env");
+        assert_eq!(value(beta, "APP_NAME").as_deref(), Some("Wormhole Beta"));
+        assert_eq!(value(beta, "DIST_NAME").as_deref(), Some("Wormhole-Beta"));
+
+        // What package.sh signs for each, and that the updater takes it for the file the feed names.
+        for (name, version) in [("Wormhole", "1.7.0"), ("Wormhole-Beta", "2.0.0-beta.1")] {
+            let file = format!("{name}-{version}-macos.app.tar.gz");
+            let release = release_at(version, &format!("https://github.com/o/r/releases/download/t/{file}"));
+            assert!(check_trusted_comment(&format!("{name} {version} {file}"), &release).is_ok(), "{name}");
+        }
+        let file = "Wormhole-Beta-2.0.0-beta.1-macos.app.tar.gz";
+        let release = release_at("2.0.0-beta.1", &format!("https://h/{file}"));
+        assert!(
+            check_trusted_comment(&format!("Wormhole Beta 2.0.0-beta.1 {file}"), &release).is_err(),
+            "the beta's APP_NAME, which has a space, is refused"
+        );
     }
 }
