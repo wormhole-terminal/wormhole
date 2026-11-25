@@ -170,3 +170,7 @@ T01, T03. Blink: with the window in front run `printf '\e[5mblink\e[0m\n'` and `
     second, together in every pane, and the cursor to blink as DECSCUSR 5 says; with Reduce Motion on (System Settings → Accessibility → Display)
     both stay steady, and with the window behind another app both stay steady (the clock runs only for the key window, so a `--background`
     instance shows them steady: the steady "on" half is what `DrawnStylesTests/drawnFacesAndLines` proves).
+T18. Resize chip: in a shell run `seq 1 100000 | while read n; do echo $n; sleep 0.01; done` and drag a window corner slowly with the mouse.
+    **Expect** the chip "cols × rows" to show while dragging and go within a moment of letting go, the grid to follow in whole cells without a
+    flicker or a doubled line, and the numbers to carry on in order after the drag. (`LiveResizeTests` drags the corner by script and proves the
+    PTY's size, the lines and the cursor; AppKit's live-resize flag and the chip's 100 ms gate need a real pointer.)
