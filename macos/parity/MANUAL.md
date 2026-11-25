@@ -174,3 +174,13 @@ T18. Resize chip: in a shell run `seq 1 100000 | while read n; do echo $n; sleep
     **Expect** the chip "cols × rows" to show while dragging and go within a moment of letting go, the grid to follow in whole cells without a
     flicker or a doubled line, and the numbers to carry on in order after the drag. (`LiveResizeTests` drags the corner by script and proves the
     PTY's size, the lines and the cursor; AppKit's live-resize flag and the chip's 100 ms gate need a real pointer.)
+T05. A mouse with three buttons over `printf '\e[?1000h\e[?1006h'; cat -v`: left, middle and right click. **Expect** `^[[<0;…M`/`m`, `^[[<1;…`,
+    `^[[<2;…` (a right click opens no menu); with Shift held the right click opens the context menu and nothing is reported. The back and
+    forward buttons report nothing. With `printf '\e[?1003h'; cat -v` move the pointer across the pane: **expect** `^[[<35;…M` once for
+    each new cell (a `--background` window gets no hover, so only a real pointer shows it).
+T05. Focus reports: `printf '\e[?1004h'; cat -v`, click another app, then back. **Expect** `^[[O` when Wormhole loses the keys and `^[[I` when it
+    gets them back (also when another pane of a split takes them). The engine's report is proved by `MouseModesLiveTests/focusReportsFollowMode1004`;
+    the window becoming key is a person's.
+T07. Option keys on a real keyboard, Settings → Terminal → Option as Meta = Left: with the left Option key press B in a shell. **Expect** the
+    cursor to jump back a word (ESC b); with the right Option key **expect** the layout's character (∫ on a US layout). Right then does the
+    reverse; Both makes either a Meta; Off types characters with both. (`KeysLiveTests` proves the sides from the device flags a keyboard sets.)

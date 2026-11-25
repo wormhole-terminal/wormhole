@@ -3,9 +3,9 @@ T01,85,5,10,5,5,"the blink flip in a key window (MANUAL.md T01); the visual-run 
 T02,35,0,65,35,5,"fallback glyph actually drawn (the test asserts a counter, not a picture); ZWJ/flag/skin-tone/Indic marks shaped and drawn; font_features string; variation selectors; hosted"
 T03,82,8,10,0,5,"theme cursor-text colour; the outline of a pane without the keys is read out (CursorTests) and not read from the picture; cursor shapes in a hosted terminal"
 T04,90,0,10,0,6,"drag autoscroll actually scrolling the history (PointerTests only checks a timer exists, on a mock); word/line/block selection in a hosted terminal"
-T05,30,0,70,0,10,"modes 1002/1003 (drag and any-motion reports), 1005, 1015, 1016; wheel reported to a mouse-tracking program; buttons other than left; motion reports (only a mock test); mouse reporting in a hosted terminal; no e2e scenario drives it"
-T06,70,0,30,0,5,alt-screen wheel (arrow keys / report to the program): no test; wheel while a program reports the mouse
-T07,55,0,45,0,10,"left vs right Option on a real keyboard (a synthetic key cannot say the side) and Option layouts (@ { [): not in MANUAL.md; kitty keyboard beyond level 1 (event types, report-all, alternates), key release not sent (T07's own note); Fn/F-key table through the app; keys in a hosted terminal"
+T05,85,8,7,0,7,"the hover through the window server and a real window gaining or losing the keys (MANUAL.md T05); back and forward buttons; mouse reporting in a hosted terminal"
+T06,95,0,5,0,5,"wheel in a hosted terminal"
+T07,80,5,15,0,10,"key release and repeat are never sent, so the kitty event-type flag gets presses only; real Option keys with a layout's characters (MANUAL.md T07); the F-key table through the app; keys in a hosted terminal"
 T08,55,0,45,0,10,"OSC 8 link through the app (ffi only); file-path links; hand cursor and a real ⌘-click (not in MANUAL.md); the ⌘-hover underline compared with GPUI (no valid pair, T08 notes); hosted"
 T09,60,0,40,0,25,kitty Unicode placeholders drawn (ffi unit tests only); image memory limit and allow_* switches (T28); animation; pictures in a hosted terminal (pixels cross the host wire: nothing shows it); iTerm2 edge column differs from GPUI (visual table)
 T10,50,0,50,30,5,"no scenario shows the strip drawn from real lines, clicks it or drags its slider; fold ticks (fake source only); View > Show Minimap toggle only as a setting (SettingsPages); hosted"
