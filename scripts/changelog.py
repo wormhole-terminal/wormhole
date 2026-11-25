@@ -9,8 +9,10 @@
                                                    turn [Unreleased] into the version, start a new [Unreleased]
   scripts/changelog.py selftest                    run the built-in tests
 
---file picks another file (default: CHANGELOG.md at the repository root). The format is Keep a
-Changelog 1.1 with one extra rule for `### Security`, see CONTRIBUTING.md ("Changelog"):
+--file picks another file (default: CHANGELOG.md at the repository root), and --tag-prefix the prefix of its
+versions' tags in the link references `release` writes (default `v`, the 1.x app's `v1.2.3`; the Swift app's
+beta, macos/CHANGELOG.md, is tagged `beta-2.0.0-beta.1`). The format is Keep a Changelog 1.1 with one extra rule
+for `### Security`, see CONTRIBUTING.md ("Changelog"):
 
   - **High** · [GHSA-xxxx-xxxx-xxxx](https://github.com/wormhole-terminal/wormhole/security/advisories/GHSA-xxxx-xxxx-xxxx) · affects 0.2.0–0.3.0: what was wrong.
 
@@ -289,8 +291,9 @@ def load(path: str) -> Doc:
         sys.exit("error: cannot read %s: %s" % (path, e))
 
 
-def clean_version(arg: str) -> str:
-    return arg[1:] if arg.startswith("v") else arg
+def clean_version(arg: str, prefix: str = "v") -> str:
+    """A version as a tag or as itself: `v1.2.3` (or `beta-2.0.0-beta.1` with that prefix) is `1.2.3`."""
+    return arg[len(prefix):] if prefix and arg.startswith(prefix) else arg
 
 
 def cmd_check(args) -> int:
@@ -304,16 +307,16 @@ def cmd_check(args) -> int:
     return 0
 
 
-def section_or_die(doc: Doc, version: str) -> Section:
-    section = doc.find(clean_version(version))
+def section_or_die(doc: Doc, version: str, prefix: str) -> Section:
+    section = doc.find(clean_version(version, prefix))
     if section is None:
-        sys.exit("error: %s has no section for %s" % (doc.path, clean_version(version)))
+        sys.exit("error: %s has no section for %s" % (doc.path, clean_version(version, prefix)))
     return section
 
 
 def cmd_notes(args) -> int:
     doc = load(args.file)
-    section = section_or_die(doc, args.version)
+    section = section_or_die(doc, args.version, args.tag_prefix)
     body = strip_blank(doc.lines[section.index + 1 : section.end])
     if not body:
         sys.exit("error: the section for %s is empty" % section.name)
@@ -323,7 +326,7 @@ def cmd_notes(args) -> int:
 
 def cmd_severity(args) -> int:
     doc = load(args.file)
-    section = section_or_die(doc, args.version)
+    section = section_or_die(doc, args.version, args.tag_prefix)
     found = security_bullets(doc, section)
     if args.advisories:
         for _, ghsa in found:
@@ -334,7 +337,7 @@ def cmd_severity(args) -> int:
     return 0
 
 
-def release_text(doc: Doc, version: str, date: str) -> str:
+def release_text(doc: Doc, version: str, date: str, prefix: str = "v") -> str:
     if not VERSION_RE.fullmatch(version):
         sys.exit("error: %r is not a version (X.Y.Z or X.Y.Z-beta.N)" % version)
     try:
@@ -357,21 +360,21 @@ def release_text(doc: Doc, version: str, date: str) -> str:
     while lines and not lines[-1].strip():
         lines.pop()
 
-    refs = [("Unreleased", "%s/compare/v%s...HEAD" % (REPO_URL, version))]
+    refs = [("Unreleased", "%s/compare/%s%s...HEAD" % (REPO_URL, prefix, version))]
     if previous is not None and core(previous) >= FIRST_LINKED:
-        refs.append((version, "%s/compare/v%s...v%s" % (REPO_URL, previous, version)))
+        refs.append((version, "%s/compare/%s%s...%s%s" % (REPO_URL, prefix, previous, prefix, version)))
     else:
-        refs.append((version, "%s/releases/tag/v%s" % (REPO_URL, version)))
+        refs.append((version, "%s/releases/tag/%s%s" % (REPO_URL, prefix, version)))
     refs += [(name, url) for name, (_, url) in sorted(doc.refs.items(), key=lambda kv: kv[1][0]) if name != "Unreleased"]
     lines += [""] + ["[%s]: %s" % r for r in refs]
     return "\n".join(lines) + "\n"
 
 
 def cmd_release(args) -> int:
-    version = clean_version(args.version)
+    version = clean_version(args.version, args.tag_prefix)
     doc = load(args.file)
     date = args.date or datetime.date.today().isoformat()
-    text = release_text(doc, version, date)
+    text = release_text(doc, version, date, args.tag_prefix)
     tmp = args.file + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(text)
@@ -527,6 +530,28 @@ def selftest() -> int:
             text = f.read()
         expect("first linked release", code == 0 and "[0.3.1]: %s/releases/tag/v0.3.1\n" % REPO_URL in text and problems_of(text) == [])
 
+        # A second changelog with tags of its own (the Swift app's beta-2.0.0-beta.1): its links name its tags.
+        beta = old.replace("## [0.3.0] - 2026-10-10\n\n### Added\n- Something.\n\n", "").replace("### Fixed", "### Added")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(beta)
+        prefixed = ["--file", path, "--tag-prefix", "beta-"]
+        code, _, _ = run(prefixed + ["release", "beta-2.0.0-beta.1", "--date", "2026-11-25"])
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        expect("prefixed first release", code == 0 and problems_of(text) == []
+               and "[Unreleased]: %s/compare/beta-2.0.0-beta.1...HEAD\n" % REPO_URL in text
+               and "[2.0.0-beta.1]: %s/releases/tag/beta-2.0.0-beta.1\n" % REPO_URL in text)
+        code, out, _ = run(prefixed + ["notes", "beta-2.0.0-beta.1"])
+        expect("prefixed notes", code == 0 and out.startswith("### Added\n- A fix"))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text.replace("## [Unreleased]\n", "## [Unreleased]\n\n### Fixed\n- Another.\n", 1))
+        code, _, _ = run(prefixed + ["release", "2.0.0-beta.2", "--date", "2026-11-26"])
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        expect("prefixed compare link", code == 0 and problems_of(text) == []
+               and "[2.0.0-beta.2]: %s/compare/beta-2.0.0-beta.1...beta-2.0.0-beta.2\n" % REPO_URL in text
+               and "/compare/v" not in text and "/tag/v" not in text)
+
     if failures:
         for name in failures:
             print("FAILED: " + name, file=sys.stderr)
@@ -539,6 +564,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="CHANGELOG.md tools", formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=__doc__)
     parser.add_argument("--file", default=DEFAULT_FILE, help="the changelog (default: CHANGELOG.md at the repository root)")
+    parser.add_argument("--tag-prefix", default="v", help="what its versions' tags start with (default: v)")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="validate the file")
     p = sub.add_parser("notes", help="a version's entries as Markdown")
