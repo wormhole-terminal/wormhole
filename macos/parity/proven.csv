@@ -2,7 +2,7 @@ id,proven,manual,unproven_auto,recorded,hosted_cut,unproven
 T01,85,5,10,5,5,"the blink flip in a key window (MANUAL.md T01); the visual-run pass against GPUI (s2-terminal/visual-table.md) is a recorded harness run, not in the suite; hosted terminal only shown drawing plain text"
 T02,35,0,65,35,5,"fallback glyph actually drawn (the test asserts a counter, not a picture); ZWJ/flag/skin-tone/Indic marks shaped and drawn; font_features string; variation selectors; hosted"
 T03,82,8,10,0,5,"theme cursor-text colour; the outline of a pane without the keys is read out (CursorTests) and not read from the picture; cursor shapes in a hosted terminal"
-T04,72,0,28,0,6,"drag autoscroll actually scrolling the history (PointerTests only checks a timer exists, on a mock); word/line/block selection in a hosted terminal; PointerTests drive a MockInteraction (view wiring only)"
+T04,90,0,10,0,6,"drag autoscroll actually scrolling the history (PointerTests only checks a timer exists, on a mock); word/line/block selection in a hosted terminal"
 T05,30,0,70,0,10,"modes 1002/1003 (drag and any-motion reports), 1005, 1015, 1016; wheel reported to a mouse-tracking program; buttons other than left; motion reports (only a mock test); mouse reporting in a hosted terminal; no e2e scenario drives it"
 T06,70,0,30,0,5,alt-screen wheel (arrow keys / report to the program): no test; wheel while a program reports the mouse
 T07,55,0,45,0,10,"left vs right Option on a real keyboard (a synthetic key cannot say the side) and Option layouts (@ { [): not in MANUAL.md; kitty keyboard beyond level 1 (event types, report-all, alternates), key release not sent (T07's own note); Fn/F-key table through the app; keys in a hosted terminal"
