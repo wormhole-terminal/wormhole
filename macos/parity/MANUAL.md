@@ -156,3 +156,13 @@ L6. On a Mac whose default terminal is still the old codename's app (bundle id `
     folder: the first launch takes the role over (X15; the Swift app refuses any folder but `Wormhole-swift*` today, so this cannot be tried yet).
 L7. With VoiceOver on, open Help → Session Hosts and move over a card. **Expect** it read as a button with the host's standing, id and note; Return or
     Space opens and folds it.
+
+## Terminal input and drawing (verification wave, beta 1)
+
+What the suite proves for these rows is in `proven.csv`. These are the parts a `--background` instance cannot show: its window is never key
+(`front` would take the focus from the app in use), no real input method runs, and an injected event cannot come from a keyboard or a mouse.
+Start a normal (not `--background`) instance as in the setup above, with a shell (`WORMHOLE_SHELL=/bin/zsh`). Items are named by their ledger row.
+
+T12. Find: ⌘F, type a word that is on screen more than once, press ↩ then ⇧↩ in the field. **Expect** the current match (the one painted
+    apart) to move to the next and the previous match, round the ends, scrolling the history when the match is in it. (An injected key never
+    reaches SwiftUI's own key handling, so only a real keyboard shows it; ⌘G and ⇧⌘G do the same and `FindTypedTests` proves them.)
