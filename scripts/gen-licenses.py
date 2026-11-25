@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Regenerate crates/wormhole-core/assets/licenses.json, the third-party license
-list that Wormhole's Licenses window shows.
+"""Regenerate the third-party license list that Wormhole's Licenses window shows:
+crates/wormhole-core/assets/licenses.json for the 1.x app, or with --ffi
+crates/wormhole-ffi/assets/licenses.json for the Swift app (its Rust library is a
+workspace of its own, with its own Cargo.lock).
 
-  scripts/gen-licenses.py           write the file
-  scripts/gen-licenses.py --check   exit 1 if the file is out of date (writes nothing)
+  scripts/gen-licenses.py                 write the 1.x app's file
+  scripts/gen-licenses.py --check         exit 1 if it is out of date (writes nothing)
+  scripts/gen-licenses.py --ffi           write the Swift app's file
+  scripts/gen-licenses.py --ffi --check   the same check for that one
 
 Run it after `cargo update` or after adding, removing or upgrading a dependency.
 It lists the crates the app is built from on macOS (normal dependencies of the
-workspace crates, for both architectures we ship; not dev- or build-only ones),
-with each crate's declared license and the text of the license files in its
-package. Crates whose package ships no license file get an empty text list, and the
-window says so. Identical texts are stored once. What is compiled in without being a crate
-(the bundled font) is listed from `ASSETS` below, marked with its `kind`.
+workspace crates, for both architectures we ship; not dev- or build-only ones, and not
+this repository's own crates), with each crate's declared license and the text of the
+license files in its package. Crates whose package ships no license file get an empty
+text list, and the window says so. Identical texts are stored once. What is compiled in
+without being a crate (the bundled font; for the Swift app also its icons and logos) is
+listed from `ASSETS` and `FFI_ASSETS` below, marked with its `kind`.
 
 Needs only Python 3 and cargo; dependencies must be downloaded (`cargo fetch`).
 """
@@ -23,6 +28,11 @@ import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 OUT = os.path.join(ROOT, "crates", "wormhole-core", "assets", "licenses.json")
+# The Swift app's Rust library: a workspace of its own, of which only `wormhole-ffi` ends up in the app
+# (the other member is the bindings generator, a build tool).
+FFI_DIR = os.path.join(ROOT, "crates", "wormhole-ffi")
+FFI_OUT = os.path.join(FFI_DIR, "assets", "licenses.json")
+FFI_ROOT_PACKAGE = "wormhole-ffi"
 TARGETS = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 LICENSE_PREFIXES = ("LICENSE", "LICENCE", "COPYING", "UNLICENSE", "NOTICE")
 
@@ -39,11 +49,71 @@ ASSETS = [
     },
 ]
 
+# What the Swift app compiles in or bundles besides crates: the font above, the file icon theme (its
+# SVGs and `icons/LICENSES.md` are the app's resources) and the agents' logos (their paths are
+# `AgentLogoData.swift`, generated from `agent-icons`), and Lucide's icons in `LucideData.swift`.
+# A license is a `(file, heading)` pair: the fenced block under that `## heading` of a markdown file,
+# for licenses that live in a notice file beside the assets rather than in a file of their own.
+# Versions are the ones the notice files name; where they name none the entry has none.
+ICON_NOTICE = "macos/swift/Sources/FileIconTheme/Resources/icons/LICENSES.md"
+LOGO_NOTICE = "crates/wormhole-core/assets/agent-icons/LICENSES.md"
+FFI_ASSETS = [
+    ASSETS[0],
+    {
+        "name": "Catppuccin VSCode Icons",
+        "version": "",
+        "license": "MIT",
+        "repository": "https://github.com/catppuccin/vscode-icons",
+        "kind": "icons",
+        "sections": [(ICON_NOTICE, "## Catppuccin VSCode Icons — MIT")],
+    },
+    {
+        "name": "Lucide",
+        "version": "",
+        "license": "ISC",
+        "repository": "https://github.com/lucide-icons/lucide",
+        "kind": "icons",
+        "sections": [(ICON_NOTICE, "## Lucide — ISC")],
+    },
+    {
+        "name": "Feather",
+        "version": "",
+        "license": "MIT",
+        "repository": "https://github.com/feathericons/feather",
+        "kind": "icons",
+        "sections": [(ICON_NOTICE, "## Feather (chevron-right, chevron-down) — MIT")],
+    },
+    {
+        # CC0 asks for no notice to travel, and the notice file carries none.
+        "name": "Simple Icons",
+        "version": "16.33.0, 16.36.0",
+        "license": "CC0-1.0",
+        "repository": "https://github.com/simple-icons/simple-icons",
+        "kind": "icons",
+    },
+    {
+        "name": "Lobe Icons",
+        "version": "1.101.0",
+        "license": "MIT",
+        "repository": "https://github.com/lobehub/lobe-icons",
+        "kind": "icons",
+        "sections": [(LOGO_NOTICE, "## Lobe Icons files — MIT License")],
+    },
+    {
+        "name": "Primer Octicons",
+        "version": "",
+        "license": "MIT",
+        "repository": "https://github.com/primer/octicons",
+        "kind": "icons",
+        "sections": [(LOGO_NOTICE, "## `copilot.svg` — MIT License (Primer Octicons)")],
+    },
+]
 
-def metadata(target):
+
+def metadata(target, cwd):
     result = subprocess.run(
         ["cargo", "metadata", "--format-version", "1", "--locked", "--filter-platform", target],
-        cwd=ROOT,
+        cwd=cwd,
         capture_output=True,
         text=True,
     )
@@ -53,8 +123,10 @@ def metadata(target):
 
 
 def shipped(meta):
-    """Ids of the packages reachable from the workspace crates through normal dependencies."""
+    """Ids of the packages reachable from the workspace crates through normal dependencies, without
+    this repository's own crates: the ones with no registry or git source."""
     nodes = {node["id"]: node for node in meta["resolve"]["nodes"]}
+    packages = {package["id"]: package for package in meta["packages"]}
     seen = set()
     stack = list(meta["workspace_members"])
     while stack:
@@ -65,14 +137,58 @@ def shipped(meta):
         for dep in nodes[pkg]["deps"]:
             if any(kind["kind"] is None for kind in dep["dep_kinds"]):
                 stack.append(dep["pkg"])
-    return seen - set(meta["workspace_members"])
+    return {pkg for pkg in seen if packages[pkg]["source"] is not None}
+
+
+def tidy(text):
+    lines = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    return "\n".join(lines).strip("\n")
+
+
+def shipped_ffi(meta, target):
+    """Ids of the packages `wormhole-ffi` is built from, as `cargo tree -p` resolves them. Not `shipped`'s
+    walk of `cargo metadata`: metadata resolves features for the whole workspace, where the bindings
+    generator turns on uniffi's tooling (askama, clap, goblin, ...), which the library is not built with."""
+    result = subprocess.run(
+        ["cargo", "tree", "--locked", "-p", FFI_ROOT_PACKAGE, "-e", "normal", "--target", target]
+        + ["--prefix", "none", "--format", "{p}"],
+        cwd=FFI_DIR,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"cargo tree failed for {target}:\n{result.stderr}")
+    # Lines read `name vX.Y.Z (source)` with a `(*)` mark on repeats.
+    built = {tuple(line.split()[:2]) for line in result.stdout.splitlines() if line.strip()}
+    return {
+        package["id"]
+        for package in meta["packages"]
+        if package["source"] is not None and (package["name"], "v" + package["version"]) in built
+    }
 
 
 def read_text(path):
     with open(path, "rb") as handle:
-        text = handle.read().decode("utf-8", errors="replace")
-    lines = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
-    return "\n".join(lines).strip("\n")
+        return tidy(handle.read().decode("utf-8", errors="replace"))
+
+
+def fenced_block(path, heading):
+    """The text of the first fenced block under `heading` (a `## ...` line) of a markdown file."""
+    lines = read_text(path).split("\n")
+    if heading not in lines:
+        sys.exit(f"{path} has no section {heading!r}")
+    block = []
+    fenced = False
+    for line in lines[lines.index(heading) + 1 :]:
+        if line.startswith("```"):
+            if fenced:
+                return tidy("\n".join(block))
+            fenced = True
+        elif fenced:
+            block.append(line)
+        elif line.startswith("## "):
+            break
+    sys.exit(f"{path}: no fenced block under {heading!r}")
 
 
 def license_files(package):
@@ -99,27 +215,27 @@ def license_files(package):
     return found
 
 
-def build():
+def build(ffi):
     packages = {}
     ids = set()
     for target in TARGETS:
-        meta = metadata(target)
+        meta = metadata(target, FFI_DIR if ffi else ROOT)
         for package in meta["packages"]:
             packages[package["id"]] = package
-        ids |= shipped(meta)
+        ids |= shipped_ffi(meta, target) if ffi else shipped(meta)
 
-    entries = [(p, license_files(p)) for p in (packages[i] for i in ids)]
-    entries += [
-        ({**asset, "id": asset["name"]}, [os.path.join(ROOT, f) for f in asset["files"]]) for asset in ASSETS
-    ]
+    entries = [(p, [read_text(path) for path in license_files(p)]) for p in (packages[i] for i in ids)]
+    for asset in FFI_ASSETS if ffi else ASSETS:
+        found = [read_text(os.path.join(ROOT, f)) for f in asset.get("files", [])]
+        found += [fenced_block(os.path.join(ROOT, f), heading) for f, heading in asset.get("sections", [])]
+        entries.append(({**asset, "id": asset["name"]}, found))
     entries.sort(key=lambda e: (e[0]["name"].lower(), e[0]["version"], e[0]["id"]))
     texts = []
     index = {}
     crates = []
-    for package, files in entries:
+    for package, found in entries:
         used = []
-        for path in files:
-            text = read_text(path)
+        for text in found:
             if not text:
                 continue
             if text not in index:
@@ -148,18 +264,23 @@ def build():
 
 
 def main():
-    if len(sys.argv) > 2 or (len(sys.argv) == 2 and sys.argv[1] != "--check"):
+    args = sys.argv[1:]
+    ffi = "--ffi" in args
+    check = "--check" in args
+    if len(args) != ffi + check:
         sys.exit(__doc__)
-    content, crates, texts = build()
-    if len(sys.argv) == 2:
-        current = open(OUT, encoding="utf-8").read() if os.path.exists(OUT) else ""
+    out = FFI_OUT if ffi else OUT
+    content, crates, texts = build(ffi)
+    if check:
+        current = open(out, encoding="utf-8").read() if os.path.exists(out) else ""
         if current != content:
-            sys.exit("licenses.json is out of date: run scripts/gen-licenses.py")
-        print(f"licenses.json is up to date ({crates} crates)")
+            sys.exit(f"{os.path.relpath(out, ROOT)} is out of date: run scripts/gen-licenses.py{' --ffi' if ffi else ''}")
+        print(f"{os.path.relpath(out, ROOT)} is up to date ({crates} crates)")
         return
-    with open(OUT, "w", encoding="utf-8") as handle:
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as handle:
         handle.write(content)
-    print(f"wrote {os.path.relpath(OUT, ROOT)}: {crates} crates, {texts} distinct texts, {len(content) // 1024} KiB")
+    print(f"wrote {os.path.relpath(out, ROOT)}: {crates} crates, {texts} distinct texts, {len(content) // 1024} KiB")
 
 
 if __name__ == "__main__":
