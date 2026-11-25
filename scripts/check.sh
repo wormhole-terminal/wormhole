@@ -68,14 +68,14 @@ scope_of() {
     .cargo/*|.config/nextest.toml) echo all ;;
     # What the bridge is built from (core, term and text by path; host and wire through term).
     crates/wormhole-core/*|crates/wormhole-term/*|crates/wormhole-host/*|crates/wormhole-wire/*|crates/wormhole-text/*) echo "all ffi" ;;
-    # include_str!'d by core's updater tests; lib.sh also runs in the app's isolated_instance test.
-    # packaging/icon: core's intro tests include the iconset script and the chevron.
-    scripts/lib.sh|scripts/package.sh|packaging/icon/*) echo all ;;
+    # include_str!'d by core's updater tests (the two identity files too: what package.sh signs); lib.sh also runs
+    # in the app's isolated_instance test. packaging/icon: core's intro tests include the iconset script and the chevron.
+    scripts/lib.sh|scripts/package.sh|packaging/app.env|packaging/beta.env|packaging/icon/*) echo all ;;
     crates/wormhole/*) echo app ;;
     # The checks read the app's sources and the repository's text; they link nothing of the workspace.
     crates/wormhole-rules/*) echo text ;;
     # include_bytes!/include_str!'d by the app alone.
-    packaging/app.env|packaging/updater.pub) echo app ;;
+    packaging/updater.pub) echo app ;;
     # Scanned for wording by crates/wormhole-rules/tests/design_rules.rs (banned words, the devctl docs).
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
     README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|ACCESSIBILITY.md|CHANGELOG.md) echo text ;;
@@ -204,6 +204,7 @@ fi
 history=("python3 scripts/commits.py check-range $base..HEAD"
          "python3 scripts/commits.py changelog-needed --include-worktree $base..HEAD")
 grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py check")
+grep -qx 'macos/CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py --file macos/CHANGELOG.md --tag-prefix beta- check")
 grep -Eqx '(scripts/worktree\.sh|crates/[^/]+/Cargo\.toml)' <<<"$changed" && history+=("scripts/worktree.sh --selftest")
 grep -qx 'scripts/check.sh' <<<"$changed" && history+=("scripts/check.sh --selftest")
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
