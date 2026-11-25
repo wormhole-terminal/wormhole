@@ -102,13 +102,14 @@ struct AuxBackends {
     #if WITH_UNIFFI
         /// Where and what to update. A fixture names its own feed and key (`--update-feed`, `--update-key`, `--update-bundle`: they
         /// are what the tests use); a release build has its feed, key, team and fallback baked in when it was built, the way the GPUI app
-        /// has them (`update::feed_config`), and its channel is Settings'. A test instance never takes the baked feed: it would ask a real
-        /// server (and be counted); a dev build has none.
+        /// has them (`update::feed_config`), and its channel is Settings'. The bundle the updater expects is the running one's own identifier, and it runs as the full version
+        /// (`WormholeVersion`; a beta's short version is `2.0.0` and would never be offered `2.0.0-beta.2`). A test instance never takes
+        /// the baked feed: it would ask a real server (and be counted); a dev build has none.
         func updateSetup() -> FFIUpdateBackend.Setup? {
-            guard real else { return nil }
+            guard real, let bundleID = Bundle.main.bundleIdentifier else { return nil }
             let info = AppInfo.from(bundle: .main)
             if let feed = app.options.updateFeedURL, let key = publicKey() {
-                var setup = FFIUpdateBackend.Setup(baseURL: feed, publicKey: key, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
+                var setup = FFIUpdateBackend.Setup(baseURL: feed, publicKey: key, currentVersion: info.version, bundleID: bundleID)
                 if app.options.updateKeyFile != nil || app.options.updateBundle != nil {
                     // A fixture: its own key and a bundle in the data folder, which no one has code-signed.
                     setup.appBundle = scratchBundle()
@@ -117,7 +118,7 @@ struct AuxBackends {
                 return setup
             }
             guard app.policy.touchesSystem, let release = updateReleaseSetup() else { return nil }
-            var setup = FFIUpdateBackend.Setup(baseURL: release.baseUrl, publicKey: release.publicKey, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
+            var setup = FFIUpdateBackend.Setup(baseURL: release.baseUrl, publicKey: release.publicKey, currentVersion: info.version, bundleID: bundleID)
             setup.teamID = release.teamId
             setup.fallbackURL = release.fallbackUrl
             if Bundle.main.bundleURL.pathExtension == "app" { setup.appBundle = Bundle.main.bundleURL }
