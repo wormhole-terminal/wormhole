@@ -67,12 +67,14 @@ jobs:
       - name: Rust library and bindings
         run: macos/scripts/build-ffi.sh swift
       # The bridge is a cargo workspace of its own, so the CI workflow's fmt, clippy and tests never reach it:
-      # the same three commands scripts/check.sh runs for it.
+      # the same three commands scripts/check.sh runs for it, in its folder (its .cargo/config.toml gives the tests
+      # their data folder, and cargo reads that file from the working directory).
       - name: The bridge's format, lints and tests
+        working-directory: crates/wormhole-ffi
         run: |
-          cargo fmt --manifest-path crates/wormhole-ffi/Cargo.toml --all -- --check
-          cargo clippy --quiet --manifest-path crates/wormhole-ffi/Cargo.toml --workspace --all-targets -- -D warnings
-          cargo test --quiet --manifest-path crates/wormhole-ffi/Cargo.toml
+          cargo fmt --all -- --check
+          cargo clippy --quiet --workspace --all-targets -- -D warnings
+          cargo test --quiet
       - name: Release build
         working-directory: macos/swift
         run: swift build -c release

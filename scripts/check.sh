@@ -189,14 +189,17 @@ case "$scope" in
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check" "cargo shear")
-# The Swift app's bridge is a workspace of its own, so none of the steps above see it: the same checks, pointed at
-# its manifest (it reads the root's rustfmt.toml, clippy.toml and lints). Formatting is only checked here, not
-# rewritten, so a failing gate never leaves a tree changed behind it. `cargo deny` gets the same deny.toml.
+# The Swift app's bridge is a workspace of its own, so none of the steps above see it: the same checks, run in its
+# folder (it reads the root's rustfmt.toml, clippy.toml and lints). In its folder and not by --manifest-path: cargo
+# takes .cargo/config.toml from the working directory, and the bridge's gives its tests the data folder they may
+# open (without it every test that starts a terminal is refused). Formatting is only checked here, not rewritten,
+# so a failing gate never leaves a tree changed behind it. `cargo deny` gets the same deny.toml.
+# shellcheck disable=SC2329 # called by name: it is the first word of the steps below
+in_bridge() { (cd crates/wormhole-ffi && "$@"); }
 if [ "$ffi" = 1 ]; then
-  ffi_manifest="--manifest-path crates/wormhole-ffi/Cargo.toml"
-  steps+=("cargo fmt $ffi_manifest --all -- --check")
-  steps+=("cargo clippy --quiet $ffi_manifest --workspace --all-targets -- -D warnings")
-  steps+=("cargo test --quiet $ffi_manifest")
+  steps+=("in_bridge cargo fmt --all -- --check")
+  steps+=("in_bridge cargo clippy --quiet --workspace --all-targets -- -D warnings")
+  steps+=("in_bridge cargo test --quiet")
 fi
 [ "$ffi_deps" = 1 ] && steps+=("cargo deny --config deny.toml --manifest-path crates/wormhole-ffi/Cargo.toml check")
 
