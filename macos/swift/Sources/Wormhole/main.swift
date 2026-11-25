@@ -14,7 +14,17 @@ import Foundation
     // that the core does not know is one of this app's own launch options (`--shell`, `--background`), which GPUI does
     // not have, or a word `Options.parse` refuses with exit 2 as GPUI does (`--json` or `--version` first: `unknown command`).
     let isCommandLine = CommandLine.arguments.dropFirst().first.map { !$0.hasPrefix("-") || HookBridge.isCommandLine() } ?? false
-    if isCommandLine, let code = HookBridge.exitCodeIfCommandLine() { exit(code) }
+    if isCommandLine {
+        // The core resolves everything a command line reaches (the control socket, `sessions`' hosts folder, `probe`'s approvals, the
+        // flags it reads) from `WORMHOLE_DATA_DIR`, and from the 1.x app's own folder when it is not set, which a terminal's shell
+        // never has (`INSTANCE_VARS`): `wh` typed in one would otherwise ask 1.x's socket and read 1.x's folder. So the folder is
+        // settled first, as for a launch; a hook inside a tab still finds its app through `WORMHOLE_SOCKET` and `WORMHOLE_TAB_ID`.
+        do { try Isolation.requireForCommandLine() } catch {
+            FileHandle.standardError.write(Data("\(error)\n".utf8))
+            exit(2)
+        }
+        if let code = HookBridge.exitCodeIfCommandLine() { exit(code) }
+    }
 #endif
 
 let arguments = Array(CommandLine.arguments.dropFirst())

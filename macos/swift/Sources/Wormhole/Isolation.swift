@@ -95,4 +95,15 @@ enum Isolation {
         setenv(variable, url.path, 1)
         return url
     }
+
+    /// The same for a command line, before anything of it runs (`main.swift`): the core resolves the control socket, `sessions`' hosts and
+    /// `probe`'s approvals from the variable, and from 1.x's folder without it. Nothing is created: a command line only reads.
+    static func requireForCommandLine(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        bundleIdentifier actual: String? = Bundle.main.bundleIdentifier
+    ) throws {
+        let url = try dataDirectory(
+            bundleIdentifier: actual, variable: environment[variable], home: homeDirectory(environment: environment), forCommandLine: true)
+        setenv(variable, url.path, 1)
+    }
 }
