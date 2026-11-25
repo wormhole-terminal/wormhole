@@ -26,6 +26,7 @@
 #     the core looks for it; it is signed first, under the identifier "<bundle id>.host" that it derives its app from;
 #   - the executable embeds the same Info.plist the bundle has (Package.swift: WORMHOLE_INFO_PLIST);
 #   - the fonts and their licence are in Resources/Fonts/JetBrainsMono, where the app looks first.
+# `macos/scripts/check-bundle.sh` checks the result, and runs a copy of it.
 # One build at a time on a Mac that other builds share; this runs three (the library, the host, the app).
 set -euo pipefail
 # Before lib.sh reads it: the beta's scripts run with the beta's identity, whatever the caller has set.
@@ -42,7 +43,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --no-build) build=0 ;;
     --out) shift; out="${1:?--out needs a directory}" ;;
-    -h|--help) sed -n '2,29p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
   shift

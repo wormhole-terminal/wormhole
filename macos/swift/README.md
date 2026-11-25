@@ -66,7 +66,9 @@ the resource bundles (themes, keymap, icons, shaders) are in `Contents/Resources
 with `swift build --build-system swiftbuild`; SwiftPM's older build system looks at the bundle's root and then at an absolute path into
 the build folder, which a user's Mac does not have, so `bundle.sh` always names the one it needs and refuses a binary that holds a path
 of the builder's Mac. The package is linked to the shipped library only while the script runs, and back to the dev one after it. The
-script's header lists what it reads from the environment.
+script's header lists what it reads from the environment. `macos/scripts/check-bundle.sh` checks the result (both executables
+universal, the identity, versions and signatures, where the parts are) and starts a copy of it outside the checkout as a background
+instance, which must load its keymap, themes, icons and shaders, find its fonts, start a session host from beside itself and quit.
 
 ## Layout
 
