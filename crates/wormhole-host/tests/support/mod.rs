@@ -36,17 +36,21 @@ pub(crate) fn host_binary() -> &'static Path {
     static BINARY: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     BINARY.get_or_init(|| {
         let built = Path::new(env!("CARGO_BIN_EXE_wormhole-host"));
-        let said = Command::new(built).arg("--built-from").output().expect("the host binary runs");
-        let from = String::from_utf8_lossy(&said.stdout).trim().to_owned();
-        assert_eq!(
-            from,
-            env!("CARGO_MANIFEST_DIR"),
-            "{} was built from {from:?} (nothing at all if it is older than the flag), not from this tree \
-             ({}): another worktree built over the shared target dir. Run `cargo build -p wormhole-host` \
-             from this tree and run the tests again.",
-            built.display(),
-            env!("CARGO_MANIFEST_DIR"),
-        );
+        // A release build has no `--built-from` (it would ship the builder's path); its target dir is
+        // `target/release`, which the debug runs that share a machine's target dir do not build over.
+        if cfg!(debug_assertions) {
+            let said = Command::new(built).arg("--built-from").output().expect("the host binary runs");
+            let from = String::from_utf8_lossy(&said.stdout).trim().to_owned();
+            assert_eq!(
+                from,
+                env!("CARGO_MANIFEST_DIR"),
+                "{} was built from {from:?} (nothing at all if it is older than the flag), not from this tree \
+                 ({}): another worktree built over the shared target dir. Run `cargo build -p wormhole-host` \
+                 from this tree and run the tests again.",
+                built.display(),
+                env!("CARGO_MANIFEST_DIR"),
+            );
+        }
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("host-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("a folder for the host binary");
         let copy = dir.join("wormhole-host");

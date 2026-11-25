@@ -151,10 +151,8 @@ cp "$plist" "$app/Contents/Info.plist"
 # A path into a folder of this Mac in an executable is what a resource accessor of the older build system, a panic message or
 # a debug map leaves behind: it works for its builder and for no one else. The checkout holds the build folders; the home folder
 # holds cargo's and rustup's. (A bare "/Users/" is no test: the app's own sample data and tests of home-folder shortening spell it.)
-# The one path left is the host's: its hidden `--built-from` (crates/wormhole-host/src/lib.rs) prints `env!("CARGO_MANIFEST_DIR")`,
-# which no path remapping reaches. It is dropped here by name, so anything else of this Mac in the host still fails the build.
 paths_of_this_mac() {
-  strings -a "$1" | awk -v own="$ROOT/crates/wormhole-host" '{ while ((i = index($0, own)) > 0) $0 = substr($0, 1, i - 1) substr($0, i + length(own)); print }' \
+  strings -a "$1" \
     | grep -F -e "$ROOT" -e "$HOME/" -e "${CARGO_HOME:-$HOME/.cargo}" -e "${RUSTUP_HOME:-$HOME/.rustup}" | sort -u | head -n 5 | cut -c1-200 || true
 }
 for binary in "$app/Contents/MacOS/$APP_BINARY" "$app/Contents/MacOS/$HOST_BINARY"; do
