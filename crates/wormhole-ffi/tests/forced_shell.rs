@@ -16,10 +16,7 @@ impl TerminalListener for Quiet {
 
 #[test]
 fn a_forced_shell_runs_in_a_terminal_opened_with_a_shell_of_its_own() {
-    let dir = tempfile::Builder::new()
-        .prefix("Wormhole-swift-forced-")
-        .tempdir_in("/tmp")
-        .expect("scratch");
+    let dir = tempfile::Builder::new().prefix("Wormhole-swift-forced-").tempdir_in("/tmp").expect("scratch");
     let forced = dir.path().join("forced");
     std::fs::write(&forced, "#!/bin/sh\nprintf 'forced-ran\\n'\nexec cat\n").expect("script");
     std::fs::set_permissions(&forced, std::os::unix::fs::PermissionsExt::from_mode(0o755))

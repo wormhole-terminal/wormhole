@@ -174,7 +174,8 @@ mod tests {
         assert_eq!(status_motion_duration("nudge".into(), 7, 7), 0.0, "no change is a cut");
         assert!(status_motion_pose("flare".into(), 7, 0, 0.3).flare_strength > 0.0);
         assert_eq!(status_motion_pose("flare".into(), 7, 0, 1.0).flare_strength, 0.0);
-        let aside = (1..20).map(|i| status_motion_pose("nudge".into(), 7, 0, i as f32 / 20.0).dx).fold(0.0, f32::max);
+        let aside =
+            (1..20).map(|i| status_motion_pose("nudge".into(), 7, 0, i as f32 / 20.0).dx).fold(0.0, f32::max);
         assert!(aside > 3.0 && aside <= 4.0, "{aside}");
     }
 }

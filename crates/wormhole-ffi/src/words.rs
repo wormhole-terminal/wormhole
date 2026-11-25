@@ -63,7 +63,12 @@ pub struct TextArg {
 pub fn text_format(id: String, args: Vec<TextArg>) -> Option<String> {
     let values: Vec<(&str, wormhole_text::Value<'_>)> = args
         .iter()
-        .map(|a| (a.name.as_str(), a.whole.map_or(wormhole_text::Value::Text(&a.text), wormhole_text::Value::Whole)))
+        .map(|a| {
+            (
+                a.name.as_str(),
+                a.whole.map_or(wormhole_text::Value::Text(&a.text), wormhole_text::Value::Whole),
+            )
+        })
         .collect();
     wormhole_text::format(&id, &values)
 }

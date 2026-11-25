@@ -139,7 +139,11 @@ fn a_hooks_status_is_pulled_once_before_the_look_at_the_process_can_hand_it_back
     ws.notice_facts(0);
     // Looked at: the next look hands it back, as before.
     ws.shared().probe(id);
-    assert_eq!(row(&ws, id).map(|r| r.state), Some(RowState::Idle), "the look found no agent and the shell in front");
+    assert_eq!(
+        row(&ws, id).map(|r| r.state),
+        Some(RowState::Idle),
+        "the look found no agent and the shell in front"
+    );
 }
 
 #[test]

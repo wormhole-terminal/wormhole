@@ -58,13 +58,13 @@ mod row_motion;
 mod settings;
 pub mod settings_dump;
 mod split_opening;
+mod studio_edit;
+mod studio_files;
+mod studio_folder;
 mod terminal;
 pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
-mod studio_edit;
-mod studio_files;
-mod studio_folder;
 
 mod status_counts;
 mod syntax;
@@ -166,8 +166,8 @@ pub use perf_counters::{PerfCounters, PerfLockUse, perf_counters_start, perf_cou
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use row_motion::{
-    RowMotionRecord, RowPoseRecord, StatusPoseRecord, fold_row_motion, fold_row_pose, insert_row_motion, insert_row_pose,
-    status_motion_duration, status_motion_pose,
+    RowMotionRecord, RowPoseRecord, StatusPoseRecord, fold_row_motion, fold_row_pose, insert_row_motion,
+    insert_row_pose, status_motion_duration, status_motion_pose,
 };
 pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
@@ -192,13 +192,13 @@ pub use split_opening::{
     split_opening_frame,
 };
 pub use status_counts::{
-    StatusBarDetail, StatusCountKind, StatusCountRecord, StatusCountsRecord, StatusEntryRecord, status_counts,
-    status_detail,
+    StatusBarDetail, StatusCountKind, StatusCountRecord, StatusCountsRecord, StatusEntryRecord,
+    status_counts, status_detail,
 };
-pub use tab_sets::{
-    TabHitRecord, TabNameRecord, TabSetRecord, tab_sets_current, tab_sets_numbered, tab_sets_search, tab_sets_step,
+pub use studio_edit::{
+    StudioCompletion, StudioCompletions, StudioContrast, StudioContrastCheck, StudioContrastFix,
+    StudioContrastIssue, StudioTokenUse, studio_completions, studio_contrast, studio_token_uses,
 };
-pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use studio_files::{
     StudioKeyRename, StudioRead, StudioThemeChoice, StudioThemeFamily, StudioThemeList, StudioUpdate,
     StudioUpdateChange, studio_add_appearance, studio_canonical, studio_convert, studio_copy_theme,
@@ -210,13 +210,14 @@ pub use studio_folder::{
     StudioSavedVersion, studio_folder_files, studio_folder_read, studio_folder_read_version,
     studio_folder_versions, studio_folder_write,
 };
-pub use studio_edit::{
-    StudioCompletion, StudioCompletions, StudioContrast, StudioContrastCheck, StudioContrastFix,
-    StudioContrastIssue, StudioTokenUse, studio_completions, studio_contrast, studio_token_uses,
+pub use syntax::{SyntaxRun, syntax_keys, syntax_lines};
+pub use tab_sets::{
+    TabHitRecord, TabNameRecord, TabSetRecord, tab_sets_current, tab_sets_numbered, tab_sets_search,
+    tab_sets_step,
 };
+pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
-pub use syntax::{SyntaxRun, syntax_keys, syntax_lines};
 pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use window_ops::{
     ExtentRecord, FullscreenRecord, MaximizeRecord, PaneSizeRecord, ScreenRect, WindowFrameGoal,
@@ -224,9 +225,9 @@ pub use window_ops::{
 };
 pub use windows::{
     Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearGrow,
-    TearLanding, TearPlaced, TearRect, TearWindow, WindowAnimationKind, WindowMinSize, Windows, cascade_frame,
-    fit_frame, tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place, window_animation,
-    window_min_size,
+    TearLanding, TearPlaced, TearRect, TearWindow, WindowAnimationKind, WindowMinSize, Windows,
+    cascade_frame, fit_frame, tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place,
+    window_animation, window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 pub use workspace_notices::NoticeFactsRecord;

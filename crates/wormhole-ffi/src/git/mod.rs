@@ -17,12 +17,12 @@ mod worktrees;
 
 pub use asked::git_next_age_change;
 pub use error::GitBackendError;
+pub use notes::{GitDiffNotes, GitSideNote};
+pub use problem::{GitProblemWords, git_problem};
 pub use records::{
     GitChange, GitChangeKind, GitDiff, GitDiffFile, GitDiffLine, GitHunk, GitLineKind, GitLog, GitLogCommit,
     GitRef, GitRefKind, GitRev, GitRevKind, GitStatus, GitSubmoduleCard,
 };
-pub use notes::{GitDiffNotes, GitSideNote};
-pub use problem::{GitProblemWords, git_problem};
 pub use service::Git;
 pub use shown::{GitCommitDetails, GitCompact, GitFact, GitParent, GitSpan, GitTone};
 pub use watch::{GitListener, GitWatch};

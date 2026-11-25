@@ -105,7 +105,12 @@ mod tests {
         let file = dir.path().join("Dusk.json").to_string_lossy().into_owned();
         studio_folder_write(themes.clone(), file.clone(), "{ \"name\": \"Dusk\" }".into()).expect("first");
         // The same theme saved again: the versions are kept under the theme's id, which a file without one takes from its name.
-        studio_folder_write(themes.clone(), file.clone(), "{ \"name\": \"Dusk\", \"primary\": \"#ff6600\" }".into()).expect("second");
+        studio_folder_write(
+            themes.clone(),
+            file.clone(),
+            "{ \"name\": \"Dusk\", \"primary\": \"#ff6600\" }".into(),
+        )
+        .expect("second");
         assert_eq!(studio_folder_files(themes.clone()), vec![file.clone()]);
         let versions = studio_folder_versions(themes, file.clone());
         assert_eq!(versions.len(), 1, "the first text was kept once");
@@ -114,7 +119,10 @@ mod tests {
             studio_folder_read_version(versions[0].path.clone()).expect("reads"),
             "{ \"name\": \"Dusk\" }"
         );
-        assert_eq!(studio_folder_read(file).expect("reads"), "{ \"name\": \"Dusk\", \"primary\": \"#ff6600\" }");
+        assert_eq!(
+            studio_folder_read(file).expect("reads"),
+            "{ \"name\": \"Dusk\", \"primary\": \"#ff6600\" }"
+        );
     }
 
     /// A theme with no id, renamed and saved as the Swift Studio saves one (`newID` with the file itself): it keeps

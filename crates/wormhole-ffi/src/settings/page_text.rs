@@ -11,9 +11,9 @@ use wormhole_core::terminal::shells::{self, ShellKind};
 use wormhole_core::update::user_agent;
 use wormhole_core::view::sidebar::display_path;
 use wormhole_text::keys::{
-    settings_advanced_reset_question, settings_agents_others_head, settings_changed_summary, settings_import_selected,
-    settings_terminal_worktree_base_under,
-    settings_window_preview_feature_note, settings_window_profiles_unreadable,
+    settings_advanced_reset_question, settings_agents_others_head, settings_changed_summary,
+    settings_import_selected, settings_terminal_worktree_base_under, settings_window_preview_feature_note,
+    settings_window_profiles_unreadable,
 };
 use wormhole_text::whole;
 

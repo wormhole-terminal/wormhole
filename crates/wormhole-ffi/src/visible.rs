@@ -37,7 +37,11 @@ pub fn visible_line(text: String, tab_width: u32) -> VisibleLine {
     scalar_at[shown.text.len()] = count;
     let mut offsets: Vec<u32> = text.char_indices().map(|(byte, _)| scalar_at[shown.offset(byte)]).collect();
     offsets.push(count);
-    let marks = shown.marks.iter().map(|m| VisibleMark { start: scalar_at[m.start], end: scalar_at[m.end] }).collect();
+    let marks = shown
+        .marks
+        .iter()
+        .map(|m| VisibleMark { start: scalar_at[m.start], end: scalar_at[m.end] })
+        .collect();
     VisibleLine { text: shown.text.into_owned(), offsets, marks }
 }
 

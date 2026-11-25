@@ -13,8 +13,7 @@ use std::time::{Instant, SystemTime};
 
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::update::{
-    self, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus,
-    UpdaterConfig,
+    self, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
@@ -124,7 +123,12 @@ fn release_record(release: &Release) -> UpdateReleaseRecord {
 /// What a change of channel did to the Unstable build it left, in the page's words: it was removed before it replaced anything, or it
 /// stays installed (`settings_window/sections/updates.rs`).
 pub(super) fn note_words(version: &str, stays_installed: bool) -> String {
-    if stays_installed { settings_updates_unstable_stays(version) } else { settings_updates_unstable_removed(version) }.to_string()
+    if stays_installed {
+        settings_updates_unstable_stays(version)
+    } else {
+        settings_updates_unstable_removed(version)
+    }
+    .to_string()
 }
 
 /// Where GitHub shows an advisory (`settings_window/sections/updates.rs` `advisory_url`).
@@ -489,7 +493,12 @@ fn set_phase(shared: &Shared, phase: Phase) {
 
 /// The check's answer as a phase (`finish_check` of the GPUI app): an automatic check says nothing when the
 /// version was skipped, and nothing of a failure.
-fn finish_check(shared: &Arc<Shared>, generation: u64, manual: bool, result: Result<UpdateStatus, UpdateError>) {
+fn finish_check(
+    shared: &Arc<Shared>,
+    generation: u64,
+    manual: bool,
+    result: Result<UpdateStatus, UpdateError>,
+) {
     if locked(&shared.state).generation != generation {
         return;
     }

@@ -56,11 +56,7 @@ fn read(desk: &AccessDesk) -> (u64, Arc<Settings>) {
 /// is too old (`AccessDesk::mode_in_force`): the settings the look was made from, their stamp, and the mode in force.
 /// While the Automation flag is off the look only follows the mode (what the person sets, what is narrowed) and asks
 /// nothing, so nothing done meanwhile counts for a widening made when the flag goes on.
-fn look(
-    desk: &AccessDesk,
-    mut stamp: u64,
-    mut settings: Arc<Settings>,
-) -> (u64, Arc<Settings>, AgentAccess) {
+fn look(desk: &AccessDesk, mut stamp: u64, mut settings: Arc<Settings>) -> (u64, Arc<Settings>, AgentAccess) {
     for _ in 0..LOOKS {
         let asks = settings.feature_enabled(FeatureFlag::Automation);
         if let Some(mode) = desk.mode_in_force(settings.agent_access, stamp, asks) {
@@ -99,9 +95,8 @@ impl Seat {
     /// The profile's settings, as they were a moment ago at most, with the mode in force in place of the file's.
     pub(crate) fn settings(&self) -> Arc<Settings> {
         let held = self.settings.lock().unwrap_or_else(PoisonError::into_inner).clone();
-        let kept = held
-            .filter(|(at, ..)| at.elapsed() < SETTINGS_TTL)
-            .map(|(_, stamp, settings)| (stamp, settings));
+        let kept =
+            held.filter(|(at, ..)| at.elapsed() < SETTINGS_TTL).map(|(_, stamp, settings)| (stamp, settings));
         let (stamp, first) = kept.clone().unwrap_or_else(|| read(&self.desk));
         // A read from before the mode last moved (Don't Keep put the earlier mode back, a hand edit narrowed it) is
         // made again there, so the question about a widening never comes from what the file no longer holds.

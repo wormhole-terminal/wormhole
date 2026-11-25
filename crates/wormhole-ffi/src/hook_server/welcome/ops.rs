@@ -263,7 +263,10 @@ fn finish(core: &Core, tab: i64, skipped: bool) -> Reply {
     let (first_run, primer) = {
         let mut welcomes = core.welcomes();
         let run = welcomes.run(tab);
-        let facts = (run.is_some_and(|run| run.first_run), run.is_some_and(|run| run.agents.as_ref().is_some_and(|a| a.found.is_empty())));
+        let facts = (
+            run.is_some_and(|run| run.first_run),
+            run.is_some_and(|run| run.agents.as_ref().is_some_and(|a| a.found.is_empty())),
+        );
         welcomes.gates.finish(tab);
         facts
     };

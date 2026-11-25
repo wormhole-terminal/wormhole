@@ -305,7 +305,8 @@ pub fn studio_remember_export_dir(dir: String) {
     if isolation::require().is_err() {
         return;
     }
-    let remembered = wormhole_core::storage::store::Store::open().and_then(|store| store.set_meta(EXPORT_DIR_KEY, &dir));
+    let remembered =
+        wormhole_core::storage::store::Store::open().and_then(|store| store.set_meta(EXPORT_DIR_KEY, &dir));
     if let Err(err) = remembered {
         tracing::warn!("remembering the export folder failed: {err:#}");
     }

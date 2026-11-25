@@ -130,7 +130,9 @@ impl Terminal {
                     selected.released(event.row as usize, std::time::Instant::now())
                 }
                 // Another button's press ends the program's own selection too (`terminal_view/input.rs:313`).
-                (PointerButton::Middle | PointerButton::Right, mouse::MouseAction::Press) => selected.forget(),
+                (PointerButton::Middle | PointerButton::Right, mouse::MouseAction::Press) => {
+                    selected.forget()
+                }
                 _ => {}
             }
             true
