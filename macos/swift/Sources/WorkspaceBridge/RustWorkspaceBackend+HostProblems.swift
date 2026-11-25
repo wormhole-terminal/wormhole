@@ -47,6 +47,7 @@ extension RustWorkspaceBackend {
     /// Once more, a moment later, before the bar is shown for a host that was only busy or slow.
     func retryAfter(_ id: TerminalID) {
         Task { [weak self] in
+            // one-shot: the single retry, a moment after the host was only busy
             try? await Task.sleep(for: retryDelay)
             self?.reconnect(id)
         }

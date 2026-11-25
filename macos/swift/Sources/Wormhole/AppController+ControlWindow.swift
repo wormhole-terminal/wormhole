@@ -124,11 +124,14 @@ extension AppController {
                 reply("step \(step) \(selectedView.map(geometry) ?? "")")
                 if step == 4 { reply(windowShot(to: words[2] + "-mid.png")) }
                 reply("chip " + hub.sizeChips.joined(separator: ", "))
+                // one-shot: the pace of the simulated live resize (devctl only)
                 try? await Task.sleep(for: .milliseconds(100))
             }
+            // one-shot: the simulated live resize rests before it ends (devctl only)
             try? await Task.sleep(for: .milliseconds(300))
             controller.windowDidEndLiveResize(Notification(name: NSWindow.didEndLiveResizeNotification))
             LiveResizeDriving.simulated = false
+            // one-shot: the end of the live resize settles before the last shot (devctl only)
             try? await Task.sleep(for: .milliseconds(300))
             reply(selectedView.map(geometry) ?? "")
             reply(windowShot(to: words[2] + "-end.png"))

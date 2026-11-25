@@ -35,6 +35,7 @@ struct ColumnHandle: View {
                 hoverTask?.cancel()
                 guard inside else { return hot = false }
                 hoverTask = Task {
+                    // one-shot: the pointer has rested on the handle (cancelled when it leaves)
                     try? await Task.sleep(for: Self.hoverDelay)
                     if !Task.isCancelled { hot = true }
                 }

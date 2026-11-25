@@ -159,7 +159,7 @@ public final class WorkspaceStore {
         timer?.cancel()
         guard let wait else { return timer = nil }
         timer = Task { [weak self] in
-            // A hair past the instant, so the words are read after they change.
+            // one-shot: the next moment the words change, a hair past it so they are read after they change.
             try? await Task.sleep(for: wait + .milliseconds(10))
             guard !Task.isCancelled else { return }
             self?.pull(refreshWords: true)

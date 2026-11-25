@@ -195,6 +195,7 @@ private struct WaitedWords: View {
         let shown = current ?? first
         Text(prefix + shown.words)
             .task(id: shown) {
+                // one-shot: the moment the words next change
                 try? await Task.sleep(for: shown.next)
                 if !Task.isCancelled { current = waited() }
             }

@@ -61,6 +61,7 @@ struct GroupRows<Row: View>: View {
         // The first frame of the run is seen before the run is: the next turn of the main loop.
         Task { @MainActor in
             withAnimation(.linear(duration: seconds)) { progress = folding ? 2 : 1 }
+            // one-shot: the fold's run ends and the rows come to rest
             try? await Task.sleep(for: .seconds(seconds))
             if run == mine { rest(folded: folding) }
         }

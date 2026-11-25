@@ -56,6 +56,7 @@ struct NoticeInfoView: View {
         Pasteboard.setText(reason)
         copied = true
         Task {
+            // one-shot: the "copied" label goes away
             try? await Task.sleep(for: Self.copiedFor)
             copied = false
         }

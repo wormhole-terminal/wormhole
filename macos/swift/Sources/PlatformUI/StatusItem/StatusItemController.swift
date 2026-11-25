@@ -71,6 +71,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         animation = Task { [weak self] in
             var frame = 0
             while !Task.isCancelled {
+                // one-shot: the icon's next frame, while it plays (never under Reduce Motion)
                 try? await Task.sleep(for: Self.frameDuration)
                 frame = (frame + 1) % Self.frames
                 self?.show(icon, frame: frame)

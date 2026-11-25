@@ -52,6 +52,7 @@ struct PaneDividers: View {
         hoverTask?.cancel()
         guard inside else { hot = nil; return }
         hoverTask = Task {
+            // one-shot: the pointer has rested on the line (cancelled when it leaves)
             try? await Task.sleep(for: PaneMetrics.hoverDelay)
             if !Task.isCancelled { hot = id }
         }

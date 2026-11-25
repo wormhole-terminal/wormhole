@@ -84,6 +84,7 @@ public final class NoticeCenter {
         guard let due = rules.due else { return }
         timer = Task { [weak self] in
             guard let self else { return }
+            // one-shot: the rules' next due time
             try? await Task.sleep(for: .seconds(max(due.timeIntervalSince(now()), 0)))
             guard !Task.isCancelled else { return }
             wake()

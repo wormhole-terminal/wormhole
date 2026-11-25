@@ -29,6 +29,7 @@ public final class GalleryModel {
         controller.perform(.copyOutput, on: blocks.block(id: 2))
         size.noteSize(cols: 100, rows: 30, live: true)
         size.noteSize(cols: 112, rows: 33, live: true)
+        // one-shot: the staged state is drawn once before it is shot
         try? await Task.sleep(for: .milliseconds(50))
     }
 }

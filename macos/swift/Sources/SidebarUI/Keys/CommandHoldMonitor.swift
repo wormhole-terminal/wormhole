@@ -49,6 +49,7 @@ public final class CommandHoldMonitor {
         showing = hold.showing(at: Date())
         guard let due = hold.due(at: Date()) else { return }
         timer = Task { [weak self] in
+            // one-shot: the next moment the held-Command hint is due to show or go
             try? await Task.sleep(for: .seconds(due))
             guard !Task.isCancelled else { return }
             self?.refresh()

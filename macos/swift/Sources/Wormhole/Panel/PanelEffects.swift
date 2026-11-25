@@ -32,7 +32,7 @@
                 guard let source = await terminal(for: place)?.source else { return }
                 source.paste(text)
                 if submit {
-                    // The program takes the paste first; Return a moment later is what the person would press.
+                    // one-shot: the program takes the paste first; Return a moment later is what the person would press.
                     try? await Task.sleep(for: .milliseconds(120))
                     source.write(Data("\r".utf8))
                 }

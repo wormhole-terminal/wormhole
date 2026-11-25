@@ -49,6 +49,7 @@ final class WindowSaver {
     private func schedule() {
         pending?.cancel()
         pending = Task { [weak self] in
+            // one-shot: the debounce, a moment after the last change
             try? await Task.sleep(for: Self.settle)
             guard !Task.isCancelled else { return }
             self?.saveNow()
