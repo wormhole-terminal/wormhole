@@ -2934,6 +2934,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tiny_http",
+ "toml",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",

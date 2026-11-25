@@ -65,6 +65,8 @@ workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+# The licenses test reads `Cargo.lock` (already in the tree through core).
+toml = "1"
 flate2 = "1.1"
 minisign = "0.9"
 sha2 = "0.11"
