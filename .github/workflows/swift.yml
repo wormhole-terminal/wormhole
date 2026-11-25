@@ -1,7 +1,8 @@
 name: Swift app
 
 # The Swift app (macos/, with its bridge crate crates/wormhole-ffi): the Rust library, a release build of the app,
-# every Swift test and the end-to-end suite, on a GitHub runner instead of a developer's Mac. Pushes to main that reach it, or by hand
+# every Swift test and the end-to-end suite, the bundle that ships as Wormhole Beta (ad hoc signed, built and started as
+# beta.yml builds it), and the bridge's dependencies, licences and changelog, on GitHub runners instead of a developer's Mac. Pushes to main that reach it, or by hand
 # (Actions → Swift app → Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and
 # publishes nothing (a failed end-to-end run keeps its logs as a run artifact for a week), and no other workflow waits for it: the app that ships is the CI workflow's.
 on:
@@ -12,6 +13,12 @@ on:
       - "crates/**"
       - "Cargo.lock"
       - "rust-toolchain.toml"
+      - "deny.toml"
+      - "packaging/**"
+      - "scripts/lib.sh"
+      - "scripts/check-entitlements.sh"
+      - "scripts/changelog.py"
+      - "scripts/gen-licenses.py"
       - ".github/workflows/swift.yml"
   workflow_dispatch:
 
@@ -108,3 +115,61 @@ jobs:
       - name: Failures, if any
         if: failure()
         run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" "$RUNNER_TEMP/swift-e2e.log" 2> /dev/null | sort -u | head -80 || true
+      # Reserved, for the two checks whose lanes are finishing them (each lands with its own step here):
+      #   - the Swift static checks: macos/scripts/quality.sh
+      #   - the bridge crate's fmt, clippy and tests, as scripts/check.sh runs them
+
+  # Wormhole Beta as it ships, without a secret: macos/scripts/bundle.sh builds the universal app with this runner's
+  # newest Xcode and `--build-system swiftbuild` and signs it ad hoc, and macos/scripts/check-bundle.sh checks it and
+  # starts a copy outside the checkout (a background test instance: scratch HOME, /bin/cat for a shell), which proves that
+  # the resource bundles resolve from the app's own Contents/Resources. beta.yml (through build.yml) builds it the same
+  # way before it signs. No cache: what is checked here is a build from nothing, as a release's is.
+  bundle:
+    name: Wormhole Beta bundle (ad hoc)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust toolchain and the Intel target
+        run: |
+          rustup toolchain install
+          rustup target add x86_64-apple-darwin
+      - name: Newest Xcode
+        run: |
+          newest="$(printf '%s\n' /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          echo "selected $newest"
+          swift --version
+      - name: Bundle
+        run: macos/scripts/bundle.sh
+      - name: Check the bundle and run a copy of it
+        run: macos/scripts/check-bundle.sh
+
+  # What the root workspace's checks do not see, in seconds on Linux: the bridge is a cargo workspace of its own, so its
+  # dependencies get `cargo deny` with the root's deny.toml (as scripts/check.sh runs it), both licence lists are compared
+  # with the locks, and the beta's changelog is checked as its release reads it.
+  bridge:
+    name: Bridge dependencies, licences and changelog
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
+        with:
+          tool: cargo-deny@0.20.2
+      - name: cargo deny (the bridge's Cargo.lock)
+        run: cargo deny --config deny.toml --manifest-path crates/wormhole-ffi/Cargo.toml check
+      - name: Licence lists match the locks
+        run: |
+          cargo fetch --locked
+          cargo fetch --locked --manifest-path crates/wormhole-ffi/Cargo.toml
+          python3 scripts/gen-licenses.py --check
+          python3 scripts/gen-licenses.py --ffi --check
+      - name: macos/CHANGELOG.md is well formed
+        run: python3 scripts/changelog.py --file macos/CHANGELOG.md --tag-prefix beta- check
