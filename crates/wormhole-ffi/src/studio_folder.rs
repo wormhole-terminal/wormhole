@@ -62,10 +62,10 @@ fn version_id(themes: &Path, path: &Path, text: &str) -> String {
 pub fn studio_folder_write(themes_dir: String, path: String, text: String) -> Result<(), FfiError> {
     let (themes, path) = (Path::new(&themes_dir), PathBuf::from(path));
     files::ensure_private_dir(themes).map_err(|e| theme_error(e.to_string()))?;
-    if let Ok(old) = files::read_to_string_capped(&path, MAX_THEME_BYTES as u64, LinkPolicy::Follow) {
-        if let Err(err) = keep_version_now(themes, &version_id(themes, &path, &old), &old) {
-            tracing::warn!("keeping the earlier {}: {err}", path.display());
-        }
+    if let Ok(old) = files::read_to_string_capped(&path, MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+        && let Err(err) = keep_version_now(themes, &version_id(themes, &path, &old), &old)
+    {
+        tracing::warn!("keeping the earlier {}: {err}", path.display());
     }
     files::write_atomic(&path, text.as_bytes(), LinkPolicy::Follow).map_err(|e| theme_error(e.to_string()))
 }
