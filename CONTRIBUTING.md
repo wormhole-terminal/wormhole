@@ -236,6 +236,26 @@ tag"); use `git fetch --tags --force`. A preview build's notes are CHANGELOG.md'
 the download server doesn't answer. The app on Unstable reads its feed and `stable/latest.json` and takes
 the newer, and it shows Settings → Feature flags, which a release otherwise hides.
 
+Wormhole Beta, the Swift app in `macos/`, is released on its own and by hand. Its version is the bridge
+workspace's (`crates/wormhole-ffi/Cargo.toml`), its notes are `macos/CHANGELOG.md`, and its tags are
+`beta-X.Y.Z-beta.N`, never `v*`, so the root `Cargo.toml`, `CHANGELOG.md` and the release and preview
+builds don't see it:
+
+```sh
+macos/scripts/release-beta.sh 2.0.0-beta.1 --dry-run    # what would change; also prints what 1.x reads
+macos/scripts/release-beta.sh 2.0.0-beta.1              # the release commit and the annotated tag
+git push origin main beta-2.0.0-beta.1
+gh workflow run beta.yml --ref main -f tag=beta-2.0.0-beta.1                  # build, sign, notarize: a dry run
+gh workflow run beta.yml --ref main -f tag=beta-2.0.0-beta.1 -f publish=true  # and publish
+```
+
+`beta.yml` runs only from `main`. Its gate checks, before anything is checked out, that the tag is an annotated
+tag on `main` whose bridge version is the tag's; `build.yml` then builds that commit with `macos/scripts/bundle.sh`,
+checks it with `macos/scripts/check-bundle.sh`, signs, notarizes and packages it (`Wormhole-Beta-<v>-macos.dmg`
+and the update archive), and with publish on creates the prerelease `beta-X.Y.Z-beta.N` and puts its
+`latest.json` on the rolling prerelease `beta`, which the beta's updater reads
+(`https://github.com/wormhole-terminal/wormhole/releases/download/beta/latest.json`).
+
 ## License
 
 By contributing you agree that your contribution is licensed under the GNU General Public License

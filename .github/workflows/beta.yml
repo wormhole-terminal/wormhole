@@ -1,0 +1,93 @@
+# A release of Wormhole Beta, the Swift app in macos/: build.yml builds, signs, notarizes and publishes it.
+#
+# macos/scripts/release-beta.sh makes the release commit on main and the annotated tag beta-X.Y.Z-beta.N; after
+# `git push origin main <tag>`, start this from main with the tag (`gh workflow run beta.yml --ref main -f tag=<tag>`).
+# With publish off (the default) it builds, signs, notarizes and packages, and the files are the run's artifact; with
+# publish on it also creates the prerelease <tag> with them and points the rolling prerelease `beta` at its
+# latest.json, which the beta's updater reads (<base>/beta/latest.json, base https://github.com/<repo>/releases/download).
+#
+# By hand and from main, never on a tag push. The signing secrets are secrets of the `release` environment, which only
+# main and v* tags may use, and a run on a tag runs that tag's own workflow file: a beta-* rule there would let anyone who
+# can push a tag reach the secrets with a workflow of their own. Run from main, this file and build.yml are main's; the
+# gate then reads the tag as data and hands build.yml the one commit it checked.
+name: Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release's annotated tag on main, beta-X.Y.Z-beta.N (macos/scripts/release-beta.sh makes it)"
+        type: string
+        required: true
+      publish:
+        description: "Publish the prerelease and the beta feed (otherwise build, sign, notarize and package only)"
+        type: boolean
+        default: false
+
+# Read-only for every job; the build job asks for what it writes (zizmor: excessive-permissions).
+permissions:
+  contents: read
+
+jobs:
+  # Whether the tag is a beta release on main. Its outputs open the job with the secrets, so it checks nothing out and
+  # runs nothing of the repository: the API reads the tag, the history and one file as data. The input reaches the
+  # shell only through the environment.
+  gate:
+    name: Is the tag a beta release on main?
+    # On the job, before a runner exists: a run started from another branch or a tag goes no further (the `release`
+    # environment would refuse it its secrets as well).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          fail() { echo "::error::$*"; exit 1; }
+          [[ "$TAG" =~ ^beta-([0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+)$ ]] || fail "'$TAG' is not beta-X.Y.Z-beta.N"
+          version="${BASH_REMATCH[1]}"
+          repo="repos/$GITHUB_REPOSITORY"
+          ref="$(gh api "$repo/git/ref/tags/$TAG")" || fail "no tag $TAG"
+          [ "$(jq -r .object.type <<<"$ref")" = tag ] || fail "$TAG is not an annotated tag (macos/scripts/release-beta.sh makes one)"
+          object="$(gh api "$repo/git/tags/$(jq -r .object.sha <<<"$ref")")"
+          [ "$(jq -r .object.type <<<"$object")" = commit ] || fail "$TAG does not tag a commit"
+          sha="$(jq -r .object.sha <<<"$object")"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || fail "$TAG names no commit"
+          # On main: main (this run's commit) is the tagged commit or comes after it.
+          status="$(gh api "$repo/compare/$sha...$GITHUB_SHA?per_page=1" --jq .status)"
+          case "$status" in identical | ahead) ;; *) fail "$TAG ($sha) is not on main ($status)" ;; esac
+          # The version in that commit is the tag's: the bridge's `[workspace.package] version`, read as lib.sh's
+          # app_version reads it (that script is not run here).
+          found="$(gh api -H 'Accept: application/vnd.github.raw+json' "$repo/contents/crates/wormhole-ffi/Cargo.toml?ref=$sha" \
+            | awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/^[^"]*"|".*$/,"");print;exit}')"
+          [ "$found" = "$version" ] || fail "crates/wormhole-ffi/Cargo.toml at $TAG says version '$found', not $version"
+          if [ "$PUBLISH" = true ] && gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            fail "the release $TAG exists already"
+          fi
+          echo "$TAG is $sha on main, version $version"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: gate
+    # The result as well: a skipped gate has no outputs, and an empty sha must not build anything.
+    if: needs.gate.result == 'success' && needs.gate.outputs.sha != ''
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    # `./` and not GitHub's newer `$/` (zizmor: self-repository): actionlint doesn't know `$/` yet, and a
+    # reusable workflow named with `./` comes from the same commit as this one anyway.
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    with:
+      channel: beta
+      publish: ${{ inputs.publish == true }}
+      build_sha: ${{ needs.gate.outputs.sha }}
+    # Environment secrets are reported empty in a called workflow without this (actions/runner#4453). The
+    # repository has no repository or organization secrets, so it passes nothing; build.yml's come from
+    # its environment.
+    secrets: inherit # zizmor: ignore[secrets-inherit]
