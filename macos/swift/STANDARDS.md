@@ -17,10 +17,10 @@ lines are both checked). A module uses only lower modules of the kinds it may us
 
 | Kind | Modules | May use |
 |---|---|---|
-| found | `WorkspaceModel`, `WordsModel`, `AppLogging`, `TerminalCore`, `DesignSystem` | nothing of the package |
+| found | `WorkspaceModel`, `WordsModel`, `AppLogging`, `TerminalCore`; then `DesignSystem` | nothing of the package; `DesignSystem` only the first four |
 | model | the `...Model` modules: plain values, pure logic, Foundation only | found |
 | ffi | `WormholeBindings`, `UniFFISource` | found, ffi |
-| ui | `...UI`, `AuxWindows`, `TerminalMetal`, `FileIconTheme`, then `StudioUI`, then `WindowUI` | found, model, a lower ui |
+| ui | `...UI`, `AuxWindows`, `TerminalMetal`, `FileIconTheme`, then `SettingsUI`, then `StudioUI`, then `WindowUI` | found, model, a lower ui |
 | bridge | the `...Bridge` modules (built only with the FFI linked) | found, model, ffi, a lower bridge |
 | app | `Wormhole` | everything |
 

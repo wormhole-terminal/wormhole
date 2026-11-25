@@ -6,7 +6,8 @@
 
 The table below is the rule (swift/STANDARDS.md, "Layers"). Each target has a kind and a rank:
 
-  found   WorkspaceModel, WordsModel, AppLogging, TerminalCore, DesignSystem: use no module of the package;
+  found   WorkspaceModel, WordsModel, AppLogging, TerminalCore use no module of the package; DesignSystem, a rank
+          above, uses only those below it (its key caps and buttons speak in the interface's words);
   model   the `...Model` modules: plain values and pure logic; use `found`;
   ffi     the generated bindings and UniFFISource: the Rust seam; use `found`;
   ui      feature UI and TerminalMetal: use `found`, `model` and a `ui` of a lower rank;
@@ -31,23 +32,23 @@ SWIFT = Path(__file__).resolve().parent.parent / "swift"
 # name: (kind, rank)
 TABLE: dict[str, tuple[str, int]] = {
     "WorkspaceModel": ("found", 0), "WordsModel": ("found", 0), "TerminalCore": ("found", 0),
-    "DesignSystem": ("found", 0), "AppLogging": ("found", 0),
+    "DesignSystem": ("found", 1), "AppLogging": ("found", 0),
     "WindowsModel": ("model", 1), "PanelModel": ("model", 1), "PaletteModel": ("model", 1),
     "PanesModel": ("model", 1), "SettingsModel": ("model", 1), "PlatformModel": ("model", 1),
     "AuxModel": ("model", 1), "StudioModel": ("model", 1), "FontPickerModel": ("model", 0),
     "WormholeFFI": ("ffi", 0), "WormholeBindings": ("ffi", 1), "UniFFISource": ("ffi", 2),
     # Leaves other UI modules draw: the group colours (SidebarUI) and the font picker (FontPickerUI) use no other UI module.
     "SidebarUI": ("ui", 0), "FontPickerUI": ("ui", 0), "PanelUI": ("ui", 1), "PaletteUI": ("ui", 1), "PanesUI": ("ui", 1),
-    "SettingsUI": ("ui", 1), "PlatformUI": ("ui", 1), "AuxWindows": ("ui", 1), "TerminalUI": ("ui", 1),
+    "SettingsUI": ("ui", 2), "PlatformUI": ("ui", 1), "AuxWindows": ("ui", 1), "TerminalUI": ("ui", 1),
     "TerminalMetal": ("ui", 1), "FileIconTheme": ("ui", 1),
-    "StudioUI": ("ui", 2), "WindowUI": ("ui", 3),
+    "StudioUI": ("ui", 3), "WindowUI": ("ui", 4),
     "WorkspaceBridge": ("bridge", 1), "FilesBridge": ("bridge", 1), "GitBridge": ("bridge", 1),
     "SettingsBridge": ("bridge", 1), "StudioBridge": ("bridge", 1), "AuxBridge": ("bridge", 1), "HookBridge": ("bridge", 1),
     "PlatformBridge": ("bridge", 1), "WordsBridge": ("bridge", 1), "WindowsBridge": ("bridge", 2),
     "Wormhole": ("app", 9),
 }
 USES = {
-    "found": set(),
+    "found": {"found"},
     "model": {"found", "model"},
     "ffi": {"found", "ffi"},
     "ui": {"found", "model", "ui"},
@@ -128,13 +129,15 @@ def selftest() -> int:
         ("PanelUI", "UniFFISource", True), ("FilesBridge", "PanelUI", True),
         ("WindowsBridge", "WorkspaceBridge", False), ("WorkspaceBridge", "WindowsBridge", True),
         ("Wormhole", "WindowUI", False), ("WindowUI", "Wormhole", True),
+        ("DesignSystem", "WordsModel", False), ("WordsModel", "DesignSystem", True), ("WorkspaceModel", "WordsModel", True),
+        ("SettingsUI", "AuxWindows", False), ("AuxWindows", "SettingsUI", True), ("StudioUI", "SettingsUI", False),
     ]
     bad = [c for c in cases if (violation(c[0], c[1]) is not None) != c[2]]
     package = 'let a = 1\n.target(name: "PanelModel", dependencies: ["PaletteModel"]),\n.target(name: "Extra")'
     assert parse_package(package) == {"PanelModel": ["PaletteModel"], "Extra": []}
     assert check(parse_package(package), {}) == [
         "unplaced: target Extra is not in layers.py's TABLE",
-        "model PanelModel must not use a model (PaletteModel)  [Package.swift]",
+        "PanelModel (rank 1) uses PaletteModel (rank 1) of the same kind: sideways or upward  [Package.swift]",
     ]
     for c in bad:
         print(f"selftest: {c[0]} -> {c[1]} expected {'violation' if c[2] else 'allowed'}")
