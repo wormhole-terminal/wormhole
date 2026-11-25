@@ -1,8 +1,9 @@
 //! What a launch brings forward from a version before the rename (`andromeda`), as the GPUI app does at launch
 //! (`main.rs` for the data folder, `app/launch.rs` for the hooks): the data folder's move and the agent hooks installed
-//! under the old name. The Swift app only opens `Wormhole-swift*` data folders, which are new, so there is nothing to bring
-//! over yet and its launch runs these only the day it opens the real folder; core's own rule already keeps the move away from
-//! any run with `WORMHOLE_DATA_DIR` set.
+//! under the old name. The Swift app never opens a folder named `Wormhole` (`isolation`): its dev folders are `Wormhole-swift*`
+//! and the beta's is `Wormhole Beta`, all new, so there is nothing to bring over yet and its launch runs these only the day it
+//! opens the 1.x folder; core's own rule already keeps the move away from any run with `WORMHOLE_DATA_DIR` set, which the Swift
+//! app always sets.
 
 use std::path::Path;
 

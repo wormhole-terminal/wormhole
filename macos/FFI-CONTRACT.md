@@ -41,12 +41,16 @@ the same source on both branches until the contract changes.
 
 ## Isolation: the library refuses to run on real data
 
-`Terminal.start` throws `FfiError.notIsolated` unless the environment variable `WORMHOLE_DATA_DIR`
-is set (before the call: `setenv` in Swift's `main`) to a folder whose last component starts with
-`Wormhole-swift` (`Wormhole-swift`, `Wormhole-swift-test-7`, ...). Core derives every path it uses
-(data folder, control-socket name) from that variable, so the check is on what core will use.
-The Swift app should refuse to start the same way, and use its own bundle id
-(`app.getwormhole.terminal.swift`).
+Every entry that reaches core's data folder (`Terminal.start` first) throws `FfiError.notIsolated` unless the environment variable
+`WORMHOLE_DATA_DIR` is set (before the call: `setenv` in Swift's `main`) to a folder this library may open: one whose last
+component starts with `Wormhole-swift` (`Wormhole-swift`, `Wormhole-swift-test-7`, ...: dev builds and tests), or exactly
+`Wormhole Beta` (the public beta's folder in Application Support), and that one only in a library that keeps no keys in files,
+which is a build without the `dev-key` feature and without debug assertions. So a dev library can never open the beta's real
+folder, and a shipped library that wrongly kept `dev-key` fails at its first launch instead of keeping keys in files. Core derives
+every path it uses (data folder, control-socket name) from that variable, and falls back to the 1.x app's own folder without it, so
+the check is on what core will use and the variable must be set. A folder an object is given (`dataDir:`) is held to the same rule.
+The Swift app applies it first (`Isolation.swift`), under its own bundle id: `app.getwormhole.terminal.swift` for dev builds and
+tests, `app.getwormhole.terminal.beta` for the beta. The names are `packaging/beta.env`'s, which both sides' tests compare.
 
 ## The object: `Terminal`
 
@@ -945,8 +949,9 @@ through the terminal's own `TerminalListener`, as a local terminal's do.
 - **Workspace.** `Action.RecoverGroup { members }` puts adopted terminals in core's Recovered group (`TermGroup.recovered`);
   `Workspace.shown()` (the terminals on screen: a host feeds those and leaves the others headless) and `cwdOf(id)`.
   `HostedTerminals.adopt(tab, terminal)` takes the tab id now.
-- **The Keychain.** The crate builds core with its `dev-key` feature: the saved text's key lives in a file beside the text in the
-  isolated data folder, never in the login Keychain (this crate runs only in `Wormhole-swift*` folders).
+- **The Keychain.** The crate's `dev-key` feature, on by default, turns on core's: the saved text's key lives in a file beside the
+  text in the isolated data folder, never in the login Keychain (such a library opens only `Wormhole-swift*` folders). The shipped
+  build is made with `--no-default-features`: its keys are in the Keychain, as the 1.x app's are, and it may open `Wormhole Beta`.
 
 ## Platform and settings gaps (round N)
 
