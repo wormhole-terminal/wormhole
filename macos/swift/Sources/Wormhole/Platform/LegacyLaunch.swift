@@ -1,7 +1,8 @@
 // What a launch brings forward from a version before the rename (`app/launch.rs` and `main.rs` of the GPUI app): the data folder's move,
-// the agent hooks installed under the codename, and the default-terminal role held by the old bundle id. The experiment opens only
-// folders named `Wormhole-swift*` (`Isolation`), which are new, so none of it applies yet: it is built where the GPUI app makes it so it
-// runs the day the app opens the real data folder, and never against one before.
+// the agent hooks installed under the codename, and the default-terminal role held by the old bundle id. The Swift app never opens a
+// folder named `Wormhole` (`Isolation`): its dev folders are `Wormhole-swift*` and the beta's is `Wormhole Beta`, all new, so none of it
+// applies yet. It is built where the GPUI app makes it so it runs the day the app opens the 1.x data folder, and never against another:
+// in the beta's folder it would rewrite the person's real agent hooks and could take the default-terminal role from the 1.x app.
 
 import Foundation
 
@@ -16,8 +17,11 @@ enum LegacyLaunch {
     /// The bundle identifier versions up to 0.2 ran under.
     static let legacyBundleID = "dev.hyperficial.andromeda"
 
-    /// Only a data folder that is not the experiment's own can hold anything from before the rename.
-    static func applies(to dataDirectory: URL) -> Bool { !dataDirectory.lastPathComponent.hasPrefix(Isolation.folderPrefix) }
+    /// The 1.x app's data folder (`DATA_DIR_NAME` in `packaging/app.env`, which a test compares with it): the only one that can hold
+    /// anything from before the rename.
+    static let dataFolderName = "Wormhole" // text: a folder name
+
+    static func applies(to dataDirectory: URL) -> Bool { dataDirectory.lastPathComponent == dataFolderName }
 
     /// Whether the app that runs a kind of file is the old bundle (the role the renamed app takes over).
     static func heldByLegacy(_ handlerBundleID: String?) -> Bool { handlerBundleID?.caseInsensitiveCompare(legacyBundleID) == .orderedSame }
