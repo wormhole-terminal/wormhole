@@ -49,8 +49,9 @@ struct ExampleBandView: View {
             .task(id: still) {
                 while !Task.isCancelled {
                     seconds = Date().timeIntervalSince(band.since)
-                    // Under Reduce Motion nothing changes; a slow look catches the setting being turned off.
-                    let wait = band.next(seconds, still) ?? 1
+                    // Nothing more changes (Reduce Motion holds the rows); turning it off restarts this task through `id`.
+                    guard let wait = band.next(seconds, still) else { return }
+                    // one-shot: the next moment the rows change
                     try? await Task.sleep(for: .seconds(max(wait, 0.05)))
                 }
             }
