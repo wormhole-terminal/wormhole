@@ -86,7 +86,7 @@ mod tests {
         assert_eq!(folder(&key).as_os_str().as_bytes(), bytes.as_slice());
         assert_eq!(folder("/tmp/plain"), PathBuf::from("/tmp/plain"));
         // Hostile: a NUL that is not a byte over 0x7f in two hex digits (a slash smuggled in, a cut key).
-        for broken in ["/tmp/caf\0e", "/tmp/caf\0zz", "/tmp/\02f/etc"] {
+        for broken in ["/tmp/caf\0e", "/tmp/caf\0zz", "/tmp/\x002f/etc"] {
             let nowhere = folder(broken);
             assert_eq!(nowhere, PathBuf::from(NOWHERE), "{broken:?}");
             assert!(!nowhere.exists() && wormhole_core::git::find_root(&nowhere).is_none());
