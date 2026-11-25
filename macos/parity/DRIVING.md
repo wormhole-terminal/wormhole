@@ -333,6 +333,12 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 - `type` writes bytes to the program; `text` and `key` go through the window like typing.
 - `key cmd-…` runs the keymap's action as the menu bar would; inside a field it is that action, not the field's own (⌘A).
 - Never `click` a link with ⌘ or pick Open Link: it reaches the system's browser.
+- `drag` over a terminal delivers the press and nothing after it: it queues the rest of the gesture ahead of the press, and SwiftUI's
+  hosting view around the terminal drains that queue, so nothing is selected or reported. Over a terminal use `mouse-down`, one
+  `mouse-move` per step and `mouse-up` (`SelectionByPointerTests`, `MouseReportingTests`); `drag` is for the window's corner, sidebar rows
+  and column edges. `scroll` over a terminal turns the wheel, but its event carries no position of its own, so a program that is told
+  where the wheel turned hears a fixed cell (`MouseModesLiveTests` checks the cell on the view's own events); and `hover` reaches no
+  terminal in a window behind others (mode 1003's hover reports are proved there, on the view's events, and by a person: MANUAL.md T05).
 
 ## What still needs a person
 
