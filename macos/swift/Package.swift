@@ -198,6 +198,10 @@ targets.append(.testTarget(name: "TerminalInputTests", dependencies: inputTestDe
 
 // The app's own coordinators, which no module below it holds (what the notes.md merge saves).
 targets.append(.testTarget(name: "WormholeTests", dependencies: ["Wormhole", "WindowUI", "WorkspaceModel", "PanelModel", "PanelUI", "SettingsModel"]))
+// The Info.plist the executable embeds. A bundle build (`macos/scripts/bundle.sh`) names the file it renders for
+// `Contents/Info.plist`, so the two are one; every other build embeds the dev identity's, beside the sources.
+let embeddedInfoPlist = Context.environment["WORMHOLE_INFO_PLIST"] ?? Context.packageDirectory + "/Sources/Wormhole/Info.plist"
+
 targets.append(
     .executableTarget(
         name: "Wormhole",
@@ -209,7 +213,7 @@ targets.append(
             // isolation check (`Isolation.swift`) sees the same identifier inside and outside an app bundle.
             .unsafeFlags([
                 "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist",
-                "-Xlinker", Context.packageDirectory + "/Sources/Wormhole/Info.plist",
+                "-Xlinker", embeddedInfoPlist,
             ])
         ]
     ))
