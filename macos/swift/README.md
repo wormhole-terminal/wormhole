@@ -14,8 +14,21 @@ export WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-run   # required; the folder must b
 .build/release/Wormhole --help
 ```
 
-It refuses to start without its own bundle identifier (`app.getwormhole.terminal.swift`, embedded in the
-executable) and a data folder called `Wormhole-swift*`. It never reads the real app's folder.
+It runs as one of two identities and refuses to start as anything else (`Isolation.swift`; the Rust library checks the same
+rule again, `crates/wormhole-ffi/src/isolation.rs`):
+
+| | dev and test | beta |
+|---|---|---|
+| bundle identifier | `app.getwormhole.terminal.swift` (embedded in the executable) | `app.getwormhole.terminal.beta` (`packaging/beta.env`) |
+| data folder | a folder named `Wormhole-swift*`, from `WORMHOLE_DATA_DIR` | `~/Library/Application Support/Wormhole Beta` |
+
+`WORMHOLE_DATA_DIR`, when set, must name a `Wormhole-swift*` folder for either identity (that is how a test drives the shipped
+bundle). Unset, the beta uses its own folder and a dev build is refused. Either way the app exports the variable before its
+first call into the bridge, so the core never falls back to the 1.x app's `Wormhole` folder. A command line (`wh`, a hook,
+`sessions`, `probe`) settles the folder the same way before it runs, and never fails for lack of the variable: a terminal's
+shell does not have it. In the beta's folder the agent and import homes are the person's own; in a dev folder they stay inside it.
+It never reads or writes the 1.x app's folder, and a launch that fails shows why in an alert when it was started as an app
+(never a `--background` or test instance).
 
 The real engine: `macos/scripts/build-ffi.sh macos/swift` links `WormholeFFI.xcframework` and the generated
 bindings into this package, and the next `swift build` adds `Sources/UniFFISource`; then
