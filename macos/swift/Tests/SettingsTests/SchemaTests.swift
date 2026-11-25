@@ -6,7 +6,8 @@ final class SchemaTests: XCTestCase {
 
     func testTheIndexHas18SectionsAndTheirRows() {
         XCTAssertEqual(schema.sections.count, 18)
-        XCTAssertEqual(schema.sections.flatMap(\.entries).count, 124)
+        // 124 rows and `one-background`, the one the core shows only to the Swift app (`platform::front_end`).
+        XCTAssertEqual(schema.sections.flatMap(\.entries).count, 125)
         XCTAssertEqual(schema.section("terminal")?.title, "Terminal")
         XCTAssertEqual(schema.section("sessions")?.title, "Terminals & sidebar")
     }
