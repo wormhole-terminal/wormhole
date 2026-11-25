@@ -184,3 +184,9 @@ T05. Focus reports: `printf '\e[?1004h'; cat -v`, click another app, then back. 
 T07. Option keys on a real keyboard, Settings → Terminal → Option as Meta = Left: with the left Option key press B in a shell. **Expect** the
     cursor to jump back a word (ESC b); with the right Option key **expect** the layout's character (∫ on a US layout). Right then does the
     reverse; Both makes either a Meta; Off types characters with both. (`KeysLiveTests` proves the sides from the device flags a keyboard sets.)
+IME. A real input method (Japanese Hiragana, Pinyin, Korean): compose a word at the prompt. **Expect** the composed text underlined at the
+    cursor with the converted clause highlighted, the candidate window right under it (also after the prompt moved down and on a wide
+    character), Return committing exactly what the candidate window showed, and nothing in the shell before the commit. Esc and a click
+    elsewhere cancel it without typing. Switch the input source with ⌃Space in the middle of a composition: **expect** the text to be
+    committed (typed) rather than lost; if it vanishes, `unmarkText` in `InputClient.swift` drops what Apple documents as accepted, and must
+    send it (`InputMethodLiveTests/cancellingDropsTheComposedTextWithoutSendingAnything` pins today's behaviour and then changes).
