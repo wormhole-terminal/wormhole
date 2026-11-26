@@ -14,12 +14,16 @@
 # key a shipped library keeps in the Keychain, is off in the scratch config.json, so no Keychain prompt can come of this.
 # On the runner this is what proves the resource accessor: the build system's own cannot be tested here without it.
 # The shaders are three separate facts (`intro-support`, DRIVING.md), and the output says which were shown: the sources found in
-# the copy's own resources (always required), compiled (needs a Metal device) and the intro played (needs them compiled). A
-# machine with no Metal device, a virtual machine say, is not a defect of the bundle: it passes, and says it did not play.
+# the copy's own resources (always required), compiled (needs a Metal device) and the intro played (needs them compiled and a
+# screen). A machine with no Metal device, or whose screens the app counts as none (a virtual machine), is not a defect of the
+# bundle: it passes, and says why the intro was not played. A machine that has both and shows no overlay fails, with what the app
+# said of it (intro-verdict.sh): the screens, Reduce Motion, whether the window is on screen, and what the play came to.
 # When anything of the instance part fails, the tail of the app's own log is printed.
 set -euo pipefail
 export WORMHOLE_APP_ENV=packaging/beta.env
 . "$(dirname "$0")/../../scripts/lib.sh"
+# shellcheck source=intro-verdict.sh
+. "$(dirname "$0")/intro-verdict.sh"
 
 app="${1:-$ROOT/macos/dist/$APP_NAME.app}"
 [ -d "$app" ] || die "no app bundle at $app (macos/scripts/bundle.sh makes it)"
@@ -113,13 +117,14 @@ if [ "$compile" = "skipped: there is no Metal device" ]; then
   shaders_said="found in the copy's resources; this machine has no Metal device, the intro was not played"
 elif [ "$compile" = ok ]; then
   # The intro's overlay is one more window while it plays. `intro` makes it before it answers and the style is the longest
-  # (7 s), so it is there at once; the wait is for a slow machine, and bounded.
+  # (7 s), so it is there at once; the wait is for a slow machine, and bounded. What the verdict is made of (a screen to play
+  # on, what the play came to) the app says in intro-support, read after.
   windows() { send windows | grep -c '^(untitled) visible=true' || true; }
   before="$(windows)"
-  send 'intro ftl' >/dev/null
+  intro_reply="$(send 'intro ftl')"
   for _ in $(seq 25); do [ "$(windows)" -gt "$before" ] && break; sleep 0.2; done
-  [ "$(windows)" -gt "$before" ] || die "the shaders compiled ($(sed -n 's/^metal //p' <<<"$support")) but the intro showed no overlay window"
-  shaders_said="found in the copy's resources and compiled, the intro played"
+  after="$(windows)"
+  shaders_said="$(intro_verdict "$(send intro-support)" "$before" "$after" "$intro_reply" "$(send windows)")" || die "$shaders_said"
 else
   die "the intro's shaders are found but do not compile: $compile"
 fi

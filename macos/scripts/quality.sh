@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One command for the Swift port's static checks, no builds: rules, layers, gallery, parity data, size, budgets.
+# One command for the Swift port's static checks, no builds: rules, layers, gallery, parity data, the intro verdict, size, budgets.
 #   macos/scripts/quality.sh            # table; exit 1 when rules, layers or parity --check fail
 #   macos/scripts/quality.sh --strict   # also fail on budgets above standards-allow.json
 #   macos/scripts/quality.sh --guards   # also run the frame's work guards (perf-guards.sh: a heavy debug build, then
@@ -20,6 +20,8 @@ words=$(py words.py); rc=$?; [ $rc -ne 0 ] && status=1
 row words "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$words" | tail -1)"
 parity=$(py parity.py --check); rc=$?; [ $rc -ne 0 ] && status=1
 row parity "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$parity" | tail -1)"
+intro=$("$here/intro-verdict.test.sh" 2>&1); rc=$?; [ $rc -ne 0 ] && status=1
+row intro "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$intro" | tail -1)"
 row size - "$(py parity.py --size | grep -E '^total|against' | head -2 | tr -s ' ' | paste -sd' ' -)"
 guards=0; args=()
 for a in "$@"; do [ "$a" = --guards ] && guards=1 || args+=("$a"); done
@@ -30,6 +32,6 @@ if [ $guards -eq 1 ]; then
   row guards "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$perf" | tail -1 | sed 's/^perf-guards: //')"
 fi
 if [ $status -ne 0 ]; then
-  echo; { echo "$rules"; echo "$layers"; echo "$gallery"; echo "$words"; echo "$parity"; echo "$budgets"; echo "${perf:-}"; } | grep -vE '^(macos/ rules: ok|layers:|ok:|standards:)' | head -20
+  echo; { echo "$rules"; echo "$layers"; echo "$gallery"; echo "$words"; echo "$parity"; echo "$intro"; echo "$budgets"; echo "${perf:-}"; } | grep -vE '^(macos/ rules: ok|layers:|ok:|standards:)' | head -20
 fi
 exit $status
