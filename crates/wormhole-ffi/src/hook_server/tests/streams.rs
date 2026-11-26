@@ -9,7 +9,9 @@ use super::support::fixture;
 #[test]
 fn an_event_stream_starts_with_the_listing_and_tells_the_status_changes() {
     let f = fixture("open");
-    let id = f.terminal();
+    // An agent that is in front: a look at the process that found `cat` under a hook for Claude would hand the row back to
+    // idle, and a change that came and went before the stream's thread read the model is told to nobody.
+    let id = f.agent_terminal();
     let mut stream = f.client();
     let first = stream.control(json!({"action": "events", "topics": ["status", "terminals"]}));
     assert_eq!(first["ok"], true, "{first}");
@@ -43,7 +45,8 @@ fn an_event_stream_starts_with_the_listing_and_tells_the_status_changes() {
 #[test]
 fn wait_answers_at_once_for_a_state_that_holds_and_later_for_one_that_comes() {
     let f = fixture("open");
-    let id = f.terminal();
+    // An agent in front, as above: its hook is not one a look at the process disagrees with.
+    let id = f.agent_terminal();
     let target = json!({"kind": "terminal", "id": id});
     let mut client = f.client();
     let held =
