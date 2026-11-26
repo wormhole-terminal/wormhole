@@ -9,6 +9,7 @@ use std::time::Duration;
 use wormhole_core::ipc::hosts;
 
 use self::support::{Fixture, wait_for};
+use super::quit::Fate;
 use super::{HostedStart, HostingError, HostingProgram, TerminalHosting};
 
 /// The one `cat` of a test: what is typed comes back, on the live screen and after a reattach.
@@ -201,16 +202,30 @@ fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {
 /// Quit and End All while a host is still starting: that host ends too, and none is let go of and left running
 /// (`terminal_view/hosted.rs` `kept_past_quit`, with the end the person asked for). The quit is this desk's alone: a desk
 /// made after it in the same process starts and keeps its hosts as any does.
+///
+/// The start is held (`held_host`): a real host starts in a few milliseconds, less than a look every 20 ms is sure to
+/// catch, so a test that waited to see it under way could miss it on any machine whose start was quick. Held, "under way"
+/// lasts until the test lets it go, and what the quit does with it can be told in order.
 #[test]
 fn ending_at_quit_ends_a_host_still_starting() {
     let fixture = Fixture::new();
-    let desk = fixture.desk();
+    let held = fixture.held_host();
+    let desk = fixture.desk_over(held.program());
     let starting = std::thread::spawn({
         let (desk, request) = (Arc::clone(&desk), fixture.request(1));
         move || desk.start(request, support::listener())
     });
     wait_for("the start to be under way", || desk.quit.under_way() > 0);
-    desk.finish(true);
+    // The quit begins while it is: it marks the quit and then waits for the starts under way, in one hold of the gate's
+    // lock, so a mark that can be seen is a quit that is waiting (the start cannot end before it is let go).
+    let quitting = std::thread::spawn({
+        let desk = Arc::clone(&desk);
+        move || desk.finish(true)
+    });
+    wait_for("the quit to be waiting", || desk.quit.fate() == Fate::Ends);
+    assert_eq!(desk.quit.under_way(), 1, "the start is still under way");
+    held.release();
+    quitting.join().expect("the quit ends");
     let made = starting.join().expect("joins").expect("starts");
     assert!(made.host_id().is_some(), "it started in a host");
     wait_for("no host left", || fixture.live_hosts().is_empty());

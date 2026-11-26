@@ -1,6 +1,7 @@
 //! A scratch data folder, the host binary built into this tree's target, and waiting.
 
 use std::ffi::OsStr;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Once};
@@ -25,8 +26,29 @@ impl Fixture {
     }
 
     pub(super) fn desk(&self) -> Arc<HostedTerminals> {
+        self.desk_over(&self.host)
+    }
+
+    /// A desk that starts `host` (a path of the test's choosing) as its session host program.
+    pub(super) fn desk_over(&self, host: &Path) -> Arc<HostedTerminals> {
         let data = self.dir.path().display().to_string();
-        HostedTerminals::new(Some(data), Some(self.host.display().to_string()), 1).expect("desk")
+        HostedTerminals::new(Some(data), Some(host.display().to_string()), 1).expect("desk")
+    }
+
+    /// A host program that waits until [`HeldHost::release`] and then is the real host: a start that uses it stays
+    /// under way for as long as the test wants, where a real host's takes a few milliseconds.
+    pub(super) fn held_host(&self) -> HeldHost {
+        let (program, go) = (self.dir.path().join("held-host"), self.dir.path().join("go"));
+        // The host is started with next to no environment, so the script names every program by its path. It gives up
+        // after ten seconds (the start itself gives up after five), so a test that failed leaves no shell waiting.
+        let script = format!(
+            "#!/bin/sh\nn=0\nwhile [ ! -e {go} ]; do\n  [ \"$n\" -lt 500 ] || exit 1\n  n=$((n + 1))\n  /bin/sleep 0.02\ndone\nexec {host} \"$@\"\n",
+            go = sh_quoted(&go),
+            host = sh_quoted(&self.host),
+        );
+        std::fs::write(&program, script).expect("the held host");
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).expect("executable");
+        HeldHost { program, go }
     }
 
     pub(super) fn desk_without_program(&self) -> Arc<HostedTerminals> {
@@ -124,6 +146,27 @@ impl Fixture {
         let mut store = wormhole_core::storage::store::Store::open_at(self.dir.path()).expect("store");
         store.delete_sessions_except(1, &[]).expect("forgets");
     }
+}
+
+/// A host program made by [`Fixture::held_host`].
+pub(super) struct HeldHost {
+    program: PathBuf,
+    go: PathBuf,
+}
+
+impl HeldHost {
+    pub(super) fn program(&self) -> &Path {
+        &self.program
+    }
+
+    /// Let the hosts started so far (and later) go on to be the real host.
+    pub(super) fn release(&self) {
+        std::fs::write(&self.go, "").expect("releases the host");
+    }
+}
+
+fn sh_quoted(path: &Path) -> String {
+    format!("'{}'", path.to_str().expect("utf8").replace('\'', "'\\''"))
 }
 
 impl Drop for Fixture {
