@@ -219,10 +219,14 @@ impl GitFeed {
         }
     }
 
-    /// The repositories now followed by a running watch (`true`) or not (`false`).
+    /// The repositories now followed by a running watch (`true`) or not (`false`). A watch that comes up owes the terminals in
+    /// its repository a read: what changed after their last read and before the watch ran was told to nobody, and the backstop
+    /// ([`WATCHED_READ`]) is half a minute away. A read made now sees everything that came before, the watch everything after.
     pub fn set_watched(&mut self, root: &Path, live: bool) {
         if live {
-            self.watched.insert(root.to_path_buf());
+            if self.watched.insert(root.to_path_buf()) {
+                self.repo_changed(root);
+            }
         } else {
             self.watched.remove(root);
         }

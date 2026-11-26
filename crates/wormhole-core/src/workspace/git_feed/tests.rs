@@ -330,11 +330,50 @@ fn the_model_reads_folders_from_the_facts_and_puts_the_answers_back() {
     // The feed's own deadline: the next read of a repository nobody follows.
     assert_eq!(m.git_next_due(1_000), Some(1 + 1_200));
     m.git_watched(Path::new("/repo"), true);
-    assert_eq!(m.git_next_due(1_000), Some(1 + WATCHED_READ));
+    // The watch coming up owes a read (`a_watch_that_comes_up_...`); once taken, the next one is the backstop's.
+    let jobs = m.git_poll(1_000, start);
+    let [GitJob::Read { id: 1, wanted, .. }] = jobs.as_slice() else { panic!("{jobs:?}") };
+    m.git_read(1, wanted, Ok(Some(status(&["a", "b"]))), Some(picture(&status(&["a", "b"]), start)));
+    assert_eq!(m.git_next_due(1_000), Some(1_000 + WATCHED_READ));
     // A terminal that closed is let go of.
     m.apply(Action::Close(1));
     m.git_poll(5_000, start);
     assert!(m.git_roots().is_empty());
+}
+
+/// The first read of a repository comes before its watch does, and a file made between the two is in no event: the test that
+/// writes a file right after the first answer lost it, under load, until the backstop's read half a minute later.
+#[test]
+fn a_watch_that_comes_up_owes_a_read_for_what_changed_before_it_ran() {
+    let mut m = WorkspaceModel::new(ModelConfig::default());
+    m.apply(Action::NewTerminal);
+    let start = Instant::now();
+    m.update_facts(1, |facts| facts.cwd = Some("/repo".into()));
+    let jobs = m.git_poll(1, start);
+    let [GitJob::Read { id: 1, wanted, .. }] = jobs.as_slice() else { panic!("{jobs:?}") };
+    m.git_read(1, wanted, Ok(Some(status(&[]))), Some(picture(&status(&[]), start)));
+    assert!(m.git_poll(2, start).is_empty(), "read a moment ago: nothing is due");
+
+    m.git_watched(Path::new("/repo"), true);
+    let jobs = m.git_poll(3, start);
+    let [GitJob::Read { id: 1, wanted, .. }] = jobs.as_slice() else { panic!("{jobs:?}") };
+    m.git_read(1, wanted, Ok(Some(status(&["b"]))), Some(picture(&status(&["b"]), start)));
+    assert_eq!(
+        m.facts(1).and_then(|facts| facts.repo_files),
+        Some(1),
+        "the file made before the watch ran is read"
+    );
+    assert!(m.git_poll(4, start).is_empty(), "once");
+
+    // The same watch reported up again is not a new one; one that went and came back is.
+    m.git_watched(Path::new("/repo"), true);
+    assert!(m.git_poll(5, start).is_empty(), "already followed");
+    m.git_watched(Path::new("/repo"), false);
+    m.git_watched(Path::new("/repo"), true);
+    assert!(
+        matches!(m.git_poll(6, start).as_slice(), [GitJob::Read { id: 1, .. }]),
+        "a new watch is a new gap"
+    );
 }
 
 #[test]
