@@ -59,6 +59,11 @@ extension EndToEnd {
             let frames = await app.reply("intro-frames voyage 4")
             app.expect(frames, contains: "intro-frames voyage 4 frames")
             app.expect(await app.reply("intro-frames nothing"), contains: "error")
+            // Read-only: the three answers a bundle check tells causes apart by (a machine with no Metal device says `metal none`).
+            let support = await app.reply("intro-support")
+            app.expect(support, contains: "shaders 12/12 ")
+            app.expect(support, contains: "\nmetal ")
+            app.expect(support, contains: "\ncompile ")
         }
     }
 }

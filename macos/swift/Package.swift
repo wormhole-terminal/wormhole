@@ -82,7 +82,7 @@ var targets: [Target] = [
     // Hosts, the agent access sheet, project trust and the close and quit questions. `Resources/shader` is the
     // GPUI app's own intro shader, copied in by `macos/scripts/build-ffi.sh` (git-ignored), so the two never drift.
     .target(
-        name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem", "FontPickerModel", "FontPickerUI"],
+        name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem", "FontPickerModel", "FontPickerUI", "AppLogging"],
         resources: [.copy("Resources/shader")]),
     .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),

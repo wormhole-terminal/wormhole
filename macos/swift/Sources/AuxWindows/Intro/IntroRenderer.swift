@@ -14,8 +14,12 @@ final class IntroRenderer {
     private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
 
-    init() throws {
+    convenience init() throws {
         guard let device = MTLCreateSystemDefaultDevice() else { throw SetupError.noDevice }
+        try self.init(device: device)
+    }
+
+    init(device: MTLDevice) throws {
         self.device = device
         let library = try device.makeLibrary(source: try IntroShader.source(), options: nil)
         guard let vertex = library.makeFunction(name: "intro_vertex") else { throw SetupError.noFunction("intro_vertex") }

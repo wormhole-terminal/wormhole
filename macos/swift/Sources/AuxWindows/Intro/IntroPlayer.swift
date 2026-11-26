@@ -3,6 +3,7 @@
 // Under Reduce Motion the glow stands in for any style: nothing moves, the page is simply there.
 
 import AppKit
+import AppLogging
 import AuxModel
 import Observation
 import QuartzCore
@@ -77,7 +78,9 @@ public final class IntroPlayer {
             run = Run(overlay: overlay, style: style, start: options.start) { [weak self] in self?.tick($0) }
             progress = Progress(style: style, seconds: 0, start: options.start, skipped: false)
         } catch {
-            // No Metal, or the shader failed: the intro doesn't play, and the page simply shows.
+            // No Metal, or the shader failed: the intro doesn't play, and the page simply shows. The log says why: a bundle check
+            // on a machine of its own reads it.
+            AppLog.log("warn", "the intro did not play: \(IntroSupport.describe(error))")
             progress = nil
         }
     }
