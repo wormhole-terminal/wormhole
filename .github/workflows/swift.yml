@@ -77,8 +77,9 @@ jobs:
         run: cargo build -p wormhole-host
       # The bridge is a cargo workspace of its own, so the CI workflow's fmt, clippy and tests never reach it:
       # the same three commands scripts/check.sh runs for it, in its folder (its .cargo/config.toml gives the tests
-      # their data folder, and cargo reads that file from the working directory). After the session host is built:
-      # its hosting tests build the host themselves when it is missing, inside a test's own 15 s deadline.
+      # their data folder, and cargo reads that file from the working directory). The hosting tests build
+      # the host themselves through the same command (support.rs host_binary): after the step above that build has
+      # nothing to do, and it is outside any test's deadline.
       - name: The bridge's format, lints and tests
         working-directory: crates/wormhole-ffi
         run: |
