@@ -1,3 +1,4 @@
+import CoreGraphics
 import Metal
 import XCTest
 @testable import AuxWindows
@@ -42,5 +43,47 @@ final class IntroSupportTests: XCTestCase {
         XCTAssertFalse(line.contains("\n"))
         XCTAssertEqual(line.count, 400)
         XCTAssertTrue(line.hasPrefix("line one line two xxx"))
+    }
+
+    // What a play depends on besides the shaders, as `intro-support` says it (`IntroSupport.environment`).
+
+    private func environment(
+        screens: [CGSize] = [CGSize(width: 1024, height: 768)], reduceMotion: Bool = false, background: Bool = true,
+        window: Bool? = true, play: IntroPlay = .none, playing: Bool = false
+    ) -> [String] {
+        IntroSupport.environment(
+            screens: screens, reduceMotion: reduceMotion, background: background, window: window, play: play, playing: playing
+        ).split(separator: "\n").map(String.init)
+    }
+
+    func testAMachineWithNoScreenSaysSoAsTheFirstWordOfItsLine() {
+        XCTAssertEqual(environment(screens: [])[0], "screens 0")
+        XCTAssertEqual(environment()[0], "screens 1 1024x768")
+        let two = environment(screens: [CGSize(width: 1512, height: 982), CGSize(width: 1920, height: 1080)])[0]
+        XCTAssertEqual(two, "screens 2 1512x982 1920x1080")
+    }
+
+    func testReduceMotionAndWhereTheOverlayGoAreBothSaid() {
+        XCTAssertEqual(Array(environment(reduceMotion: true, background: true)[1...2]), ["reduce-motion on", "overlay above the window"])
+        XCTAssertEqual(Array(environment(reduceMotion: false, background: false)[1...2]), ["reduce-motion off", "overlay over the screen"])
+    }
+
+    func testTheWindowToPlayOverIsShownHiddenOrNone() {
+        XCTAssertEqual(environment(window: true)[3], "window shown")
+        XCTAssertEqual(environment(window: false)[3], "window hidden")
+        XCTAssertEqual(environment(window: nil)[3], "window none")
+    }
+
+    func testEveryWayAPlayEndsHasItsOwnLine() {
+        let lines = [IntroPlay.none, .noWindow, .failed("noDevice"), .opened(shown: true), .opened(shown: false)].map { environment(play: $0)[4] }
+        XCTAssertEqual(lines, ["play none", "play no window", "play failed: noDevice", "play opened shown", "play opened hidden"])
+        XCTAssertEqual(environment(playing: true)[5], "playing yes")
+        XCTAssertEqual(environment(playing: false)[5], "playing no")
+    }
+
+    func testTheSixLinesFollowTheThreeOfTheShaders() {
+        XCTAssertEqual(environment().count, 6)
+        let report = IntroSupport.report(locate: found, device: { nil }).split(separator: "\n")
+        XCTAssertEqual(report.count, 3, "the shaders' answer is unchanged: three lines, which a check reads by their first words")
     }
 }

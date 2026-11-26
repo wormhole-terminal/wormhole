@@ -59,11 +59,18 @@ extension EndToEnd {
             let frames = await app.reply("intro-frames voyage 4")
             app.expect(frames, contains: "intro-frames voyage 4 frames")
             app.expect(await app.reply("intro-frames nothing"), contains: "error")
-            // Read-only: the three answers a bundle check tells causes apart by (a machine with no Metal device says `metal none`).
+            // Read-only: the three answers a bundle check tells causes apart by (a machine with no Metal device says `metal none`),
+            // and what a play depends on besides them (a machine with no screen says `screens 0`).
             let support = await app.reply("intro-support")
             app.expect(support, contains: "shaders 12/12 ")
             app.expect(support, contains: "\nmetal ")
             app.expect(support, contains: "\ncompile ")
+            app.expect(support, contains: "\nscreens ")
+            app.expect(support, contains: "\nplay none\nplaying no")
+            // Whatever this machine shows, `intro` says what its play came to, and `intro-support` says the same.
+            let reply = await app.reply("intro glow")
+            let play = (await app.reply("intro-support")).split(separator: "\n").first { $0.hasPrefix("play ") }.map { String($0.dropFirst(5)) }
+            app.expect(reply == (play == "opened shown" ? "intro glow" : "intro glow: \(play ?? "?")"), "the reply is the play's: \(reply) / \(play ?? "no play line")")
         }
     }
 }

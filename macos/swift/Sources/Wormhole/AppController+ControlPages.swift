@@ -46,8 +46,9 @@ extension AppController {
             browser.selected = index
             reply("licenses-select \(argument) \(browser.selectedPackage?.version ?? "")")
         case "intro-frames": reply(introFrames(argument))
-        // What `intro <style>` needs, read without playing it: the shader sources, a Metal device, the compile (see `IntroSupport`).
-        case "intro-support": reply(IntroSupport.report())
+        // What `intro <style>` needs, read without playing it (the shader sources, a Metal device, the compile, the screens), and what the
+        // last play came to (see `IntroSupport`).
+        case "intro-support": reply(aux.introSupport())
         case "onboarding-tailor":
             guard let look = aux.onboarding?.session.look else { reply("error: the intro window is not open (`onboarding look`)"); return true }
             let acts: [String: TailorAct] = ["back": .back, "over": .startOver, "ok": .settle]

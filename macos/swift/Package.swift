@@ -84,7 +84,7 @@ var targets: [Target] = [
     .target(
         name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem", "FontPickerModel", "FontPickerUI", "AppLogging"],
         resources: [.copy("Resources/shader")]),
-    .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem"]),
+    .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem", "AppLogging"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     // The seam for the interface's words (`wormhole-text`'s ids and tables behind it, when linked). Foundation only.
     .target(name: "WordsModel"),

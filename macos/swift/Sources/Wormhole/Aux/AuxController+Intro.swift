@@ -14,12 +14,16 @@ import TerminalMetal
 extension AuxController {
     /// Plays `style` over the front window as a replay: the window leaves into the wormhole and comes back.
     func playIntro(_ style: IntroStyle, handover: Handover? = nil) {
-        guard let window = app.window else { return }
         var options = IntroOptions()
         options.lights = true
         options.handover = handover
         options.immersive = !app.policy.background
-        introPlayer.play(style, over: window, options: options, colors: IntroColors(tokens: ThemeStore.shared.tokens))
+        introPlayer.play(style, over: app.window, options: options, colors: IntroColors(tokens: ThemeStore.shared.tokens))
+    }
+
+    /// The control folder's `intro-support`: what the intro needs, and what the last play came to (see `IntroSupport`).
+    func introSupport() -> String {
+        IntroSupport.report(window: app.window, background: app.policy.background, player: introPlayer)
     }
 
     /// Play Welcome (Help ▸ Welcome, the palette, `welcome`, a first run): the start animation with its ship docking as `handover` has it,
@@ -79,14 +83,18 @@ extension AuxController {
 extension AppController {
     /// `intro <style>` and `welcome <cursor|portal|logo>`, the two developer actions' control verbs.
     func runIntro(command: String, argument: String) {
+        var played = ""
         if command == "intro", let style = IntroStyle(rawValue: argument) {
             aux.playIntro(style)
+            // The reply says what came of it: an overlay that is not on screen, or none at all, is not "intro ftl" and nothing more.
+            let play = aux.introPlayer.lastPlay
+            if play != .opened(shown: true) { played = ": \(play.line)" }
         } else if command == "welcome", let handover = Handover(rawValue: argument) {
             aux.playWelcome(handover)
         } else {
             return reply("error: \(command) takes \((command == "intro" ? IntroStyle.allCases.map(\.rawValue) : Handover.allCases.map(\.rawValue)).joined(separator: "|"))") // text: a control reply
         }
-        reply("\(command) \(argument)")
+        reply("\(command) \(argument)\(played)")
     }
 }
 

@@ -43,12 +43,31 @@ public final class IntroPlayer {
         public var skipped: Bool
     }
 
+    /// What the last `play` came to, for `intro-support`: a play that ends with no overlay says so here and in the log.
+    @ObservationIgnored public private(set) var lastPlay = IntroPlay.none
+
     @ObservationIgnored private var run: Run?
     @ObservationIgnored private let reduceMotion: () -> Bool
+    /// Makes the overlay: the real one, or (in a test) one that fails.
+    @ObservationIgnored private let makeOverlay: @MainActor (NSWindow, IntroSetup, @escaping () -> SIMD3<Float>?) throws -> IntroOverlay
 
-    public init(reduceMotion: @escaping () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }) {
-        self.reduceMotion = reduceMotion
+    public convenience init(reduceMotion: @escaping () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }) {
+        self.init(reduceMotion: reduceMotion) { try IntroOverlay(over: $0, setup: $1, landing: $2) }
     }
+
+    init(
+        reduceMotion: @escaping () -> Bool,
+        makeOverlay: @escaping @MainActor (NSWindow, IntroSetup, @escaping () -> SIMD3<Float>?) throws -> IntroOverlay
+    ) {
+        self.reduceMotion = reduceMotion
+        self.makeOverlay = makeOverlay
+    }
+
+    /// Whether Reduce Motion is on as this player reads it (the glow then stands in for every style).
+    public var reducesMotion: Bool { reduceMotion() }
+
+    /// Whether a run is playing now.
+    public var isPlaying: Bool { run != nil }
 
     /// The page's parts as far as the playing run lets them in: all of them when none plays.
     public var entrance: Entrance {
@@ -66,21 +85,35 @@ public final class IntroPlayer {
     /// Seconds into the run playing, for the terminal welcome's hand-over timing.
     public var elapsed: Float? { progress?.seconds }
 
-    /// Plays `style` around `window` (the glow instead under Reduce Motion); `colors` from the theme's tokens.
-    public func play(_ style: IntroStyle, over window: NSWindow, options: IntroOptions = IntroOptions(), colors: IntroColors) {
+    /// Plays `style` around `window` (the glow instead under Reduce Motion); `colors` from the theme's tokens. Every way it ends with
+    /// no overlay is in `lastPlay` and the log: no window, an overlay that could not be made, one that opened where nothing shows it.
+    public func play(_ style: IntroStyle, over window: NSWindow?, options: IntroOptions = IntroOptions(), colors: IntroColors) {
         stop()
+        guard let window else {
+            lastPlay = .noWindow
+            AppLog.log("warn", "the intro did not play: there is no window to play it over")
+            return
+        }
         let style = style.withMotion(reduceMotion: reduceMotion())
         let setup = IntroSetup(
             style: style, colors: colors, start: options.start, lights: options.lights && style != .glow,
             ship: options.handover?.ship ?? true, immersive: options.immersive)
         do {
-            let overlay = try IntroOverlay(over: window, setup: setup, landing: { [weak self] in self?.landingSource?() ?? self?.landing })
+            let overlay = try makeOverlay(window, setup) { [weak self] in self?.landingSource?() ?? self?.landing }
             run = Run(overlay: overlay, style: style, start: options.start) { [weak self] in self?.tick($0) }
             progress = Progress(style: style, seconds: 0, start: options.start, skipped: false)
+            let shown = overlay.window.isVisible
+            lastPlay = .opened(shown: shown)
+            if !shown {
+                // A child window is on screen only where its parent is: the window server, not the player, left it out.
+                AppLog.log("warn", "the intro's overlay opened but is not on screen (the window it plays over is \(window.isVisible ? "" : "not ")on screen)")
+            }
         } catch {
-            // No Metal, or the shader failed: the intro doesn't play, and the page simply shows. The log says why: a bundle check
-            // on a machine of its own reads it.
-            AppLog.log("warn", "the intro did not play: \(IntroSupport.describe(error))")
+            // No Metal or no screen, or the shader failed: the intro doesn't play, and the page simply shows. The log says why: a
+            // bundle check on a machine of its own reads it.
+            let why = IntroSupport.describe(error)
+            lastPlay = .failed(why)
+            AppLog.log("warn", "the intro did not play: \(why)")
             progress = nil
         }
     }
