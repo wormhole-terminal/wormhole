@@ -58,8 +58,11 @@ pid=""
 # What the app itself said, so that a failure on a machine nobody can look at explains itself: what it wrote to stderr, and the
 # newest of its daily log files, `wormhole.<date>.log` (the intro logs why it did not play there; the hosts' own logs are beside it).
 show_logs() {
-  local daily
-  daily="$(ls -t "$data"/logs/wormhole.*.log 2>/dev/null | head -n 1 || true)"
+  local daily="" log
+  for log in "$data"/logs/wormhole.*.log; do
+    [ -e "$log" ] || continue
+    if [ -z "$daily" ] || [ "$log" -nt "$daily" ]; then daily="$log"; fi
+  done
   printf 'the end of %s:\n' "$run/app.log" >&2
   tail -n 30 "$run/app.log" >&2 || true
   [ -z "$daily" ] || { printf 'the end of the app log %s:\n' "$(basename "$daily")" >&2; tail -n 30 "$daily" >&2 || true; }
