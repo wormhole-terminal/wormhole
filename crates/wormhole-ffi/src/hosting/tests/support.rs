@@ -1,5 +1,6 @@
 //! A scratch data folder, the host binary built into this tree's target, and waiting.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Once};
@@ -142,16 +143,36 @@ fn host_binary() -> PathBuf {
     BUILD.call_once(|| {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let target = profile_dir.parent().expect("target");
-        let status = Command::new(env!("CARGO"))
+        let mut cargo = Command::new(env!("CARGO"));
+        cargo
             .args(["build", "-p", "wormhole-host", "--manifest-path"])
             .arg(root.join("Cargo.toml"))
             .arg("--target-dir")
-            .arg(target)
-            .status()
-            .expect("cargo");
+            .arg(target);
+        for name in std::env::vars_os().map(|(name, _)| name).filter(|name| is_cargo_tests_own(name)) {
+            cargo.env_remove(name);
+        }
+        let status = cargo.status().expect("cargo");
         assert!(status.success(), "building wormhole-host");
     });
     host
+}
+
+/// What `cargo test` tells a test about the package under test. A build that inherits it is not the build a shell
+/// makes: a dependency's build script (ring's) records `CARGO_MANIFEST_DIR` and the like in its fingerprint, so the
+/// test's build and every build after it from outside rebuilt ring and all that depends on it, again and again
+/// (30 s on a runner), and a host built in an earlier step was never the one the tests found fresh.
+fn is_cargo_tests_own(name: &OsStr) -> bool {
+    const NAMED: [&str; 5] = [
+        "CARGO_MANIFEST_DIR",
+        "CARGO_MANIFEST_PATH",
+        "CARGO_CRATE_NAME",
+        "CARGO_PRIMARY_PACKAGE",
+        "CARGO_TARGET_TMPDIR",
+    ];
+    let name = name.to_string_lossy();
+    NAMED.contains(&name.as_ref())
+        || ["CARGO_PKG_", "CARGO_BIN_EXE_"].iter().any(|prefix| name.starts_with(prefix))
 }
 
 pub(super) fn listener() -> Arc<dyn TerminalListener> {
